@@ -1,0 +1,34 @@
+{
+  "name": "agentic_web_crawl",
+  "description": "Fetch any URL and extract page content and SEO signals: title, meta description, Open Graph tags, canonical URL, robots directives, heading structure, word count, and link breakdown.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "The URL to analyse. Must use http or https. Example: 'https://example.com/article'"
+      },
+      "extract": {
+        "type": "string",
+        "description": "Comma-separated list of what to extract: text, links, images, metadata. Default: 'all'. For SEO audits use 'metadata' or 'metadata,links'.",
+        "default": "all"
+      },
+      "timeout": {
+        "type": "integer",
+        "description": "Request timeout in seconds. Min 1, max 60. Default: 15",
+        "default": 15
+      },
+      "max_links": {
+        "type": "integer",
+        "description": "Maximum number of links to return. Default: 50",
+        "default": 50
+      },
+      "max_images": {
+        "type": "integer",
+        "description": "Maximum number of images to return. Default: 20",
+        "default": 20
+      }
+    },
+    "required": ["url"]
+  }
+}

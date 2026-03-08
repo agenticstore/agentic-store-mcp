@@ -1,0 +1,41 @@
+version: '3.8'
+
+# AgenticStore MCP Tools — Docker Compose
+#
+# Provides supporting services for the MCP tools.
+# The MCP server itself is launched per-connection by your AI client (stdio protocol).
+#
+# Usage:
+#   docker compose up -d            # start all services
+#   docker compose down             # stop all services
+#   docker compose logs -f          # tail logs
+#
+# After starting, configure your MCP client to use:
+#   docker run -i --rm \
+#     --network agentic-store-mcp_default \
+#     -e SEARXNG_URL=http://searxng:8080 \
+#     agentic-store-mcp
+
+services:
+
+  # -------------------------------------------------------------------------
+  # SearXNG — self-hosted metasearch engine
+  # Required by: agentic_web_search tool
+  # Docs: https://docs.searxng.org
+  # -------------------------------------------------------------------------
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./searxng:/etc/searxng
+    environment:
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-please-change-this-secret}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

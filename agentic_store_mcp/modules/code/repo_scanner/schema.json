@@ -1,0 +1,19 @@
+{
+  "name": "repo_scanner",
+  "description": "Scans a directory for leaked secrets, missing .gitignore entries, and PII exposure risks.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Absolute or relative path to the directory to scan. Example: '/Users/me/my-project'"
+      },
+      "checks": {
+        "type": "string",
+        "description": "Comma-separated checks to run: secrets, gitignore, pii. Default: 'all'. Example: 'secrets,gitignore'",
+        "default": "all"
+      }
+    },
+    "required": ["path"]
+  }
+}

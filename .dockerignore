@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# Python artifacts
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info
+dist/
+build/
+
+# Virtual environments
+.venv
+venv
+testing/
+
+# Dev / CI artifacts
+.pytest_cache
+.mypy_cache
+.ruff_cache
+coverage.xml
+.coverage
+htmlcov/
+
+# Project-specific
+memory/
+skills/
+docs/
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp

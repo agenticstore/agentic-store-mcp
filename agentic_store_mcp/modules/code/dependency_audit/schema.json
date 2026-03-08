@@ -1,0 +1,14 @@
+{
+  "name": "dependency_audit",
+  "description": "Scans requirements.txt, pyproject.toml, Pipfile, and package.json for outdated and vulnerable dependencies.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Absolute or relative path to the project directory to scan. Example: '/Users/me/my-project'"
+      }
+    },
+    "required": ["path"]
+  }
+}

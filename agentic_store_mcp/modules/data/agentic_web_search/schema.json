@@ -1,0 +1,29 @@
+{
+  "name": "agentic_web_search",
+  "description": "Search the web using a self-hosted SearXNG instance. Returns ranked results with title, URL, and snippet. Requires SearXNG running locally (docker compose up -d).",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "The search query. Example: 'open source MCP tools for AI agents'"
+      },
+      "categories": {
+        "type": "string",
+        "description": "SearXNG category to search in: general, news, images, science, it, map, music, social_media, videos. Default: 'general'",
+        "default": "general"
+      },
+      "language": {
+        "type": "string",
+        "description": "Language code for results. Example: 'en', 'de', 'fr'. Default: 'en'",
+        "default": "en"
+      },
+      "max_results": {
+        "type": "integer",
+        "description": "Maximum number of results to return. Min 1, max 50. Default: 10",
+        "default": 10
+      }
+    },
+    "required": ["query"]
+  }
+}

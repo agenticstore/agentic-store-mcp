@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentic-store-mcp"
+version = "0.4.0"
+description = "Open-source MCP tools for AI agents — lint, security, dependency audit, web scraping and more"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+keywords = ["mcp", "ai", "agents", "tools", "lint", "security"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "mcp>=1.0",
+]
+
+[project.scripts]
+agentic-store-mcp = "agentic_store_mcp.server:main"
+
+[project.urls]
+Homepage = "https://www.agenticstore.dev/docs"
+Issues   = "https://github.com/agenticstore/agentic-store-mcp/issues"
+Repository = "https://github.com/agenticstore/agentic-store-mcp"
+
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.hatch.build]
+exclude = [
+  "*.pyc",
+  "**/__pycache__",
+  "**/.venv",
+  "**/venv",
+  "**/testing",
+  "**/.pytest_cache",
+  "**/.mypy_cache",
+  "**/.ruff_cache",
+  "**/node_modules",
+  "dist",
+  "build",
+  "memory",
+  "skills",
+  ".env",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["agentic_store_mcp"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "agentic_store_mcp/",
+  "server.py",
+  "setup_local.py",
+  "README.md",
+  "pyproject.toml",
+  ".env.example",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["agentic_store_mcp/modules"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "--import-mode=importlib"

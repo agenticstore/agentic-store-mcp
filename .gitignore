@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+
+# uv
+.python-version
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment
+.env
+*.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+
+# Docker
+.docker/
+docker-compose.override.yml
+.dockerignore.local
+*.dockertmp
+searxng/settings.yml
+searxng/uwsgi.ini
+
+# Agent Private — not for public repo
+memory/
+skills/
+CLAUDE.md
