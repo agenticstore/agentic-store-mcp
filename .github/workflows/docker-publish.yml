@@ -10,6 +10,7 @@ on:
 
 jobs:
   build-and-push:
+    if: false  # Disabled — re-enable by removing this line
     runs-on: ubuntu-latest
     permissions:
       contents: read
