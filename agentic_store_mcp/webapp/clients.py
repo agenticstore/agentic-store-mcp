@@ -97,3 +97,52 @@ def launch_client(slug: str) -> dict:
         return {"ok": True, "error": None}
     except OSError as e:
         return {"ok": False, "error": str(e)}
+
+
+def restart_client(slug: str, sync_first: bool = False) -> dict:
+    """Validate client, then kick off kill→sync→relaunch in a background thread.
+
+    Returns immediately so the HTTP response is sent before the client process
+    is killed (avoids the race where pkill fires before the response escapes).
+    """
+    import threading
+    import time
+
+    c = get_client(slug)
+    if not c:
+        return {"ok": False, "error": f"Unknown client: {slug}"}
+    if not c.launch_cmd:
+        return {"ok": False, "error": f"Launch not supported for {c.name} on this platform"}
+    if not c.launch_supported():
+        return {"ok": False, "error": f"Launch binary not found for {c.name}"}
+
+    def _do_restart() -> None:
+        # Give the HTTP response a moment to be sent before we kill the client.
+        time.sleep(0.5)
+
+        # Optionally sync the MCP environment first so missing packages
+        # (e.g. `mcp`) don't cause an immediate server-disconnected error.
+        if sync_first:
+            uv = shutil.which("uv")
+            if uv:
+                project_root = Path(__file__).parent.parent.parent
+                subprocess.run([uv, "sync"], cwd=project_root, check=False)  # noqa: S603
+
+        # Kill the running client process.
+        # macOS: ["open", "-a", "Claude"] → pkill "Claude"
+        # Linux/Windows: ["cursor", ...] → pkill "cursor"
+        if sys.platform == "darwin" and c.launch_cmd[0] == "open":
+            app_name = c.launch_cmd[-1]
+            subprocess.run(["pkill", "-x", app_name], check=False)  # noqa: S603,S607
+        elif sys.platform == "win32":
+            app_name = c.launch_cmd[-1]
+            subprocess.run(["taskkill", "/F", "/IM", f"{app_name}.exe"], check=False)  # noqa: S603,S607
+        else:
+            subprocess.run(["pkill", "-x", c.launch_cmd[0]], check=False)  # noqa: S603,S607
+
+        # Wait for the process to fully exit before relaunching.
+        time.sleep(2.5)
+        subprocess.Popen(c.launch_cmd)  # noqa: S603
+
+    threading.Thread(target=_do_restart, daemon=True).start()
+    return {"ok": True, "error": None}

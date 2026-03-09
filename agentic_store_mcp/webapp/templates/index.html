@@ -70,6 +70,24 @@
       </div>
     </div>
 
+    <!-- Restart confirmation modal -->
+    <div id="restart-modal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <h3 class="modal-title">Restart <span id="restart-client-name"></span>?</h3>
+        <p class="modal-body">
+          We'll close <span id="restart-client-name2"></span> and relaunch it so the new config takes effect.
+        </p>
+        <label class="modal-sync-label">
+          <input type="checkbox" id="modal-sync-env" checked />
+          <span>Also run <code>uv sync</code> to refresh the MCP environment</span>
+        </label>
+        <div class="modal-actions">
+          <button id="modal-cancel" class="btn btn-ghost">Cancel</button>
+          <button id="modal-confirm" class="btn btn-primary">Yes, restart</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Docker mode: copy-paste snippet -->
     <div id="clients-docker" style="display:none">
       <div class="docker-notice">
@@ -317,6 +335,50 @@
             <strong>Run uv sync in the project directory</strong>
             <pre class="ts-code">uv sync</pre>
             <p>All dependencies (PyGithub, FastAPI, keyring, etc.) are installed by default — no extras needed.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Server disconnected / No module named mcp -->
+    <div class="ts-card" id="ts-server-disconnect">
+      <div class="ts-card-header">
+        <span class="ts-badge ts-badge-general">General</span>
+        <h3>Server disconnected — "No module named 'mcp'"</h3>
+      </div>
+      <p class="ts-desc">
+        The MCP server process exited immediately after starting. The log shows
+        <code>ModuleNotFoundError: No module named 'mcp'</code> even though the package
+        is listed in <code>pyproject.toml</code>. This usually means the virtual environment
+        is missing or stale.
+      </p>
+      <div class="ts-steps">
+        <div class="ts-step">
+          <span class="ts-step-num">1</span>
+          <div>
+            <strong>Re-sync the virtual environment</strong>
+            <pre class="ts-code">cd /path/to/agentic-store-mcp
+uv sync</pre>
+            <p>This installs <code>mcp</code>, <code>PyGithub</code>, <code>keyring</code>, and all other dependencies into the local <code>.venv</code>.</p>
+          </div>
+        </div>
+        <div class="ts-step">
+          <span class="ts-step-num">2</span>
+          <div>
+            <strong>Check for a conflicting VIRTUAL_ENV variable</strong>
+            <p>If another project's venv is active in your shell, <code>uv run</code> may
+            warn <em>"VIRTUAL_ENV does not match the project environment path"</em>.
+            Deactivate it first, then retry:</p>
+            <pre class="ts-code">deactivate
+uv sync</pre>
+          </div>
+        </div>
+        <div class="ts-step">
+          <span class="ts-step-num">3</span>
+          <div>
+            <strong>Restart your AI client</strong>
+            <p>After syncing, restart Claude Desktop / Claude Code / Cursor so the MCP
+            server process is relaunched with the updated environment.</p>
           </div>
         </div>
       </div>

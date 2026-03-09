@@ -295,6 +295,7 @@ function showApplyPanel() {
   api("GET", "/api/clients").then((data) => {
     const c = data.clients.find((cl) => cl.slug === state.selectedClient);
     if (c) {
+      state.selectedClientName = c.name;
       document.getElementById("apply-config-path").textContent = c.config_path;
       const launchBtn = document.getElementById("btn-launch");
       if (c.launch_supported) {
@@ -329,12 +330,31 @@ document.getElementById("btn-apply")?.addEventListener("click", async () => {
   }
 });
 
-document.getElementById("btn-launch")?.addEventListener("click", async () => {
+document.getElementById("btn-launch")?.addEventListener("click", () => {
   if (!state.selectedClient) return;
+  const name = state.selectedClientName || state.selectedClient;
+  document.getElementById("restart-client-name").textContent = name;
+  document.getElementById("restart-client-name2").textContent = name;
+  document.getElementById("restart-modal").style.display = "flex";
+});
+
+document.getElementById("modal-cancel")?.addEventListener("click", () => {
+  document.getElementById("restart-modal").style.display = "none";
+});
+
+document.getElementById("modal-confirm")?.addEventListener("click", async () => {
+  const syncFirst = document.getElementById("modal-sync-env")?.checked ?? true;
+  document.getElementById("restart-modal").style.display = "none";
+  const statusEl = document.getElementById("apply-status");
+  statusEl.textContent = syncFirst ? "Syncing environment…" : "Restarting…";
+  statusEl.className = "apply-status";
   try {
-    await api("POST", "/api/launch", { client: state.selectedClient });
+    await api("POST", "/api/restart", { client: state.selectedClient, sync_first: syncFirst });
+    statusEl.textContent = `✓ ${state.selectedClientName || state.selectedClient} restarted`;
+    statusEl.className = "apply-status status-success";
   } catch (e) {
-    alert(`Launch failed: ${e.message}`);
+    statusEl.textContent = `✗ Restart failed: ${e.message}`;
+    statusEl.className = "apply-status status-error";
   }
 });
 

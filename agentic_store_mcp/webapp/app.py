@@ -252,6 +252,20 @@ async def api_launch(body: LaunchRequest):
     return result
 
 
+class RestartRequest(BaseModel):
+    client: str
+    sync_first: bool = False
+
+
+@app.post("/api/restart")
+async def api_restart(body: RestartRequest):
+    from agentic_store_mcp.webapp.clients import restart_client
+    result = restart_client(body.client, sync_first=body.sync_first)
+    if not result["ok"]:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
+
+
 # ─── Memory ───────────────────────────────────────────────────────────────────
 
 @app.get("/api/memory/status")
@@ -342,7 +356,7 @@ async def api_memory_delete_checkpoint(name: str):
 
 
 @app.get("/api/memory/logs")
-async def api_memory_logs(limit: int = 30):
+async def api_memory_logs(limit: int = 50):
     from agentic_store_mcp.memory_store import read_logs
     entries = read_logs(limit)
     return {"entries": entries, "total": len(entries)}

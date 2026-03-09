@@ -17,11 +17,15 @@ def _server_command() -> list[str]:
     """Return the command array for running the MCP server."""
     # Prefer uv run when available; fall back to python
     import shutil
-    uv = shutil.which("uv")
-    server_py = str(Path(__file__).parent.parent.parent / "server.py")
+    project_root = Path(__file__).parent.parent.parent
+    server_py = str(project_root / "server.py")
 
+    uv = shutil.which("uv")
     if uv:
-        return [uv, "run", server_py]
+        # --directory ensures uv resolves the .venv from the project root
+        # regardless of what working directory the MCP client uses when
+        # launching the server process.
+        return [uv, "run", "--directory", str(project_root), server_py]
     return [sys.executable, server_py]
 
 
