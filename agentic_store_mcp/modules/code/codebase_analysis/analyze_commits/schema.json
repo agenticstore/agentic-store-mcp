@@ -1,0 +1,32 @@
+{
+  "name": "analyze_commits",
+  "description": "Analyzes local git commit history — authors, frequency, recent changes, and commit patterns. No API key required; reads directly from the local git repository.\nUse when: user asks about who committed what, recent changes, commit history, activity patterns, or wants to understand how a local repo has evolved.\nScope: local git repository only — no network access. Run git commands via subprocess.\nNot for: remote GitHub repo metadata (use get_repo_info), fetching remote files (use get_file), or searching code patterns (use search_code).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Path to the local git repository root. Example: '/Users/me/my-project'"
+      },
+      "since": {
+        "type": "string",
+        "description": "Only show commits after this date. Accepts git date formats: '2024-01-01', '1 week ago', '3 months ago'. Optional."
+      },
+      "until": {
+        "type": "string",
+        "description": "Only show commits before this date. Accepts git date formats. Optional."
+      },
+      "author": {
+        "type": "string",
+        "description": "Filter commits by author name or email (partial match). Optional."
+      },
+      "max_commits": {
+        "type": "integer",
+        "description": "Maximum number of commits to return. Default: 50.",
+        "default": 50
+      }
+    },
+    "required": ["path"]
+  }
+}

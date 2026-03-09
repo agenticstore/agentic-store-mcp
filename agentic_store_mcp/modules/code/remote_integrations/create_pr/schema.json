@@ -1,0 +1,42 @@
+{
+  "name": "create_pr",
+  "description": "Opens a pull request in a GitHub repository. Always returns a preview first — call with confirmed=false (default) to review, then confirmed=true to execute. Requires GitHub connector token with 'repo' scope.\nUse when: user wants to open a pull request to merge a branch into a target branch.\nScope: remote GitHub API — write operation, requires token.\nNot for: creating issues (use manage_issue), pushing commits (use local git), or reviewing existing PRs (use get_repo_info).",
+  "connectors": ["github"],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "repo": {
+        "type": "string",
+        "description": "GitHub repo in 'owner/repo' format. Example: 'myorg/myrepo'"
+      },
+      "title": {
+        "type": "string",
+        "description": "Pull request title."
+      },
+      "body": {
+        "type": "string",
+        "description": "Pull request description (markdown). Optional."
+      },
+      "head": {
+        "type": "string",
+        "description": "The branch containing your changes. Example: 'feature/my-feature' or 'username:branch' for forks."
+      },
+      "base": {
+        "type": "string",
+        "description": "The target branch to merge into. Default: repo's default branch (usually 'main').",
+        "default": "main"
+      },
+      "draft": {
+        "type": "boolean",
+        "description": "Open as a draft PR. Default: false.",
+        "default": false
+      },
+      "confirmed": {
+        "type": "boolean",
+        "description": "Must be true to execute the write. When false (default), returns a preview without making any changes. Always review the preview before setting confirmed=true.",
+        "default": false
+      }
+    },
+    "required": ["repo", "title", "head"]
+  }
+}

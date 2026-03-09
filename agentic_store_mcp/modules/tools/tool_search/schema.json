@@ -1,0 +1,22 @@
+{
+  "name": "tool_search",
+  "description": "Searches the available MCP tools by keyword, tag, or module. Returns tool names, descriptions, connector requirements, and capability tags. Useful for discovering which tool to use for a task.\nUse when: user asks what tools are available, which tool handles a specific task, or which tools require API keys.\nScope: reads the local tool registry — no network access.\nNot for: executing tools (call the tool directly), configuring credentials (use configure), or managing MCP client config (use the webapp).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Keyword to search in tool names and descriptions. Case-insensitive. Example: 'github', 'scan', 'commit'. Optional — omit to list all tools."
+      },
+      "tags": {
+        "type": "string",
+        "description": "Comma-separated tag filters. Valid tags: api_required, local_only, write_tool, read_only. Example: 'api_required,read_only'. Optional."
+      },
+      "module": {
+        "type": "string",
+        "description": "Filter by top-level module name. Example: 'code', 'data', 'tools', 'memory'. Optional."
+      }
+    }
+  }
+}

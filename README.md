@@ -1,193 +1,108 @@
-# ⚡ Agentic Store MCP: Free, Open-Source Tools for AI Agents
+<div align="center">
 
-<!-- SEO Metadata -->
-<!-- Keywords: Model Context Protocol, MCP server, AI agents, Claude Desktop MCP, Cursor MCP, open-source MCP tools, Python MCP, self-hosted AI tools, web search MCP, Python lint checker MCP -->
+# ⚡ AgenticStore MCP: The Ultimate Open-Source AI Agent Toolkit
+**Supercharge your AI Assistant with 27 Powerful Model Context Protocol (MCP) Tools**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Docker Pulls](https://img.shields.io/docker/pulls/agenticstore/agentic-store-mcp.svg)](https://hub.docker.com/r/agenticstore/agentic-store-mcp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg?style=for-the-badge)](https://www.python.org/downloads/)
+[![MCP Compatible](https://img.shields.io/badge/MCP-compatible-green.svg?style=for-the-badge)](https://modelcontextprotocol.io)
+[![GitHub Stars](https://img.shields.io/github/stars/agenticstore/agentic-store-mcp?style=for-the-badge&color=gold)](https://github.com/agenticstore/agentic-store-mcp)
 
-Give your AI agents superpowers with **Agentic Store MCP**—a collection of free, open-source, and self-hosted tools built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io).
+[🚀 Quick Start](#-quick-start-guide-3-ways-to-install) • [📋 Full Tool Directory](#-tool-directory--all-27-tools) • [🌐 Web Search](#-enabling-web-search) • [🔌 Client Setup](#-connect-to-your-ai-client) • [⭐ Star Repo](https://github.com/agenticstore/agentic-store-mcp)
 
-No accounts, no API limits, no subscriptions. Just pure, self-hosted capabilities for your favorite AI assistants.
-
-**Fully compatible with:** [Claude Desktop](#-claude-desktop), [Cursor](#-cursor), [Windsurf](#-windsurf), [VS Code](#-vs-code-mcp-extension), and any other MCP-compatible client.
+</div>
 
 ---
 
-## 🚀 Quick Start: Installation
+<!-- SEO: Model Context Protocol tools, MCP server, Claude Desktop MCP, Cursor MCP, open-source AI tools, self-hosted MCP, Python MCP server, AI agent toolkit, web search MCP, code review MCP, GitHub MCP tools, agent memory MCP, AI productivity tools, LLM tools open source, Windsurf MCP, VS Code AI >> -->
 
-Get started in less than a minute. Choose your preferred environment:
+<br/>
 
-### Method 1: Python (Recommended for Developers)
+> **AgenticStore MCP** turns **Claude Desktop, Cursor, and Windsurf** into unstoppable autonomous agents. Get instant access to web search, codebase analysis, GitHub integration, and persistent memory—all locally hosted, with no subscriptions or vendor lock-in.
 
-Using `uv` (the fast Python package installer):
+## 🔥 Why Choose AgenticStore MCP?
 
+- **🔒 100% Privacy-First:** Everything runs locally. Your code and data never leave your machine.
+- **💸 Truly Free:** No accounts, no paywalls, no subscriptions.
+- **🧠 Persistent Agent Memory:** Let your AI remember facts and contexts across sessions.
+- **⚡ Plug & Play:** Installs in seconds via `uvx` or Docker.
+
+---
+
+## 📋 Table of Contents
+
+- [🧰 What's Inside the Toolkit](#-whats-inside-the-toolkit)
+- [🚀 Quick Start Guide (3 Ways to Install)](#-quick-start-guide-3-ways-to-install)
+  - [V0: Python/uvx (Fastest)](#v0--python--uvx-fastest-start-no-docker-needed)
+  - [V1: Docker (Isolated)](#v1--docker-no-python-required-isolated-environment)
+  - [V2: MCP Hub Webapp (UI)](#v2--mcp-hub-webapp-gui-to-manage-everything)
+- [🔌 Connect to Your AI Client](#-connect-to-your-ai-client)
+- [🗂 Tool Directory — All 27 Tools](#-tool-directory--all-27-tools)
+- [🔎 Enabling Web Search](#-enabling-web-search)
+- [🎛 Advanced Usage & CLI Flags](#-advanced-usage--cli-flags)
+- [🤝 Contributing](#-contributing)
+
+---
+
+## 🧰 What's Inside the Toolkit
+
+Equip your AI client with these 4 powerhouse modules containing **27 specific tools**:
+
+| Module | Purpose | Key Capabilities | Tools |
+| :--- | :--- | :--- | :---: |
+| 💻 **Code & Security** | Codebase mastery & safety | Static analysis, CVE scans, Git commit summaries | **11** |
+| 🌐 **Data & Search** | Web access | Private web search (SearXNG) and deep web crawling | **2** |
+| 🧠 **Memory** | Agent context persistence | Save/read facts, session checkpoints, changelogs | **12** |
+| 🔧 **Meta-Tools** | Configuration & discovery | Tool discovery, runtime config management | **2** |
+
+---
+
+## 🚀 Quick Start Guide (3 Ways to Install)
+
+Pick the setup that best fits your workflow. *Don't know which to pick? Start with V0.*
+
+<details open>
+<summary><strong><kbd>V0</kbd> — Python / uvx (Fastest start, no Docker needed)</strong></summary>
+<br/>
+
+**1️⃣ Install `uv` (one-time setup)**
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+**2️⃣ Run the MCP server**
 ```bash
 uvx --refresh agentic-store-mcp
 ```
+*(The `--refresh` flag ensures you always pull the latest published stable version).*
 
-_Note: The `--refresh` flag ensures you always run the latest published version._
+**3️⃣ Configure your AI Client**  
+See the [Connect to Your AI Client](#-connect-to-your-ai-client) section to link it!
 
-**Need to install `uv`?**
+> 💡 **Pro-Tip (Web Search):** Want web search? Add `"env": { "SEARXNG_URL": "http://localhost:8080" }` to your config and run `docker compose up -d searxng` from this repo. See [Web Search Setup](#-enabling-web-search).
 
-- **macOS / Linux:** `curl -LsSf https://astral.sh/uv/install.sh | sh`
-- **Windows (PowerShell):** `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
+</details>
 
-### Method 2: Docker (No Python Required)
+<details>
+<summary><strong><kbd>V1</kbd> — Docker (No Python required, fully isolated)</strong></summary>
+<br/>
 
+**1️⃣ Ensure [Docker Desktop](https://www.docker.com/products/docker-desktop/) is running**
+
+**2️⃣ Clone and start services**
 ```bash
-docker run --rm agenticstore/agentic-store-mcp:latest --list
+git clone https://github.com/agenticstore/agentic-store-mcp
+cd agentic-store-mcp
+docker compose up -d
 ```
+*This starts a private web search engine (SearXNG) at `http://localhost:8080` and the AgenticStore Webapp at `http://localhost:8765`.*
 
----
-
-## 🛠️ MCP Tool Directory
-
-Our tools are organized into powerful modules designed to solve specific workflow challenges for AI agents.
-
-### 🌐 AgenticData Module
-
-Empower your AI to gather real-time information from the web.
-
-- **`agentic_web_crawl` — Advanced Web Scraper & Crawler**
-  - **What it does:** Fetches any URL and extracts clean page text, SEO metadata, heading structures, links, and images. Handles redirects and encoding automatically.
-  - **Use Case:** Let Claude or Cursor read external documentation, scrape competitor sites, or summarize web articles.
-  - **Requirements:** None! Works out of the box.
-
-- **`agentic_web_search` — Private Metasearch Engine**
-  - **What it does:** Searches the web via a self-hosted SearXNG instance. Returns ranked results with titles, URLs, and text snippets.
-  - **Use Case:** Give your AI live internet access without paying for search APIs.
-  - **Requirements:** Requires a local [SearXNG](https://github.com/searxng/searxng) instance (`docker compose up -d`).
-
-### 💻 AgenticCode Module
-
-Give your AI the ability to analyze, lint, and secure codebases autonomously.
-
-- **`python_lint_checker` — Python Static Analysis**
-  - **What it does:** Checks Python files for imports, bugs, styling issues, and code complexity.
-  - **Use Case:** Ask your AI to review your Python code for PEP-8 compliance and logical bugs.
-  - **Requirements:** None! Zero external dependencies.
-
-- **`repo_scanner` — Security & Secret Scanner**
-  - **What it does:** Scans directories for leaked secrets (AWS keys, API tokens), PII (emails, SSNs), and `.gitignore` gaps.
-  - **Use Case:** Run a security audit on your project before committing code to public repositories.
-  - **Requirements:** None!
-
-- **`dependency_audit` — Vulnerability Checker**
-  - **What it does:** Audits package files (`requirements.txt`, `package.json`, `go.mod`, etc.) for outdated versions and known CVEs using the OSV database.
-  - **Use Case:** Ask your AI to check if your project's dependencies are secure and up-to-date.
-  - **Requirements:** None!
-
----
-
-## 🔌 Connecting to Your AI Client
-
-Add AgenticStore to your MCP client's configuration file to enable the tools, then restart the client.
-
-<details>
-<summary><h3>🧠 Claude Desktop</h3></summary>
-
-**Config locations:**
-
-- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-
-**Python (All Tools)**
-
-```json
-{
-  "mcpServers": {
-    "agentic-store-mcp": {
-      "command": "uvx",
-      "args": ["--refresh", "agentic-store-mcp"]
-    }
-  }
-}
-```
-
-**Docker (All Tools)**
-
-```json
-{
-  "mcpServers": {
-    "agentic-store-mcp": {
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "agenticstore/agentic-store-mcp:latest"]
-    }
-  }
-}
-```
-
-_(Check the bottom of this section for SearXNG setup instructions if you want web search enabled!)_
-
-</details>
-
-<details>
-<summary><h3>💻 Cursor</h3></summary>
-
-**Config location:** `~/.cursor/mcp.json`
-
-**Python (All Tools)**
-
-```json
-{
-  "mcpServers": {
-    "agentic-store-mcp": {
-      "command": "uvx",
-      "args": ["--refresh", "agentic-store-mcp"]
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><h3>🏄 Windsurf</h3></summary>
-
-**Config location:** `~/.codeium/windsurf/mcp_config.json`
-
-_(Configuration is identical to the Cursor setup above.)_
-
-</details>
-
-<details>
-<summary><h3>📝 VS Code (MCP Extension)</h3></summary>
-
-_(Configuration is identical to the Cursor setup above.)_
-
-</details>
-
----
-
-## 🔎 Enabling Web Search (`agentic_web_search`)
-
-To use the web search tool, you need a running [SearXNG](https://github.com/searxng/searxng) instance.
-
-1. **Start SearXNG via Docker:**
-   ```bash
-   git clone https://github.com/agenticstore/agentic-store-mcp
-   cd agentic-store-mcp
-   docker compose up -d
-   ```
-2. **Update your MCP config with the `SEARXNG_URL` environment variable:**
-
-**Python users:**
-
-```json
-{
-  "mcpServers": {
-    "agentic-store-mcp": {
-      "command": "uvx",
-      "args": ["--refresh", "agentic-store-mcp"],
-      "env": { "SEARXNG_URL": "http://localhost:8080" }
-    }
-  }
-}
-```
-
-**Docker users:**
+**3️⃣ Client configuration**  
+Open `http://localhost:8765` → **Clients tab** to get your exact copy-paste config snippet. Example for Claude:
 
 ```json
 {
@@ -195,15 +110,190 @@ To use the web search tool, you need a running [SearXNG](https://github.com/sear
     "agentic-store-mcp": {
       "command": "docker",
       "args": [
-        "run",
-        "-i",
-        "--rm",
-        "--network",
-        "agentic-store-mcp_default",
-        "-e",
-        "SEARXNG_URL=http://searxng:8080",
-        "agenticstore/agentic-store-mcp:latest"
+        "run", "-i", "--rm",
+        "-v", "agentic-store-mcp_agentic-store-memory:/root/.config/agentic-store",
+        "--network", "agentic-store-mcp_default",
+        "-e", "SEARXNG_URL=http://searxng:8080",
+        "agentic-store-mcp"
       ]
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong><kbd>V2</kbd> — MCP Hub UI (Manage everything visually)</strong></summary>
+<br/>
+
+Forget manual JSON editing! Use our local web UI to:
+- 🔑 **Connectors:** Enter GitHub/OpenAI API keys securely (stored in OS keyring).
+- 🛠️ **Tools:** Toggle which of the 27 tools to expose to the AI.
+- 💻 **Clients:** Auto-generate configuration for Claude, Cursor, and Windsurf.
+- 🧠 **Memory:** Manage persistent agent states, checkpoints, and logs.
+
+**Start the Hub via Python:**
+```bash
+# Option A — from a cloned repo
+git clone https://github.com/agenticstore/agentic-store-mcp
+cd agentic-store-mcp
+uv sync
+uv run webapp.py
+
+# Option B — if installed via uvx / pip
+uvx agentic-store-mcp  # installs the package
+agentic-store-webapp   # launches the webapp
+```
+*(Or via Docker: `docker compose up -d`)*
+
+**Access it at:** [http://localhost:8765](http://localhost:8765)
+
+</details>
+
+---
+
+## 🔌 Connect to Your AI Client
+
+Add the configuration snippet to your respective client's config file. **Remember to restart the client after saving!**
+
+| Client | Config File Path |
+| :--- | :--- |
+| **Claude Desktop (Mac)** | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| **Claude Desktop (Win)** | `%APPDATA%\Claude\claude_desktop_config.json` |
+| **Cursor** | `~/.cursor/mcp.json` |
+| **Windsurf** | `~/.codeium/windsurf/mcp_config.json` |
+| **VS Code** | Appends to your VS Code `settings.json` under MCP extension config |
+
+**The Config Snippet (for V0 `uvx` setup):**
+```json
+{
+  "mcpServers": {
+    "agentic-store-mcp": {
+      "command": "uvx",
+      "args": ["--refresh", "agentic-store-mcp"]
+    }
+  }
+}
+```
+
+<div align="center">
+  <br/>
+  <a href="#-agenticstore-mcp-the-ultimate-open-source-ai-agent-toolkit">⬆️ Back to Top</a>
+</div>
+
+---
+
+## 🗂 Tool Directory — All 27 Tools
+
+<details>
+<summary><strong>💻 Code Tools & Integrations (11 tools)</strong></summary>
+<br/>
+
+### Codebase Analysis
+*Analyze, search, and navigate your codebase flawlessly.*
+
+| Tool | Capability |
+|------|-------------|
+| `python_lint_checker` | Runs static analysis on Python files (finds bugs, unused imports, complexity). No external deps. |
+| `search_code` | Blazing-fast full-text search across local codebases with regex & file-type filtering. |
+| `get_file` | Read files from defined paths, including specific line-range slicing. |
+| `analyze_commits` | Contextualize agents with recent repo history (diff stats, authors, messages). |
+
+### GitHub Integration 
+*(Requires a GitHub Personal Access Token. Set via `GITHUB_TOKEN` or MCP Hub).*
+
+| Tool | Capability |
+|------|-------------|
+| `get_repo_info` | Fetch metadata: stars, forks, primary language, open issues. |
+| `manage_issue` | Create, comment on, close, or list issues in accessible repositories. |
+| `create_pr` | Automatically open new internal Pull Requests with title & body definitions. |
+
+### Security & Auditing
+*Agent-driven DevSecOps.*
+
+| Tool | Capability |
+|------|-------------|
+| `repo_scanner` | Detects leaked secrets (API keys), PII, and validates `.gitignore`. |
+| `dependency_audit` | Scans `requirements.txt`, `package.json`, etc. against the OSV CVE database. |
+| `code_scanning_alerts` | Fetches active CodeQL/Security alerts from GitHub. |
+| `dependabot_alerts` | Fetches Dependabot vulnerability alerts from GitHub. |
+
+</details>
+
+<details>
+<summary><strong>🌐 Data & Search (2 tools)</strong></summary>
+<br/>
+
+| Tool | Capability |
+|------|-------------|
+| `agentic_web_crawl` | Extract clean markdown text, headings, and metadata from any URL. Handles redirects beautifully. |
+| `agentic_web_search` | Conduct live web searches via self-hosted SearXNG. Returns structured snippets. |
+
+</details>
+
+<details>
+<summary><strong>🧠 Memory & Agent Orchestration (12 tools)</strong></summary>
+<br/>
+
+*Persistent memory lets AI agents hand off work across sessions and restarts. 100% locally stored.*
+
+### Storage Primitives
+| Tool | Capability |
+|------|-------------|
+| `memory_write` | Store a key-value fact in local JSON. Survives restarts. |
+| `memory_read` | Retrieve specific (or all) stored facts. |
+| `memory_search` | Fuzzy full-text search across all stored facts. |
+| `memory_log` | Append timestamped entries to an immutable session JSONL log (decision trails). |
+| `memory_checkpoint` | Save a complete snapshot: state, decisions, next steps, and client context. |
+| `memory_restore` | Load a named checkpoint back into the active agent context. |
+
+### Productivity Layer
+| Tool | Capability |
+|------|-------------|
+| `spinup_memory` | Initialize a new project context (stub files for plans, milestones, learnings). |
+| `restore_session` | One-call holistic session restore (loads latest checkpoint, plans, logs, and facts). |
+| `update_plan` | Create or update the active `plan.md` for task tracking. |
+| `update_milestones` | Append or patch individual milestone progress via regex. |
+| `update_learnings` | Log technical discoveries into a growing context directory. |
+| `update_change_log` | Append semantic release notes to `CHANGELOG.md` automatically. |
+
+</details>
+
+<details>
+<summary><strong>🔧 Toolkit Meta-Tools (2 tools)</strong></summary>
+<br/>
+
+| Tool | Capability |
+|------|-------------|
+| `tool_search` | List all available toolkit tools, requirements, and descriptions. |
+| `configure` | Dynamically override runtime configurations and module states. |
+
+</details>
+
+---
+
+## 🔎 Enabling Web Search
+
+To give your agent internet access, `agentic_web_search` uses a private [SearXNG](https://github.com/searxng/searxng) instance.
+
+**1. Start the SearXNG Docker container:**
+```bash
+git clone https://github.com/agenticstore/agentic-store-mcp
+cd agentic-store-mcp
+docker compose up -d searxng
+```
+
+**2. Pass the environment variable to your AI Client:**
+```json
+{
+  "mcpServers": {
+    "agentic-store-mcp": {
+      "command": "uvx",
+      "args": ["--refresh", "agentic-store-mcp"],
+      "env": {
+        "SEARXNG_URL": "http://localhost:8080"
+      }
     }
   }
 }
@@ -211,49 +301,65 @@ To use the web search tool, you need a running [SearXNG](https://github.com/sear
 
 ---
 
-## 🎛️ Advanced Usage & CLI Flags
+## 🎛 Advanced Usage & CLI Flags
 
-Filter which tools or modules your AI has access to using the CLI:
+Need granular control? Filter exactly what gets loaded.
 
 ```bash
-uvx --refresh agentic-store-mcp                              # Run all tools
-uvx --refresh agentic-store-mcp --modules code               # Only load AgenticCode
-uvx --refresh agentic-store-mcp --modules data               # Only load AgenticData
-uvx --refresh agentic-store-mcp --tools agentic_web_search   # Only load a specific tool
-uvx --refresh agentic-store-mcp --list                       # List all available tools and exit
-```
+# Load everything
+uvx --refresh agentic-store-mcp
 
-## 🏗️ Programmatic Usage (Python)
+# Load only specific feature modules
+uvx --refresh agentic-store-mcp --modules code
+uvx --refresh agentic-store-mcp --modules data memory
 
-Integrate these MCP tools directly into your own LangChain, LlamaIndex, or custom AI python scripts:
+# Load only specific isolated tools
+uvx --refresh agentic-store-mcp --tools agentic_web_search repo_scanner
 
-```python
-from agentic_store_mcp import start_server
-
-start_server()                              # Load all tools
-start_server(modules=["code", "data"])      # Load multiple categories
-start_server(tools=["agentic_web_search"])  # Load a single tool
+# Debug: List what would be loaded and exit
+uvx --refresh agentic-store-mcp --list
 ```
 
 ---
 
-## 🤝 Contributing & Community
+## 🤝 Contributing
 
-We welcome contributions! To add a new tool:
+We want to build the ultimate open-source tool directory for Agents!
 
-1. Ensure the tool is **pure Python** (no external managed services, completely self-hosted).
-2. Create your tool under `agentic_store_mcp/modules/<category>/<tool_name>/` containing:
-   - `handler.py`
-   - `schema.json`
-   - `README.md`
-   - `test_handler.py`
-3. Run tests locally using `uv run pytest`.
+**Tool Guidelines:**
+- 🐍 **Pure Python** — No weird managed services, no mandatory accounts.
+- 📦 **Self-contained** — Placed inside `agentic_store_mcp/modules/<module>/<submodule>/<tool_name>/`.
+- 🧪 **Tested** — Must have a `test_handler.py` smoke test.
+- 📚 **Documented** — Include a `README.md` for tool usage.
+
+**Local Dev Setup:**
+```bash
+git clone https://github.com/agenticstore/agentic-store-mcp
+cd agentic-store-mcp
+uv sync
+
+# Run tests
+uv run pytest
+
+# Start the MCP server
+uv run server.py
+
+# Start the webapp (MCP Hub UI)
+uv run webapp.py
+```
+
+---
 
 ## 📜 License & Support
 
-This project is licensed under the **MIT License** — free to use, modify, and distribute.
+This project is licensed under the **MIT License** — free to use, modify, and distribute. See [LICENSE](LICENSE) for details.
 
 ---
 
-**⭐ Enjoying Agentic Store MCP?**
-If you find these tools useful, please [star this repository on GitHub](https://github.com/agenticstore/agentic-store-mcp) to help other developers discover free, open-source MCP tools for their AI workflows!
+<div align="center">
+
+⭐ **If AgenticStore MCP makes your workflow faster, please [star the repository](https://github.com/agenticstore/agentic-store-mcp) to help others discover it!** ⭐
+
+*Built with ❤️ by [AgenticStore.dev](https://agenticstore.dev) — Open-source AI tooling for everyone.*
+
+</div>

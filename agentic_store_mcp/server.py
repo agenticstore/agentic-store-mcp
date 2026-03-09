@@ -83,8 +83,12 @@ def _load_tools(
     """
     Walk modules/ and load matching tools.
 
+    Supports two directory depths (both backward-compatible):
+      2-level: modules/{module}/{tool}/handler.py          (e.g. data/agentic_web_search)
+      3-level: modules/{module}/{submodule}/{tool}/handler.py  (e.g. code/security/repo_scanner)
+
     Returns:
-        { tool_name: { description, input_schema, run, module, slug } }
+        { tool_name: { description, input_schema, run, module, submodule, connectors } }
     """
     tools: dict[str, dict[str, Any]] = {}
 
@@ -100,54 +104,80 @@ def _load_tools(
         if modules_filter and slug not in modules_filter:
             continue
 
-        for tool_dir in sorted(module_dir.iterdir()):
-            if not tool_dir.is_dir() or tool_dir.name.startswith("."):
+        for child_dir in sorted(module_dir.iterdir()):
+            if not child_dir.is_dir() or child_dir.name.startswith("."):
                 continue
 
-            schema_path = tool_dir / "schema.json"
-            handler_path = tool_dir / "handler.py"
-
-            if not schema_path.exists() or not handler_path.exists():
-                continue
-
-            try:
-                schema = json.loads(schema_path.read_text())
-            except (json.JSONDecodeError, OSError) as exc:
-                _warn(f"Skipping {tool_dir.name}: bad schema.json — {exc}")
-                continue
-
-            tool_name: str = schema.get("name") or tool_dir.name
-            if tools_filter and tool_name not in tools_filter:
-                continue
-
-            mod_id = f"agentic-store.{slug}.{tool_name}"
-            spec = importlib.util.spec_from_file_location(mod_id, handler_path)
-            if spec is None or spec.loader is None:
-                _warn(f"Skipping {tool_name}: cannot create module spec")
-                continue
-
-            handler_module = importlib.util.module_from_spec(spec)
-            try:
-                spec.loader.exec_module(handler_module)  # type: ignore[union-attr]
-            except Exception as exc:
-                _warn(f"Skipping {tool_name}: handler import failed — {exc}")
-                continue
-
-            if not hasattr(handler_module, "run"):
-                _warn(f"Skipping {tool_name}: handler.py has no run() function")
-                continue
-
-            tools[tool_name] = {
-                "description": schema.get("description", ""),
-                "input_schema": schema.get(
-                    "inputSchema",
-                    {"type": "object", "properties": {}},
-                ),
-                "run": handler_module.run,
-                "module": slug,
-            }
+            if (child_dir / "handler.py").exists():
+                # 2-level tool: modules/{module}/{tool}/
+                _register_tool(tools, child_dir, slug, submodule=None, tools_filter=tools_filter)
+            else:
+                # 3-level: treat child_dir as a submodule, walk one level deeper
+                for tool_dir in sorted(child_dir.iterdir()):
+                    if not tool_dir.is_dir() or tool_dir.name.startswith("."):
+                        continue
+                    if (tool_dir / "handler.py").exists():
+                        _register_tool(tools, tool_dir, slug, submodule=child_dir.name, tools_filter=tools_filter)
 
     return tools
+
+
+def _register_tool(
+    tools: dict[str, dict[str, Any]],
+    tool_dir: Path,
+    slug: str,
+    submodule: str | None,
+    tools_filter: set[str] | None,
+) -> None:
+    """Load and register a single tool from tool_dir into the tools dict."""
+    schema_path = tool_dir / "schema.json"
+    handler_path = tool_dir / "handler.py"
+
+    if not schema_path.exists() or not handler_path.exists():
+        return
+
+    try:
+        schema = json.loads(schema_path.read_text())
+    except (json.JSONDecodeError, OSError) as exc:
+        _warn(f"Skipping {tool_dir.name}: bad schema.json — {exc}")
+        return
+
+    tool_name: str = schema.get("name") or tool_dir.name
+    if tools_filter and tool_name not in tools_filter:
+        return
+
+    mod_id = (
+        f"agentic-store.{slug}.{submodule}.{tool_name}"
+        if submodule
+        else f"agentic-store.{slug}.{tool_name}"
+    )
+    spec = importlib.util.spec_from_file_location(mod_id, handler_path)
+    if spec is None or spec.loader is None:
+        _warn(f"Skipping {tool_name}: cannot create module spec")
+        return
+
+    handler_module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(handler_module)  # type: ignore[union-attr]
+    except Exception as exc:
+        _warn(f"Skipping {tool_name}: handler import failed — {exc}")
+        return
+
+    if not hasattr(handler_module, "run"):
+        _warn(f"Skipping {tool_name}: handler.py has no run() function")
+        return
+
+    tools[tool_name] = {
+        "description": schema.get("description", ""),
+        "input_schema": schema.get(
+            "inputSchema",
+            {"type": "object", "properties": {}},
+        ),
+        "run": handler_module.run,
+        "module": slug,
+        "submodule": submodule,
+        "connectors": schema.get("connectors", []),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -205,18 +235,28 @@ def _print_tools_table(tools: dict[str, dict[str, Any]]) -> None:
         print("No tools found.")
         return
 
-    by_module: dict[str, list[str]] = {}
+    # Group by module → submodule
+    grouped: dict[str, dict[str, list[str]]] = {}
     for name, info in sorted(tools.items()):
         slug = info["module"]
-        by_module.setdefault(slug, []).append(name)
+        sub = info.get("submodule") or ""
+        grouped.setdefault(slug, {}).setdefault(sub, []).append(name)
 
     print(f"\nAgenticStore Tools — {len(tools)} tool(s) available\n")
-    for slug in sorted(by_module):
+    for slug in sorted(grouped):
         print(f"  [{slug}]")
-        for name in sorted(by_module[slug]):
-            desc = tools[name]["description"]
-            short = desc[:72] + "…" if len(desc) > 72 else desc
-            print(f"    {name:<28} {short}")
+        for sub in sorted(grouped[slug]):
+            if sub:
+                print(f"    ({sub})")
+                indent = "      "
+            else:
+                indent = "    "
+            for name in sorted(grouped[slug][sub]):
+                desc = tools[name]["description"].split("\n")[0]
+                short = desc[:68] + "…" if len(desc) > 68 else desc
+                connectors = tools[name].get("connectors", [])
+                badge = f" [{','.join(connectors)}]" if connectors else ""
+                print(f"{indent}{name:<28}{badge:<16} {short}")
     print()
 
 

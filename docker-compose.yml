@@ -6,15 +6,28 @@ version: '3.8'
 # The MCP server itself is launched per-connection by your AI client (stdio protocol).
 #
 # Usage:
-#   docker compose up -d            # start all services
+#   docker compose up -d            # start all services (searxng + webapp)
 #   docker compose down             # stop all services
 #   docker compose logs -f          # tail logs
 #
-# After starting, configure your MCP client to use:
-#   docker run -i --rm \
-#     --network agentic-store-mcp_default \
-#     -e SEARXNG_URL=http://searxng:8080 \
-#     agentic-store-mcp
+# Workflow:
+#   1. docker compose up -d
+#   2. Open http://localhost:8765 → configure secrets in Connectors tab
+#   3. Add the MCP server to your AI client config (Clients tab shows the snippet):
+#
+#   Claude Desktop / Cursor — add to mcpServers in your client config:
+#   {
+#     "agentic-store-mcp": {
+#       "command": "docker",
+#       "args": ["run", "-i", "--rm",
+#                "-v", "agentic-store-mcp_agentic-store-memory:/root/.config/agentic-store",
+#                "--network", "agentic-store-mcp_default",
+#                "-e", "SEARXNG_URL=http://searxng:8080",
+#                "agentic-store-mcp"]
+#     }
+#   }
+#
+# The volume mount (-v) makes secrets saved in the webapp available to the MCP server.
 
 services:
 
@@ -39,3 +52,36 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+  # -------------------------------------------------------------------------
+  # Onboarding Webapp — configure connectors, select tools, apply MCP config
+  # Opens at: http://localhost:8765
+  # Sections: Connectors | Tools | Clients | Agent Orchestration
+  # -------------------------------------------------------------------------
+  webapp:
+    build: .
+    container_name: agentic-store-webapp
+    entrypoint: ["uv", "run", "webapp.py", "--host", "0.0.0.0", "--port", "8765", "--no-open"]
+    ports:
+      - "8765:8765"
+    volumes:
+      # Persist memory, secrets (tokens.json), and checkpoints across restarts
+      - agentic-store-memory:/root/.config/agentic-store
+    environment:
+      # Pass API keys via env vars — secrets.py checks these automatically
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - LINEAR_API_KEY=${LINEAR_API_KEY:-}
+      - SEARXNG_URL=http://searxng:8080
+    depends_on:
+      - searxng
+    restart: unless-stopped
+
+# -------------------------------------------------------------------------
+# Named volume — persists ~/.config/agentic-store across container restarts:
+#   - tokens.json (secrets fallback when keyring unavailable)
+#   - memory/ (facts, checkpoints, plan, milestones, learnings, changelog)
+# -------------------------------------------------------------------------
+volumes:
+  agentic-store-memory:

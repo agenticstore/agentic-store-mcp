@@ -1,0 +1,15 @@
+{
+  "name": "get_repo_info",
+  "description": "Fetches metadata and structure of a GitHub repository — description, language, stars, forks, branches, topics, and top contributors. Token optional for public repos.\nUse when: user asks for an overview of a GitHub repo, wants to understand its structure, or needs branch/contributor information.\nScope: remote GitHub API. Token optional for public repos, required for private repos.\nNot for: fetching file contents (use get_file), searching code (use search_code), or analyzing local git history (use analyze_commits).",
+  "connectors": ["github"],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "repo": {
+        "type": "string",
+        "description": "GitHub repo in 'owner/repo' format. Example: 'agenticstore/agentic-store-mcp'"
+      }
+    },
+    "required": ["repo"]
+  }
+}

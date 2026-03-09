@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block title %}AgenticStore Setup{% endblock %}
+
+{% block content %}
+<div class="setup-container">
+
+  <!-- ── Section Nav ── -->
+  <nav class="section-nav">
+    <button class="nav-btn active" data-section="connectors">1. Connectors</button>
+    <button class="nav-btn" data-section="tools">2. Tools</button>
+    <button class="nav-btn" data-section="clients">3. Clients</button>
+    <button class="nav-btn" data-section="orchestration">4. Agent Orchestration</button>
+    <button class="nav-btn" data-section="troubleshoot">Troubleshoot</button>
+  </nav>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <!-- Section 1: Connectors                                          -->
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <section id="section-connectors" class="setup-section active">
+    <div class="section-header">
+      <h2>Connectors</h2>
+      <p>Configure credentials once — all linked tools will use them automatically.</p>
+    </div>
+    <div id="connectors-list" class="connectors-list">
+      <div class="loading">Loading connectors…</div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <!-- Section 2: Tools                                               -->
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <section id="section-tools" class="setup-section">
+    <div class="section-header">
+      <h2>Tools</h2>
+      <p>Select which tools to expose in your MCP client. Deselecting keeps them installed but unlisted.</p>
+    </div>
+    <div class="tools-controls">
+      <button id="btn-select-all" class="btn btn-sm btn-ghost">Select All</button>
+      <button id="btn-deselect-all" class="btn btn-sm btn-ghost">Deselect All</button>
+      <span id="tools-count" class="tools-count"></span>
+    </div>
+    <div id="tools-list" class="tools-list">
+      <div class="loading">Loading tools…</div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <!-- Section 3: Clients                                             -->
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <section id="section-clients" class="setup-section">
+    <div class="section-header">
+      <h2>Clients</h2>
+      <p id="clients-subtitle">Choose your AI client. We'll write the MCP config automatically.</p>
+    </div>
+
+    <!-- Native mode: client picker + auto-write -->
+    <div id="clients-native">
+      <div id="clients-list" class="clients-list">
+        <div class="loading">Loading clients…</div>
+      </div>
+      <div id="apply-panel" class="apply-panel" style="display:none">
+        <div class="apply-info">
+          <span id="apply-config-path" class="config-path"></span>
+        </div>
+        <div class="apply-actions">
+          <button id="btn-apply" class="btn btn-primary">Save &amp; Apply Config</button>
+          <button id="btn-launch" class="btn btn-secondary" style="display:none">Open App</button>
+        </div>
+        <div id="apply-status" class="apply-status"></div>
+      </div>
+    </div>
+
+    <!-- Docker mode: copy-paste snippet -->
+    <div id="clients-docker" style="display:none">
+      <div class="docker-notice">
+        <p>You're running inside Docker. The webapp can't write to your host's client config directly.</p>
+        <p>Copy the snippet below into your client's <code>mcpServers</code> config — it mounts the shared secrets volume so credentials you configured in the Connectors tab are available to the MCP server.</p>
+      </div>
+
+      <div class="docker-clients">
+        <div class="docker-client-card" id="docker-claude">
+          <div class="docker-client-header">
+            <strong>Claude Desktop</strong>
+            <span class="config-path">~/Library/Application Support/Claude/claude_desktop_config.json</span>
+          </div>
+          <pre class="docker-snippet" id="snippet-claude"></pre>
+          <button class="btn btn-sm btn-ghost btn-copy" data-target="snippet-claude">Copy</button>
+        </div>
+        <div class="docker-client-card" id="docker-cursor">
+          <div class="docker-client-header">
+            <strong>Cursor</strong>
+            <span class="config-path">~/.cursor/mcp.json</span>
+          </div>
+          <pre class="docker-snippet" id="snippet-cursor"></pre>
+          <button class="btn btn-sm btn-ghost btn-copy" data-target="snippet-cursor">Copy</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <!-- Section 4: Agent Orchestration                                 -->
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <section id="section-orchestration" class="setup-section">
+    <div class="section-header">
+      <h2>Agent Orchestration</h2>
+      <p>Manage persistent memory so AI agents can hand off work across sessions and clients.</p>
+    </div>
+
+    <!-- Stats row -->
+    <div id="mem-stats" class="mem-stats-row">
+      <div class="loading">Loading…</div>
+    </div>
+
+    <!-- Tabs within orchestration -->
+    <div class="orch-tabs">
+      <button class="orch-tab active" data-orch="checkpoints">Checkpoints</button>
+      <button class="orch-tab" data-orch="strategy">Strategy</button>
+      <button class="orch-tab" data-orch="facts">Facts</button>
+      <button class="orch-tab" data-orch="logs">Session Log</button>
+    </div>
+
+    <!-- ── Checkpoints ── -->
+    <div id="orch-checkpoints" class="orch-panel active">
+      <div class="orch-panel-header">
+        <h3>Checkpoints</h3>
+        <button id="btn-new-checkpoint" class="btn btn-sm btn-primary">+ Save Current</button>
+      </div>
+
+      <!-- New checkpoint form (hidden by default) -->
+      <div id="new-checkpoint-form" class="checkpoint-form" style="display:none">
+        <div class="form-field">
+          <label>Task description <span class="required">*</span></label>
+          <input type="text" id="cp-task" placeholder="What are you working on?" />
+        </div>
+        <div class="form-field">
+          <label>Name <span class="optional">(optional — auto-generated if blank)</span></label>
+          <input type="text" id="cp-name" placeholder="my-feature-v2" />
+        </div>
+        <div class="form-field">
+          <label>Decisions made <span class="optional">(one per line)</span></label>
+          <textarea id="cp-decisions" rows="3" placeholder="Chose JWT over sessions&#10;Use Postgres not SQLite"></textarea>
+        </div>
+        <div class="form-field">
+          <label>Next steps <span class="optional">(one per line)</span></label>
+          <textarea id="cp-next-steps" rows="3" placeholder="Write migration&#10;Add tests"></textarea>
+        </div>
+        <div class="form-field">
+          <label>Notes</label>
+          <textarea id="cp-notes" rows="2" placeholder="Any extra context…"></textarea>
+        </div>
+        <div class="form-actions">
+          <button id="btn-save-checkpoint" class="btn btn-primary">Save Checkpoint</button>
+          <button id="btn-cancel-checkpoint" class="btn btn-ghost">Cancel</button>
+        </div>
+        <div id="cp-save-status" class="cp-status"></div>
+      </div>
+
+      <div id="checkpoints-list" class="checkpoints-list">
+        <div class="loading">Loading checkpoints…</div>
+      </div>
+    </div>
+
+    <!-- ── Strategy ── -->
+    <div id="orch-strategy" class="orch-panel">
+      <div class="orch-panel-header">
+        <h3>Strategy</h3>
+        <button id="btn-save-strategy" class="btn btn-sm btn-primary">Save</button>
+      </div>
+      <p class="orch-hint">Free-form markdown. Agents read this to understand your project goals, constraints, and preferred patterns.</p>
+      <textarea id="strategy-editor" class="strategy-editor" rows="20" placeholder="## Goals&#10;&#10;## Constraints&#10;&#10;## Patterns I prefer&#10;"></textarea>
+      <div id="strategy-status" class="cp-status"></div>
+    </div>
+
+    <!-- ── Facts ── -->
+    <div id="orch-facts" class="orch-panel">
+      <div class="orch-panel-header">
+        <h3>Stored Facts</h3>
+        <button id="btn-refresh-facts" class="btn btn-sm btn-ghost">Refresh</button>
+      </div>
+      <div id="facts-list" class="facts-list">
+        <div class="loading">Loading facts…</div>
+      </div>
+    </div>
+
+    <!-- ── Logs ── -->
+    <div id="orch-logs" class="orch-panel">
+      <div class="orch-panel-header">
+        <h3>Session Log</h3>
+        <button id="btn-refresh-logs" class="btn btn-sm btn-ghost">Refresh</button>
+      </div>
+      <div id="logs-list" class="logs-list">
+        <div class="loading">Loading log…</div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <!-- Section 5: Troubleshoot                                        -->
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <section id="section-troubleshoot" class="setup-section">
+    <div class="section-header">
+      <h2>Troubleshoot</h2>
+      <p>Common issues and fixes.</p>
+    </div>
+
+    <!-- GitHub: 401 Bad Credentials -->
+    <div class="ts-card" id="ts-github-401">
+      <div class="ts-card-header">
+        <span class="ts-badge ts-badge-connector">GitHub</span>
+        <h3>401 Bad Credentials</h3>
+      </div>
+      <p class="ts-desc">
+        The GitHub API rejected your token. This usually means the token is expired,
+        has the wrong scopes, or was pasted incorrectly.
+      </p>
+
+      <div class="ts-steps">
+        <div class="ts-step">
+          <span class="ts-step-num">1</span>
+          <div>
+            <strong>Use a Classic PAT, not a fine-grained token</strong>
+            <p>Fine-grained PATs require explicit per-repo permission grants and often hit unexpected 401s for org repos.
+            A Classic PAT with <code>repo</code> scope is the most reliable option.</p>
+          </div>
+        </div>
+        <div class="ts-step">
+          <span class="ts-step-num">2</span>
+          <div>
+            <strong>Generate a new token with the right scope</strong>
+            <ol class="ts-ol">
+              <li>Go to <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens/new</a></li>
+              <li>Note: <code>agentic-store-mcp</code></li>
+              <li>Expiration: your choice</li>
+              <li>Scopes: check <strong>repo</strong> <span class="ts-muted">(covers contents, issues, PRs, metadata)</span></li>
+              <li>Click <strong>Generate token</strong> and copy it immediately</li>
+            </ol>
+          </div>
+        </div>
+        <div class="ts-step">
+          <span class="ts-step-num">3</span>
+          <div>
+            <strong>Save it in the Connectors tab</strong>
+            <p>Go to <button class="ts-inline-link" data-goto="connectors">Connectors</button> →
+            GitHub → paste the token → <strong>Save</strong> → <strong>Test Connection</strong>.
+            You should see <span class="ts-ok">✓ Authenticated as your-username</span>.</p>
+          </div>
+        </div>
+        <div class="ts-step">
+          <span class="ts-step-num">4</span>
+          <div>
+            <strong>Never share your token in chat or logs</strong>
+            <p>PATs have the same access as your GitHub account. If you suspect a token was exposed, revoke it immediately at
+            <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a>.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ts-links">
+        <a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic" target="_blank">
+          GitHub Docs — Create a Classic PAT ↗
+        </a>
+        <a href="https://docs.github.com/en/rest/authentication/authenticating-to-the-rest-api" target="_blank">
+          GitHub Docs — Authenticating to the REST API ↗
+        </a>
+      </div>
+    </div>
+
+    <!-- Secrets not persisting in Docker -->
+    <div class="ts-card" id="ts-docker-secrets">
+      <div class="ts-card-header">
+        <span class="ts-badge ts-badge-docker">Docker</span>
+        <h3>Secrets configured in webapp not seen by MCP server</h3>
+      </div>
+      <p class="ts-desc">
+        When running in Docker, the webapp and the MCP server run in separate containers.
+        Both must mount the same volume for secrets to be shared.
+      </p>
+      <div class="ts-steps">
+        <div class="ts-step">
+          <span class="ts-step-num">1</span>
+          <div>
+            <strong>Start services with docker compose</strong>
+            <pre class="ts-code">docker compose up -d</pre>
+          </div>
+        </div>
+        <div class="ts-step">
+          <span class="ts-step-num">2</span>
+          <div>
+            <strong>Configure secrets here in the webapp</strong>
+            <p>Go to <button class="ts-inline-link" data-goto="connectors">Connectors</button> and save your tokens.</p>
+          </div>
+        </div>
+        <div class="ts-step">
+          <span class="ts-step-num">3</span>
+          <div>
+            <strong>Mount the same volume when running the MCP server</strong>
+            <p>Your client config must include the <code>-v</code> flag. See the
+            <button class="ts-inline-link" data-goto="clients">Clients</button> tab for the exact snippet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tool returns "no module named" -->
+    <div class="ts-card" id="ts-deps">
+      <div class="ts-card-header">
+        <span class="ts-badge ts-badge-general">General</span>
+        <h3>Tool returns "PyGithub not installed" or import error</h3>
+      </div>
+      <p class="ts-desc">Dependencies aren't installed yet.</p>
+      <div class="ts-steps">
+        <div class="ts-step">
+          <span class="ts-step-num">1</span>
+          <div>
+            <strong>Run uv sync in the project directory</strong>
+            <pre class="ts-code">uv sync</pre>
+            <p>All dependencies (PyGithub, FastAPI, keyring, etc.) are installed by default — no extras needed.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+</div>
+{% endblock %}

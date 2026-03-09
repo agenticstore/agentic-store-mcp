@@ -1,0 +1,30 @@
+{
+  "name": "code_scanning_alerts",
+  "description": "Retrieves GitHub code scanning alerts (SARIF findings) for a repository — results from tools like CodeQL, Semgrep, or other SAST tools integrated via GitHub Actions. Requires GitHub connector token with 'security_events' or 'repo' scope.\nUse when: user asks about code scanning results, CodeQL findings, SARIF alerts, or GitHub Actions security scan results on a remote repo.\nScope: remote GitHub API only — requires GITHUB_TOKEN.\nNot for: local secret scanning (use repo_scanner), Dependabot package vulnerabilities (use dependabot_alerts), or local dependency auditing (use dependency_audit).",
+  "connectors": ["github"],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "repo": {
+        "type": "string",
+        "description": "GitHub repo in 'owner/repo' format. Example: 'myorg/myrepo'"
+      },
+      "state": {
+        "type": "string",
+        "enum": ["open", "dismissed", "fixed"],
+        "description": "Filter by alert state. Default: 'open'.",
+        "default": "open"
+      },
+      "tool_name": {
+        "type": "string",
+        "description": "Filter by scanning tool name. Example: 'CodeQL', 'Semgrep'. Optional — omit to return alerts from all tools."
+      },
+      "severity": {
+        "type": "string",
+        "enum": ["critical", "high", "medium", "low", "warning", "note", "error"],
+        "description": "Filter by severity/precision. Optional."
+      }
+    },
+    "required": ["repo"]
+  }
+}

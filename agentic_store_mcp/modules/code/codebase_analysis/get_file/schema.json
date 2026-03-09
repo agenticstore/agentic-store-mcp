@@ -1,0 +1,24 @@
+{
+  "name": "get_file",
+  "description": "Fetches the content of a specific file from a GitHub repository. Token optional for public repos; required for private repos.\nUse when: user wants to read a known file from a GitHub repo by its path — e.g. 'show me the README', 'get the handler.py from owner/repo'.\nScope: remote GitHub file fetch only. Requires knowing the exact file path.\nNot for: searching for files by pattern (use search_code), local file reading (use standard file tools), or repo structure overview (use get_repo_info).",
+  "connectors": ["github"],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "repo": {
+        "type": "string",
+        "description": "GitHub repo in 'owner/repo' format. Example: 'agenticstore/agentic-store-mcp'"
+      },
+      "file_path": {
+        "type": "string",
+        "description": "Path to the file within the repository. Example: 'README.md', 'src/handler.py'"
+      },
+      "ref": {
+        "type": "string",
+        "description": "Branch, tag, or commit SHA to fetch from. Default: repo's default branch (usually 'main' or 'master').",
+        "default": "main"
+      }
+    },
+    "required": ["repo", "file_path"]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "search_code",
+  "description": "Searches for code patterns across files in a local directory or a remote GitHub repository. Local mode requires no token; GitHub mode uses the GitHub connector (optional for public repos).\nUse when: user wants to find where a function, class, variable, or pattern is used across a codebase — locally or on GitHub.\nScope: local directory walk (no token) OR GitHub code search API (token optional for public repos).\nNot for: fetching a specific known file (use get_file), analyzing commit history (use analyze_commits), or finding security issues (use repo_scanner).",
+  "connectors": ["github"],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "pattern": {
+        "type": "string",
+        "description": "Search pattern — regex for local mode, keyword/qualifier for GitHub mode. Example: 'def run\\(' or 'PyGithub language:python'"
+      },
+      "path": {
+        "type": "string",
+        "description": "Local directory to search. Use this for local mode. Omit if using 'repo'."
+      },
+      "repo": {
+        "type": "string",
+        "description": "GitHub repo in 'owner/repo' format. Use this for GitHub mode. Omit if using 'path'. Example: 'agenticstore/agentic-store-mcp'"
+      },
+      "file_extension": {
+        "type": "string",
+        "description": "Filter by file extension. Example: 'py', 'ts', 'go'. Optional."
+      },
+      "max_results": {
+        "type": "integer",
+        "description": "Maximum number of results to return. Default: 50.",
+        "default": 50
+      }
+    },
+    "required": ["pattern"]
+  }
+}

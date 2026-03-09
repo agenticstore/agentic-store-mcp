@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-store-mcp"
-version = "0.4.0"
+version = "0.6.0"
 description = "Open-source MCP tools for AI agents — lint, security, dependency audit, web scraping and more"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 keywords = ["mcp", "ai", "agents", "tools", "lint", "security"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.12",
@@ -19,10 +19,16 @@ classifiers = [
 ]
 dependencies = [
     "mcp>=1.0",
+    "keyring>=25.0",
+    "PyGithub>=2.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "jinja2>=3.1",
 ]
 
 [project.scripts]
 agentic-store-mcp = "agentic_store_mcp.server:main"
+agentic-store-webapp = "agentic_store_mcp.webapp.run:main"
 
 [project.urls]
 Homepage = "https://www.agenticstore.dev/docs"
@@ -60,6 +66,7 @@ packages = ["agentic_store_mcp"]
 include = [
   "agentic_store_mcp/",
   "server.py",
+  "webapp.py",
   "setup_local.py",
   "README.md",
   "pyproject.toml",
@@ -71,3 +78,8 @@ testpaths = ["agentic_store_mcp/modules"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "--import-mode=importlib"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.5",
+]

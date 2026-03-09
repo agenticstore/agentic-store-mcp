@@ -1,0 +1,24 @@
+{
+  "name": "configure",
+  "description": "Sets, retrieves, or removes API tokens for any service connector using the system keyring. Run once per service — credentials persist across sessions and MCP clients.\nUse when: user needs to save a GitHub token, OpenAI key, or any other API credential for use by other tools.\nScope: local machine keyring (or ~/.config/agentic-store/tokens.json fallback on headless systems).\nNot for: listing available tools (use tool_search) or testing if a connection works (use the webapp connector test).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["set", "get", "remove", "list"],
+        "description": "Action to perform. 'set': store a token. 'get': retrieve a token value. 'remove': delete a token. 'list': show all service names with stored tokens (no values shown)."
+      },
+      "service": {
+        "type": "string",
+        "description": "Service name to operate on. Use connector_field format: 'github_token', 'openai_api_key', 'anthropic_api_key', 'linear_api_key'. Required for set, get, remove."
+      },
+      "token": {
+        "type": "string",
+        "description": "The token or API key value to store. Required only for the 'set' action."
+      }
+    },
+    "required": ["action"]
+  }
+}

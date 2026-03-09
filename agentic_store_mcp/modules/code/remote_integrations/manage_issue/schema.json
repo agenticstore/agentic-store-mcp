@@ -1,0 +1,47 @@
+{
+  "name": "manage_issue",
+  "description": "Creates, updates, closes, or triages issues in a GitHub repository. Always returns a preview first — call with confirmed=false (default) to review, then confirmed=true to execute. Requires GitHub connector token with 'repo' scope.\nUse when: user wants to create a bug report, update an issue title/body, add labels, assign someone, or close an issue on GitHub.\nScope: remote GitHub API — write operation, requires token.\nNot for: creating pull requests (use create_pr), reading issue lists (use get_repo_info), or local git operations.",
+  "connectors": ["github"],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "repo": {
+        "type": "string",
+        "description": "GitHub repo in 'owner/repo' format. Example: 'myorg/myrepo'"
+      },
+      "action": {
+        "type": "string",
+        "enum": ["create", "update", "close", "label"],
+        "description": "Action to perform. 'create': open a new issue. 'update': edit title/body. 'close': close the issue. 'label': add/replace labels and assignees."
+      },
+      "issue_number": {
+        "type": "integer",
+        "description": "Issue number to act on. Required for update, close, and label actions."
+      },
+      "title": {
+        "type": "string",
+        "description": "Issue title. Required for 'create'. Optional for 'update'."
+      },
+      "body": {
+        "type": "string",
+        "description": "Issue body (markdown). Optional for create and update."
+      },
+      "labels": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Labels to apply. Example: ['bug', 'high-priority']. For 'label' action, replaces existing labels."
+      },
+      "assignees": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "GitHub usernames to assign. Example: ['alice', 'bob']. For 'label' action, replaces existing assignees."
+      },
+      "confirmed": {
+        "type": "boolean",
+        "description": "Must be true to execute the write. When false (default), returns a preview without making any changes. Always review the preview before setting confirmed=true.",
+        "default": false
+      }
+    },
+    "required": ["repo", "action"]
+  }
+}

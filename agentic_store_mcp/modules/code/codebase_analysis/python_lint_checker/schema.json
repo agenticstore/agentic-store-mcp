@@ -1,6 +1,7 @@
 {
   "name": "python_lint_checker",
-  "description": "Analyzes Python files for unused imports, likely bugs, style violations, and complexity issues. No execution — pure static analysis.",
+  "description": "Static analysis for Python files — detects unused imports, likely bugs, style violations, and high-complexity functions. No code is executed.\nUse when: user asks to lint, review, check quality, or find bugs in Python code.\nScope: Python files only (.py). Local files — no network access.\nNot for: other languages, package vulnerabilities (use dependency_audit), or secrets in files (use repo_scanner).",
+  "connectors": [],
   "inputSchema": {
     "type": "object",
     "properties": {

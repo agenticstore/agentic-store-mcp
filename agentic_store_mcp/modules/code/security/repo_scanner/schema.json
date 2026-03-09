@@ -1,0 +1,20 @@
+{
+  "name": "repo_scanner",
+  "description": "Scans local source files for leaked secrets (API keys, tokens, passwords, private keys), PII (emails, SSNs, credit cards), and missing .gitignore protections. Works on any language — scans file content, not package metadata.\nUse when: user asks about hardcoded credentials, leaked tokens, .env exposure, or PII in source files.\nScope: local directory — no network access, no GitHub API.\nNot for: package vulnerabilities (use dependency_audit), code quality issues (use python_lint_checker), or GitHub code scanning findings from a remote repo (use code_scanning_alerts).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Absolute or relative path to the directory to scan. Example: '/Users/me/my-project'"
+      },
+      "checks": {
+        "type": "string",
+        "description": "Comma-separated checks to run: secrets, gitignore, pii. Default: 'all'. Example: 'secrets,gitignore'",
+        "default": "all"
+      }
+    },
+    "required": ["path"]
+  }
+}

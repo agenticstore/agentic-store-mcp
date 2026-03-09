@@ -30,10 +30,11 @@ RUN uv sync --frozen --no-install-project --no-dev
 
 # Copy source
 COPY agentic_store_mcp/ ./agentic_store_mcp/
-COPY server.py ./
+COPY server.py webapp.py ./
 
 # Install the project itself
 RUN uv sync --frozen --no-dev
 
 # MCP stdio — no port needed
+# Override with: docker run ... agentic-store-mcp webapp.py --host 0.0.0.0
 ENTRYPOINT ["uv", "run", "server.py"]

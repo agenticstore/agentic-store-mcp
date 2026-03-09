@@ -1,0 +1,15 @@
+{
+  "name": "dependency_audit",
+  "description": "Checks third-party packages for known CVEs and outdated versions using the OSV vulnerability database. Supports Python (requirements.txt, pyproject.toml, Pipfile), JavaScript (package.json), Go (go.mod), Java (pom.xml, build.gradle), and C++ (conanfile, vcpkg.json). No API key required.\nUse when: user asks about vulnerable packages, CVEs, supply chain risk, or outdated dependencies.\nScope: local project directory — reads dependency files on disk.\nNot for: secrets leaked in source code (use repo_scanner), code quality issues (use python_lint_checker), or GitHub Dependabot alerts from a remote repo (use dependabot_alerts).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Absolute or relative path to the project directory to scan. Example: '/Users/me/my-project'"
+      }
+    },
+    "required": ["path"]
+  }
+}

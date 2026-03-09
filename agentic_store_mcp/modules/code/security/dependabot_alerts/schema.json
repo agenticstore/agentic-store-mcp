@@ -1,0 +1,26 @@
+{
+  "name": "dependabot_alerts",
+  "description": "Retrieves Dependabot vulnerability alerts for a GitHub repository. Shows CVE IDs, severity, affected package, and available fix versions. Requires GitHub connector with a token that has 'security_events' or 'repo' scope.\nUse when: user asks about Dependabot alerts, GitHub security tab findings, vulnerable dependencies in a remote GitHub repo.\nScope: remote GitHub API only — requires GITHUB_TOKEN. Not for local project scanning.\nNot for: scanning a local project for vulnerable deps (use dependency_audit), local secret scanning (use repo_scanner), or GitHub code scanning SARIF findings (use code_scanning_alerts).",
+  "connectors": ["github"],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "repo": {
+        "type": "string",
+        "description": "GitHub repo in 'owner/repo' format. Example: 'myorg/myrepo'"
+      },
+      "state": {
+        "type": "string",
+        "enum": ["open", "dismissed", "fixed", "auto_dismissed"],
+        "description": "Filter by alert state. Default: 'open'.",
+        "default": "open"
+      },
+      "severity": {
+        "type": "string",
+        "enum": ["critical", "high", "medium", "low"],
+        "description": "Filter by minimum severity level. Optional — omit to return all severities."
+      }
+    },
+    "required": ["repo"]
+  }
+}
