@@ -21,7 +21,10 @@
 > **AgenticStore MCP** turns **Claude Desktop, Cursor, and Windsurf** into unstoppable autonomous agents. Get instant access to web search, codebase analysis, deep semantic memory, and a beautiful local GUI—all locally hosted, with absolutely zero subscriptions or vendor lock-in.
 
 <div align="center">
-  <h3>🎥 <a href="https://www.agenticstore.dev/docs/gui">Watch the GUI Demo in Action</a></h3>
+  <h3>🎥 Watch the GUI Demo in Action</h3>
+
+https://github.com/user-attachments/assets/e894bd97-b535-4563-ada8-5561c8d10513
+
 </div>
 
 ## 🔥 Why Choose AgenticStore MCP?
