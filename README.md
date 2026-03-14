@@ -14,7 +14,9 @@
 
 ---
 
-<!-- SEO: Model Context Protocol tools, MCP server, Claude Desktop MCP, Cursor MCP, open-source AI tools, self-hosted MCP, Python MCP server, AI agent toolkit, web search MCP, code review MCP, MCP Hub GUI, agent memory MCP, AI productivity tools, LLM tools open source, Windsurf MCP, VS Code AI >> -->
+## 🚀 Capabilities at a Glance
+
+AgenticStore provides a robust Model Context Protocol (MCP) implementation for Claude Desktop, Cursor, and Windsurf. It functions as a self-hosted AI Agent Toolkit, enabling autonomous code review, web search via SearXNG, and persistent LLM memory.
 
 <br/>
 
@@ -23,11 +25,29 @@
 <div align="center">
   <h3>🎥 Watch the GUI Demo in Action</h3>
 
-https://github.com/user-attachments/assets/e894bd97-b535-4563-ada8-5561c8d10513
+  <video src="https://github.com/user-attachments/assets/e894bd97-b535-4563-ada8-5561c8d10513" width="100%" controls title="AgenticStore MCP User Interface Demo">
+    Your browser does not support the video tag. <a href="https://github.com/user-attachments/assets/e894bd97-b535-4563-ada8-5561c8d10513">Take a look at the AgenticStore MCP GUI Demo video here</a>.
+  </video>
+  <br/>
+  <i>(If the video above doesn't load, <a href="https://github.com/user-attachments/assets/e894bd97-b535-4563-ada8-5561c8d10513">click here to watch the demo</a>)</i>
+
+  <br/><br/>
+
+  <h3>🏗️ How It Works</h3>
+
+<img src="docs/Agentic%20Store%20MCP%20Architecture.png" alt="AgenticStore MCP Architecture" width="100%" />
 
 </div>
 
 ## 🔥 Why Choose AgenticStore MCP?
+
+| Feature | AgenticStore MCP | Standard MCP Servers |
+| :--- | :--- | :--- |
+| **Memory Persistence** | 🧠 Yes (survives restarts) | ❌ No |
+| **Web Search** | 🌐 Self-hosted SearXNG | ❌ Usually No |
+| **Capabilities** | �️ 27+ specialized tools | ⛏️ 1 to 5 basic tools |
+| **Configuration** | 🖥️ Web GUI Dashboard | ⚙️ Manual JSON setup |
+| **Privacy** | �🔒 100% Local Execution | 🔒 Varies |
 
 - **🔒 100% Privacy-First:** Everything runs locally. Your code and data never leave your machine.
 - **💸 Truly Free:** No accounts, no paywalls, no subscriptions.
@@ -82,10 +102,15 @@ pip install agentic-store-mcp --upgrade
 agentic-store-mcp
 ```
 
-**3️⃣ Configure your AI Client**  
+**3️⃣ (Optional) Check your installation**
+```bash
+agentic-store-mcp --version
+```
+
+**4️⃣ Configure your AI Client**  
 See the [Connect to Your AI Client](#-connect-to-your-ai-client) section to link it!
 
-> 💡 **Pro-Tip (Web Search):** Want web search? Add `"env": { "SEARXNG_URL": "http://localhost:8080" }` to your config and use our integrated search instance. See [Web Search Setup](#-enabling-web-search).
+> 💡 **Pro-Tip (Web Search):** Want web search? Check out our Copy-Paste Config below. See [Web Search Setup](#-enabling-web-search).
 
 </details>
 
@@ -146,13 +171,30 @@ Add the configuration snippet to your respective client's config file. **Remembe
 | **Windsurf** | `~/.codeium/windsurf/mcp_config.json` |
 | **VS Code** | Appends to your VS Code `settings.json` under MCP extension config |
 
-**The Config Snippet (for standard setup):**
+### Standard Copy-Paste Config
+
+**Basic Setup:**
 ```json
 {
   "mcpServers": {
     "agentic-store-mcp": {
       "command": "agentic-store-mcp",
       "args": []
+    }
+  }
+}
+```
+
+**With Web Search (SearXNG) enabled:**
+```json
+{
+  "mcpServers": {
+    "agentic-store-mcp": {
+      "command": "agentic-store-mcp",
+      "args": [],
+      "env": {
+        "SEARXNG_URL": "http://localhost:8080"
+      }
     }
   }
 }
@@ -285,6 +327,16 @@ Need granular control? Filter exactly what gets loaded via environment variables
 # Debug: List what would be loaded and exit
 agentic-store-mcp --list
 ```
+
+---
+
+## 🤝 Contributing & Community
+
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**. 
+
+If you'd like to contribute code or improvements, please fork the repository and create a Pull Request.
+
+**⭐ If this toolkit saved you 10 hours of configuration, please give us a star to help others find it!**
 
 ---
 
