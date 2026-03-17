@@ -4,17 +4,25 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-store-mcp"
-version = "0.9.0"
-description = "Open-source MCP tools for AI agents — lint, security, dependency audit, web scraping and more"
+version = "1.0"
+description = "Model Context Protocol (MCP) Server for AI Data Privacy: LLM prompt firewall, audit logs, and 27 tools for Claude, Cursor, and Windsurf."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
-keywords = ["mcp", "ai", "agents", "tools", "lint", "security"]
+keywords = [
+    "mcp", "mcp-server", "model context protocol", "llm security", "prompt firewall",
+    "ai data privacy", "data loss prevention", "dlp", "prompt sanitization",
+    "prompt recording", "audit traces", "autonomous agents", "ai coding assistants",
+    "claude", "cursor", "windsurf", "agentic workflows", "devsecops"
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries",
 ]
 dependencies = [
@@ -24,6 +32,8 @@ dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",
     "jinja2>=3.1",
+    "httpx>=0.27",
+    "mitmproxy>=12.2.1",
 ]
 
 [project.scripts]

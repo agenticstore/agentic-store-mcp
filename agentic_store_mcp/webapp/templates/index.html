@@ -1,385 +1,601 @@
 {% extends "base.html" %}
-{% block title %}AgenticStore Setup{% endblock %}
+{% block title %}Firewall — AgenticStore{% endblock %}
 
 {% block content %}
 <div class="setup-container">
 
-  <!-- ── Section Nav ── -->
+  <!-- ── Top Nav: two sections only ── -->
   <nav class="section-nav">
-    <button class="nav-btn active" data-section="connectors">1. Connectors</button>
-    <button class="nav-btn" data-section="tools">2. Tools</button>
-    <button class="nav-btn" data-section="clients">3. Clients</button>
-    <button class="nav-btn" data-section="orchestration">4. Agent Orchestration</button>
-    <button class="nav-btn" data-section="troubleshoot">Troubleshoot</button>
+    <button class="nav-btn active" data-section="firewall">Firewall</button>
+    <button class="nav-btn" data-section="mcp-hub">MCP Hub</button>
   </nav>
 
-  <!-- ─────────────────────────────────────────────────────────────── -->
-  <!-- Section 1: Connectors                                          -->
-  <!-- ─────────────────────────────────────────────────────────────── -->
-  <section id="section-connectors" class="setup-section active">
-    <div class="section-header">
-      <h2>Connectors</h2>
-      <p>Configure credentials once — all linked tools will use them automatically.</p>
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SECTION: Firewall (default)
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <section id="section-firewall" class="setup-section active">
+
+    <!-- System Proxy card -->
+    <div id="fw-system-card" class="fw-system-card">
+      <div class="fw-system-header">
+        <div class="fw-system-title-row">
+          <span class="fw-system-icon">🛡️</span>
+          <div>
+            <h3 class="fw-system-title">System-Level Proxy</h3>
+            <p class="fw-system-sub">Intercepts all Claude traffic at the OS level — no manual env vars needed.</p>
+          </div>
+        </div>
+        <div id="fw-sys-status-badges" class="fw-sys-badges">
+          <span class="fw-sys-badge" id="badge-ca">CA —</span>
+          <span class="fw-sys-badge" id="badge-net">Network —</span>
+          <span class="fw-sys-badge" id="badge-tls">Proxy —</span>
+        </div>
+      </div>
+
+      <div class="fw-system-body">
+        <div class="fw-sys-steps-preview">
+          <div class="fw-sys-step-item"><span class="fw-sys-step-num">1</span><span>Generate local CA certificate</span></div>
+          <div class="fw-sys-step-item"><span class="fw-sys-step-num">2</span><span>Trust CA in login keychain <em>(one password prompt)</em></span></div>
+          <div class="fw-sys-step-item"><span class="fw-sys-step-num">3</span><span>Set macOS network proxy → localhost</span></div>
+          <div class="fw-sys-step-item"><span class="fw-sys-step-num">4</span><span>Start TLS-intercepting proxy</span></div>
+        </div>
+
+        <div class="fw-system-actions">
+          <button id="btn-sys-install" class="btn btn-primary">Install System Proxy</button>
+          <button id="btn-sys-uninstall" class="btn btn-ghost" style="display:none">Remove System Proxy</button>
+          <span class="fw-sys-note">Fully reversible.</span>
+        </div>
+      </div>
     </div>
-    <div id="connectors-list" class="connectors-list">
-      <div class="loading">Loading connectors…</div>
+
+    <!-- Install / Uninstall progress modal -->
+    <div id="fw-sys-modal" class="modal-overlay" style="display:none">
+      <div class="modal-box fw-sys-modal-box">
+        <h3 class="modal-title" id="fw-sys-modal-title">Installing System Proxy</h3>
+        <div id="fw-sys-steps" class="fw-sys-modal-steps"></div>
+        <div id="fw-sys-modal-footer" class="fw-sys-modal-footer" style="display:none">
+          <button id="btn-sys-modal-close" class="btn btn-primary">Done</button>
+        </div>
+      </div>
     </div>
+
+    <!-- Status bar -->
+    <div id="fw-status-bar" class="fw-status-bar">
+      <div class="fw-status-left">
+        <span id="fw-status-dot" class="fw-dot fw-dot-off"></span>
+        <span id="fw-status-text" class="fw-status-text">Proxy stopped</span>
+        <span id="fw-status-port" class="fw-status-port"></span>
+      </div>
+      <div class="fw-status-right">
+        <div class="fw-stat"><span id="fw-stat-total">0</span><span class="fw-stat-label">requests</span></div>
+        <div class="fw-stat"><span id="fw-stat-redacted">0</span><span class="fw-stat-label">redacted</span></div>
+        <div class="fw-stat"><span id="fw-stat-blocked">0</span><span class="fw-stat-label">blocked</span></div>
+        <button id="btn-fw-toggle" class="btn btn-primary">Start Proxy</button>
+      </div>
+    </div>
+
+    <!-- Setup hint (shown when proxy is running) -->
+    <div id="fw-setup-hint" class="fw-setup-hint" style="display:none">
+      <strong>Proxy is running — point your AI client here:</strong>
+      <div class="fw-endpoints">
+        <div class="fw-endpoint-row">
+          <span class="fw-endpoint-label">Claude / Anthropic</span>
+          <code id="fw-endpoint-anthropic" class="fw-endpoint-code">http://localhost:8766</code>
+          <button class="btn btn-sm btn-ghost btn-fw-copy" data-target="fw-endpoint-anthropic">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Clients — Claude active, others Coming Soon -->
+    <div id="fw-clients-card" class="fw-clients-card" style="display:none">
+      <div class="fw-clients-header">
+        <span class="fw-clients-title">Connect AI Clients</span>
+        <span class="fw-clients-subtitle">One click sets the env var at the OS level — new terminals and GUI apps pick it up automatically.</span>
+      </div>
+
+      <div class="fw-clients-list">
+
+        <!-- Claude Code — ACTIVE -->
+        <div class="fw-client-row" id="fw-client-claude">
+          <div class="fw-client-info">
+            <span class="fw-client-name">Claude Code</span>
+            <span class="fw-client-var">ANTHROPIC_BASE_URL · ~/.zshrc · launchctl</span>
+          </div>
+          <span id="fw-client-claude-badge" class="fw-client-badge badge-disconnected">disconnected</span>
+          <button class="btn btn-sm btn-primary fw-client-connect-btn" data-client="claude_code" data-action="connect">Connect</button>
+        </div>
+        <div id="fw-restart-claude" class="fw-restart-notice" style="display:none">
+          ⚠ Restart required — open a new terminal for the proxy to take effect.
+        </div>
+        <div id="fw-env-banner-claude" class="fw-env-banner">
+          ✓ <code>ANTHROPIC_BASE_URL</code> set in <code>~/.zshrc</code> and <code>launchctl</code> — new terminals and GUI apps will route Claude through the firewall automatically.
+        </div>
+
+        <!-- Cursor — COMING SOON -->
+        <div class="fw-client-row coming-soon-row" id="fw-client-cursor">
+          <div class="fw-client-info">
+            <span class="fw-client-name">Cursor</span>
+            <span class="fw-client-var">OPENAI_BASE_URL</span>
+          </div>
+          <span class="badge-coming-soon">Coming Soon</span>
+          <button class="btn btn-sm btn-ghost" disabled>Connect</button>
+        </div>
+
+        <!-- OpenAI SDK — COMING SOON -->
+        <div class="fw-client-row coming-soon-row">
+          <div class="fw-client-info">
+            <span class="fw-client-name">OpenAI SDK</span>
+            <span class="fw-client-var">OPENAI_BASE_URL</span>
+          </div>
+          <span class="badge-coming-soon">Coming Soon</span>
+          <button class="btn btn-sm btn-ghost" disabled>Connect</button>
+        </div>
+
+        <!-- Gemini — COMING SOON -->
+        <div class="fw-client-row coming-soon-row">
+          <div class="fw-client-info">
+            <span class="fw-client-name">Gemini / Google AI</span>
+            <span class="fw-client-var">GOOGLE_AI_BASE_URL</span>
+          </div>
+          <span class="badge-coming-soon">Coming Soon</span>
+          <button class="btn btn-sm btn-ghost" disabled>Connect</button>
+        </div>
+
+      </div>
+      <p class="fw-clients-note">This version supports <strong>Claude Code</strong> only. Open a new terminal after connecting for the env var to take effect.</p>
+    </div>
+
+    <!-- Sub-tabs: Settings | Audit Log | Recordings -->
+    <div class="orch-tabs" style="margin-top:20px">
+      <button class="orch-tab active" data-fw="settings">Settings</button>
+      <button class="orch-tab" data-fw="logs">Audit Log</button>
+      <button class="orch-tab" data-fw="recordings">Recordings</button>
+    </div>
+
+    <!-- ── Settings panel ── -->
+    <div id="fw-settings" class="orch-panel active">
+
+      <div class="fw-card">
+        <h3 class="fw-card-title">Layer 1 — Deterministic Rules <span class="fw-layer-badge fw-layer-always">Always On</span></h3>
+        <p class="fw-card-desc">Fast regex + entropy detection. Runs on every request, zero latency.</p>
+        <div class="fw-toggles">
+          <label class="fw-toggle-row">
+            <input type="checkbox" id="fw-det-pii" class="fw-checkbox" />
+            <div class="fw-toggle-info">
+              <span class="fw-toggle-name">PII Detection</span>
+              <span class="fw-toggle-desc">Emails, phone numbers, SSNs, credit cards</span>
+            </div>
+          </label>
+          <label class="fw-toggle-row">
+            <input type="checkbox" id="fw-det-secrets" class="fw-checkbox" />
+            <div class="fw-toggle-info">
+              <span class="fw-toggle-name">Secret Scanning</span>
+              <span class="fw-toggle-desc">API keys (Anthropic, OpenAI, GitHub, AWS), JWTs, high-entropy strings</span>
+            </div>
+          </label>
+          <label class="fw-toggle-row">
+            <input type="checkbox" id="fw-det-paths" class="fw-checkbox" />
+            <div class="fw-toggle-info">
+              <span class="fw-toggle-name">File Paths</span>
+              <span class="fw-toggle-desc">/home/user/..., C:\Users\... absolute paths</span>
+            </div>
+          </label>
+          <label class="fw-toggle-row">
+            <input type="checkbox" id="fw-det-ips" class="fw-checkbox" />
+            <div class="fw-toggle-info">
+              <span class="fw-toggle-name">Internal IPs</span>
+              <span class="fw-toggle-desc">RFC1918 private addresses (10.x, 172.16–31.x, 192.168.x)</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="fw-card">
+        <h3 class="fw-card-title">Action Mode</h3>
+        <div class="fw-mode-options">
+          <label class="fw-mode-option" id="fw-mode-redact-opt">
+            <input type="radio" name="fw-mode" value="redact" />
+            <div>
+              <strong>Redact &amp; Forward</strong>
+              <p>Replace sensitive data with tokens and forward the sanitized prompt.</p>
+            </div>
+          </label>
+          <label class="fw-mode-option" id="fw-mode-block-opt">
+            <input type="radio" name="fw-mode" value="block" />
+            <div>
+              <strong>Block &amp; Alert</strong>
+              <p>Return a 400 error if sensitive data is detected. No prompt is forwarded.</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="fw-card">
+        <div class="fw-card-title-row">
+          <h3 class="fw-card-title">Layer 2 — LLM Reviewer <span class="fw-layer-badge fw-layer-optional">Optional</span></h3>
+          <label class="fw-llm-enable-label">
+            <input type="checkbox" id="fw-llm-enabled" class="fw-checkbox" />
+            <span>Enable</span>
+          </label>
+        </div>
+        <p class="fw-card-desc">Local open-source model via Ollama catches context-aware leaks that regex misses.</p>
+
+        <div id="fw-ollama-status" class="fw-ollama-status"></div>
+
+        <div id="fw-llm-controls" style="display:none">
+          <div class="fw-field">
+            <label class="fw-label">Active Model</label>
+            <div class="fw-field-row">
+              <select id="fw-model-select" class="fw-select">
+                <option value="">— select a model —</option>
+              </select>
+              <button id="btn-fw-refresh-models" class="btn btn-sm btn-ghost">Refresh</button>
+            </div>
+          </div>
+
+          <div class="fw-field">
+            <label class="fw-label">Download Model from Ollama</label>
+            <p class="fw-field-hint">Recommended: <code>llama3.2:3b</code> (fast, 2 GB) · <code>mistral:7b</code> (thorough, 4 GB) · <code>phi3:mini</code> (tiny, 2.3 GB)</p>
+            <div class="fw-field-row">
+              <input type="text" id="fw-model-input" class="fw-input" placeholder="e.g. llama3.2:3b" />
+              <button id="btn-fw-pull-model" class="btn btn-sm btn-primary">Download</button>
+            </div>
+            <div id="fw-pull-progress" class="fw-pull-progress" style="display:none">
+              <div class="fw-pull-bar-wrap"><div id="fw-pull-bar" class="fw-pull-bar"></div></div>
+              <span id="fw-pull-status" class="fw-pull-status"></span>
+            </div>
+          </div>
+
+          <div class="fw-field">
+            <label class="fw-label">Predefined Detection Prompt <span class="fw-label-hint">(read-only)</span></label>
+            <textarea id="fw-predefined-prompt" class="fw-prompt-editor" rows="8" readonly></textarea>
+          </div>
+
+          <div class="fw-field">
+            <label class="fw-label">Your Custom Rules <span class="fw-label-hint">(one per line)</span></label>
+            <textarea id="fw-custom-rules" class="fw-prompt-editor" rows="4"
+              placeholder="Never forward internal project codenames&#10;Block any mention of customer IDs starting with CID-&#10;Redact any Jira ticket numbers"></textarea>
+          </div>
+        </div>
+
+        <div style="margin-top:14px">
+          <button id="btn-fw-save" class="btn btn-primary">Save Settings</button>
+          <span id="fw-save-status" class="cp-status" style="margin-left:10px"></span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Audit Log panel ── -->
+    <div id="fw-logs" class="orch-panel">
+      <div class="orch-panel-header">
+        <div style="display:flex;flex-direction:column;gap:6px;width:100%">
+          <div style="display:flex;align-items:center;gap:10px">
+            <h3>Audit Log</h3>
+            <span id="fw-log-live" class="fw-log-live" style="display:none">● live</span>
+            <div style="margin-left:auto;display:flex;gap:8px">
+              <button id="btn-fw-refresh-logs" class="btn btn-sm btn-ghost">Refresh</button>
+              <button id="btn-fw-clear-logs" class="btn btn-sm btn-ghost">Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fw-tester-card">
+        <div class="fw-tester-label">Test Detection</div>
+        <div class="fw-tester-row">
+          <textarea id="fw-tester-input" class="fw-tester-input" rows="2"
+            placeholder="Type something with PII or secrets… e.g. My email is john@acme.com, card 4111111111111111"></textarea>
+          <button id="btn-fw-tester-run" class="btn btn-primary btn-sm">Scan</button>
+        </div>
+        <div id="fw-tester-result" class="fw-tester-result" style="display:none"></div>
+      </div>
+
+      <div id="fw-logs-list" class="fw-logs-list">
+        <div class="loading">Loading…</div>
+      </div>
+    </div>
+
+    <!-- ── Recordings panel ── -->
+    <div id="fw-recordings" class="orch-panel">
+      <div class="orch-panel-header">
+        <div style="display:flex;flex-direction:column;gap:6px;width:100%">
+          <div style="display:flex;align-items:center;gap:10px">
+            <h3>Prompt Recordings</h3>
+            <span id="fw-rec-size" class="fw-rec-size"></span>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+              <label class="fw-rec-toggle-label">
+                <input type="checkbox" id="fw-rec-toggle"> Record outgoing prompts
+              </label>
+              <button id="btn-fw-refresh-recs" class="btn btn-sm btn-ghost">Refresh</button>
+              <button id="btn-fw-clear-recs" class="btn btn-sm btn-ghost">Clear All</button>
+            </div>
+          </div>
+          <div id="fw-rec-status" style="font-size:12px;color:var(--text-muted);min-height:16px"></div>
+        </div>
+      </div>
+      <div id="fw-recs-list" class="fw-recs-list">
+        <div class="loading">Loading…</div>
+      </div>
+    </div>
+
   </section>
 
-  <!-- ─────────────────────────────────────────────────────────────── -->
-  <!-- Section 2: Tools                                               -->
-  <!-- ─────────────────────────────────────────────────────────────── -->
-  <section id="section-tools" class="setup-section">
-    <div class="section-header">
-      <h2>Tools</h2>
-      <p>Select which tools to expose in your MCP client. Deselecting keeps them installed but unlisted.</p>
-    </div>
-    <div class="tools-controls">
-      <button id="btn-select-all" class="btn btn-sm btn-ghost">Select All</button>
-      <button id="btn-deselect-all" class="btn btn-sm btn-ghost">Deselect All</button>
-      <span id="tools-count" class="tools-count"></span>
-    </div>
-    <div id="tools-list" class="tools-list">
-      <div class="loading">Loading tools…</div>
-    </div>
-  </section>
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SECTION: MCP Hub
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <section id="section-mcp-hub" class="setup-section">
 
-  <!-- ─────────────────────────────────────────────────────────────── -->
-  <!-- Section 3: Clients                                             -->
-  <!-- ─────────────────────────────────────────────────────────────── -->
-  <section id="section-clients" class="setup-section">
-    <div class="section-header">
-      <h2>Clients</h2>
-      <p id="clients-subtitle">Choose your AI client. We'll write the MCP config automatically.</p>
-    </div>
+    <nav class="mcp-tabs">
+      <button class="mcp-tab active" data-mcp="connectors">Connectors</button>
+      <button class="mcp-tab" data-mcp="tools">Tools</button>
+      <button class="mcp-tab" data-mcp="clients">Clients</button>
+      <button class="mcp-tab" data-mcp="orchestration">Memory</button>
+      <button class="mcp-tab" data-mcp="troubleshoot">Troubleshoot</button>
+    </nav>
 
-    <!-- Native mode: client picker + auto-write -->
-    <div id="clients-native">
-      <div id="clients-list" class="clients-list">
-        <div class="loading">Loading clients…</div>
+    <!-- ── Connectors panel ── -->
+    <div id="mcp-panel-connectors" class="mcp-panel active">
+      <div class="section-header">
+        <h2>Connectors</h2>
+        <p>Configure credentials once — all linked tools will use them automatically.</p>
       </div>
-      <div id="apply-panel" class="apply-panel" style="display:none">
-        <div class="apply-info">
-          <span id="apply-config-path" class="config-path"></span>
+      <div id="connectors-list" class="connectors-list">
+        <div class="loading">Loading connectors…</div>
+      </div>
+    </div>
+
+    <!-- ── Tools panel ── -->
+    <div id="mcp-panel-tools" class="mcp-panel">
+      <div class="section-header">
+        <h2>Tools</h2>
+        <p>Select which tools to expose in your MCP client.</p>
+      </div>
+      <div class="tools-controls">
+        <button id="btn-select-all" class="btn btn-sm btn-ghost">Select All</button>
+        <button id="btn-deselect-all" class="btn btn-sm btn-ghost">Deselect All</button>
+        <span id="tools-count" class="tools-count"></span>
+      </div>
+      <div id="tools-list" class="tools-list">
+        <div class="loading">Loading tools…</div>
+      </div>
+    </div>
+
+    <!-- ── Clients panel ── -->
+    <div id="mcp-panel-clients" class="mcp-panel">
+      <div class="section-header">
+        <h2>Clients</h2>
+        <p id="clients-subtitle">Choose your AI client. We'll write the MCP config automatically.</p>
+      </div>
+
+      <div id="clients-native">
+        <div id="clients-list" class="clients-list">
+          <div class="loading">Loading clients…</div>
         </div>
-        <div class="apply-actions">
-          <button id="btn-apply" class="btn btn-primary">Save &amp; Apply Config</button>
-          <button id="btn-launch" class="btn btn-secondary" style="display:none">Open App</button>
-        </div>
-        <div id="apply-status" class="apply-status"></div>
-      </div>
-    </div>
-
-    <!-- Restart confirmation modal -->
-    <div id="restart-modal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true">
-      <div class="modal-box">
-        <h3 class="modal-title">Restart <span id="restart-client-name"></span>?</h3>
-        <p class="modal-body">
-          We'll close <span id="restart-client-name2"></span> and relaunch it so the new config takes effect.
-        </p>
-        <label class="modal-sync-label">
-          <input type="checkbox" id="modal-sync-env" checked />
-          <span>Also run <code>uv sync</code> to refresh the MCP environment</span>
-        </label>
-        <div class="modal-actions">
-          <button id="modal-cancel" class="btn btn-ghost">Cancel</button>
-          <button id="modal-confirm" class="btn btn-primary">Yes, restart</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Docker mode: copy-paste snippet -->
-    <div id="clients-docker" style="display:none">
-      <div class="docker-notice">
-        <p>You're running inside Docker. The webapp can't write to your host's client config directly.</p>
-        <p>Copy the snippet below into your client's <code>mcpServers</code> config — it mounts the shared secrets volume so credentials you configured in the Connectors tab are available to the MCP server.</p>
-      </div>
-
-      <div class="docker-clients">
-        <div class="docker-client-card" id="docker-claude">
-          <div class="docker-client-header">
-            <strong>Claude Desktop</strong>
-            <span class="config-path">~/Library/Application Support/Claude/claude_desktop_config.json</span>
+        <div id="apply-panel" class="apply-panel" style="display:none">
+          <div class="apply-info">
+            <span id="apply-config-path" class="config-path"></span>
           </div>
-          <pre class="docker-snippet" id="snippet-claude"></pre>
-          <button class="btn btn-sm btn-ghost btn-copy" data-target="snippet-claude">Copy</button>
-        </div>
-        <div class="docker-client-card" id="docker-cursor">
-          <div class="docker-client-header">
-            <strong>Cursor</strong>
-            <span class="config-path">~/.cursor/mcp.json</span>
+          <div class="apply-actions">
+            <button id="btn-apply" class="btn btn-primary">Save &amp; Apply Config</button>
+            <button id="btn-launch" class="btn btn-secondary" style="display:none">Open App</button>
           </div>
-          <pre class="docker-snippet" id="snippet-cursor"></pre>
-          <button class="btn btn-sm btn-ghost btn-copy" data-target="snippet-cursor">Copy</button>
+          <div id="apply-status" class="apply-status"></div>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- ─────────────────────────────────────────────────────────────── -->
-  <!-- Section 4: Agent Orchestration                                 -->
-  <!-- ─────────────────────────────────────────────────────────────── -->
-  <section id="section-orchestration" class="setup-section">
-    <div class="section-header">
-      <h2>Agent Orchestration</h2>
-      <p>Manage persistent memory so AI agents can hand off work across sessions and clients.</p>
-    </div>
-
-    <!-- Stats row -->
-    <div id="mem-stats" class="mem-stats-row">
-      <div class="loading">Loading…</div>
-    </div>
-
-    <!-- Tabs within orchestration -->
-    <div class="orch-tabs">
-      <button class="orch-tab active" data-orch="checkpoints">Checkpoints</button>
-      <button class="orch-tab" data-orch="strategy">Strategy</button>
-      <button class="orch-tab" data-orch="facts">Facts</button>
-      <button class="orch-tab" data-orch="logs">Session Log</button>
-    </div>
-
-    <!-- ── Checkpoints ── -->
-    <div id="orch-checkpoints" class="orch-panel active">
-      <div class="orch-panel-header">
-        <h3>Checkpoints</h3>
-        <button id="btn-new-checkpoint" class="btn btn-sm btn-primary">+ Save Current</button>
-      </div>
-
-      <!-- New checkpoint form (hidden by default) -->
-      <div id="new-checkpoint-form" class="checkpoint-form" style="display:none">
-        <div class="form-field">
-          <label>Task description <span class="required">*</span></label>
-          <input type="text" id="cp-task" placeholder="What are you working on?" />
-        </div>
-        <div class="form-field">
-          <label>Name <span class="optional">(optional — auto-generated if blank)</span></label>
-          <input type="text" id="cp-name" placeholder="my-feature-v2" />
-        </div>
-        <div class="form-field">
-          <label>Decisions made <span class="optional">(one per line)</span></label>
-          <textarea id="cp-decisions" rows="3" placeholder="Chose JWT over sessions&#10;Use Postgres not SQLite"></textarea>
-        </div>
-        <div class="form-field">
-          <label>Next steps <span class="optional">(one per line)</span></label>
-          <textarea id="cp-next-steps" rows="3" placeholder="Write migration&#10;Add tests"></textarea>
-        </div>
-        <div class="form-field">
-          <label>Notes</label>
-          <textarea id="cp-notes" rows="2" placeholder="Any extra context…"></textarea>
-        </div>
-        <div class="form-actions">
-          <button id="btn-save-checkpoint" class="btn btn-primary">Save Checkpoint</button>
-          <button id="btn-cancel-checkpoint" class="btn btn-ghost">Cancel</button>
-        </div>
-        <div id="cp-save-status" class="cp-status"></div>
-      </div>
-
-      <div id="checkpoints-list" class="checkpoints-list">
-        <div class="loading">Loading checkpoints…</div>
-      </div>
-    </div>
-
-    <!-- ── Strategy ── -->
-    <div id="orch-strategy" class="orch-panel">
-      <div class="orch-panel-header">
-        <h3>Strategy</h3>
-        <button id="btn-save-strategy" class="btn btn-sm btn-primary">Save</button>
-      </div>
-      <p class="orch-hint">Free-form markdown. Agents read this to understand your project goals, constraints, and preferred patterns.</p>
-      <textarea id="strategy-editor" class="strategy-editor" rows="20" placeholder="## Goals&#10;&#10;## Constraints&#10;&#10;## Patterns I prefer&#10;"></textarea>
-      <div id="strategy-status" class="cp-status"></div>
-    </div>
-
-    <!-- ── Facts ── -->
-    <div id="orch-facts" class="orch-panel">
-      <div class="orch-panel-header">
-        <h3>Stored Facts</h3>
-        <button id="btn-refresh-facts" class="btn btn-sm btn-ghost">Refresh</button>
-      </div>
-      <div id="facts-list" class="facts-list">
-        <div class="loading">Loading facts…</div>
-      </div>
-    </div>
-
-    <!-- ── Logs ── -->
-    <div id="orch-logs" class="orch-panel">
-      <div class="orch-panel-header">
-        <h3>Session Log</h3>
-        <button id="btn-refresh-logs" class="btn btn-sm btn-ghost">Refresh</button>
-      </div>
-      <div id="logs-list" class="logs-list">
-        <div class="loading">Loading log…</div>
-      </div>
-    </div>
-
-  </section>
-
-  <!-- ─────────────────────────────────────────────────────────────── -->
-  <!-- Section 5: Troubleshoot                                        -->
-  <!-- ─────────────────────────────────────────────────────────────── -->
-  <section id="section-troubleshoot" class="setup-section">
-    <div class="section-header">
-      <h2>Troubleshoot</h2>
-      <p>Common issues and fixes.</p>
-    </div>
-
-    <!-- GitHub: 401 Bad Credentials -->
-    <div class="ts-card" id="ts-github-401">
-      <div class="ts-card-header">
-        <span class="ts-badge ts-badge-connector">GitHub</span>
-        <h3>401 Bad Credentials</h3>
-      </div>
-      <p class="ts-desc">
-        The GitHub API rejected your token. This usually means the token is expired,
-        has the wrong scopes, or was pasted incorrectly.
-      </p>
-
-      <div class="ts-steps">
-        <div class="ts-step">
-          <span class="ts-step-num">1</span>
-          <div>
-            <strong>Use a Classic PAT, not a fine-grained token</strong>
-            <p>Fine-grained PATs require explicit per-repo permission grants and often hit unexpected 401s for org repos.
-            A Classic PAT with <code>repo</code> scope is the most reliable option.</p>
-          </div>
-        </div>
-        <div class="ts-step">
-          <span class="ts-step-num">2</span>
-          <div>
-            <strong>Generate a new token with the right scope</strong>
-            <ol class="ts-ol">
-              <li>Go to <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens/new</a></li>
-              <li>Note: <code>agentic-store-mcp</code></li>
-              <li>Expiration: your choice</li>
-              <li>Scopes: check <strong>repo</strong> <span class="ts-muted">(covers contents, issues, PRs, metadata)</span></li>
-              <li>Click <strong>Generate token</strong> and copy it immediately</li>
-            </ol>
-          </div>
-        </div>
-        <div class="ts-step">
-          <span class="ts-step-num">3</span>
-          <div>
-            <strong>Save it in the Connectors tab</strong>
-            <p>Go to <button class="ts-inline-link" data-goto="connectors">Connectors</button> →
-            GitHub → paste the token → <strong>Save</strong> → <strong>Test Connection</strong>.
-            You should see <span class="ts-ok">✓ Authenticated as your-username</span>.</p>
-          </div>
-        </div>
-        <div class="ts-step">
-          <span class="ts-step-num">4</span>
-          <div>
-            <strong>Never share your token in chat or logs</strong>
-            <p>PATs have the same access as your GitHub account. If you suspect a token was exposed, revoke it immediately at
-            <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a>.</p>
+      <!-- Restart confirmation modal -->
+      <div id="restart-modal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true">
+        <div class="modal-box">
+          <h3 class="modal-title">Restart <span id="restart-client-name"></span>?</h3>
+          <p class="modal-body">
+            We'll close <span id="restart-client-name2"></span> and relaunch it so the new config takes effect.
+          </p>
+          <label class="modal-sync-label">
+            <input type="checkbox" id="modal-sync-env" checked />
+            <span>Also run <code>uv sync</code> to refresh the MCP environment</span>
+          </label>
+          <div class="modal-actions">
+            <button id="modal-cancel" class="btn btn-ghost">Cancel</button>
+            <button id="modal-confirm" class="btn btn-primary">Yes, restart</button>
           </div>
         </div>
       </div>
 
-      <div class="ts-links">
-        <a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic" target="_blank">
-          GitHub Docs — Create a Classic PAT ↗
-        </a>
-        <a href="https://docs.github.com/en/rest/authentication/authenticating-to-the-rest-api" target="_blank">
-          GitHub Docs — Authenticating to the REST API ↗
-        </a>
-      </div>
-    </div>
-
-    <!-- Secrets not persisting in Docker -->
-    <div class="ts-card" id="ts-docker-secrets">
-      <div class="ts-card-header">
-        <span class="ts-badge ts-badge-docker">Docker</span>
-        <h3>Secrets configured in webapp not seen by MCP server</h3>
-      </div>
-      <p class="ts-desc">
-        When running in Docker, the webapp and the MCP server run in separate containers.
-        Both must mount the same volume for secrets to be shared.
-      </p>
-      <div class="ts-steps">
-        <div class="ts-step">
-          <span class="ts-step-num">1</span>
-          <div>
-            <strong>Start services with docker compose</strong>
-            <pre class="ts-code">docker compose up -d</pre>
-          </div>
+      <div id="clients-docker" style="display:none">
+        <div class="docker-notice">
+          <p>You're running inside Docker. The webapp can't write to your host's client config directly.</p>
+          <p>Copy the snippet below into your client's <code>mcpServers</code> config.</p>
         </div>
-        <div class="ts-step">
-          <span class="ts-step-num">2</span>
-          <div>
-            <strong>Configure secrets here in the webapp</strong>
-            <p>Go to <button class="ts-inline-link" data-goto="connectors">Connectors</button> and save your tokens.</p>
+        <div class="docker-clients">
+          <div class="docker-client-card" id="docker-claude">
+            <div class="docker-client-header">
+              <strong>Claude Desktop</strong>
+              <span class="config-path">~/Library/Application Support/Claude/claude_desktop_config.json</span>
+            </div>
+            <pre class="docker-snippet" id="snippet-claude"></pre>
+            <button class="btn btn-sm btn-ghost btn-copy" data-target="snippet-claude">Copy</button>
           </div>
-        </div>
-        <div class="ts-step">
-          <span class="ts-step-num">3</span>
-          <div>
-            <strong>Mount the same volume when running the MCP server</strong>
-            <p>Your client config must include the <code>-v</code> flag. See the
-            <button class="ts-inline-link" data-goto="clients">Clients</button> tab for the exact snippet.</p>
+          <div class="docker-client-card" id="docker-cursor">
+            <div class="docker-client-header">
+              <strong>Cursor</strong>
+              <span class="config-path">~/.cursor/mcp.json</span>
+            </div>
+            <pre class="docker-snippet" id="snippet-cursor"></pre>
+            <button class="btn btn-sm btn-ghost btn-copy" data-target="snippet-cursor">Copy</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Tool returns "no module named" -->
-    <div class="ts-card" id="ts-deps">
-      <div class="ts-card-header">
-        <span class="ts-badge ts-badge-general">General</span>
-        <h3>Tool returns "PyGithub not installed" or import error</h3>
+    <!-- ── Memory / Orchestration panel ── -->
+    <div id="mcp-panel-orchestration" class="mcp-panel">
+      <div class="section-header">
+        <h2>Agent Memory</h2>
+        <p>Persistent memory so AI agents can hand off work across sessions.</p>
       </div>
-      <p class="ts-desc">Dependencies aren't installed yet.</p>
-      <div class="ts-steps">
-        <div class="ts-step">
-          <span class="ts-step-num">1</span>
-          <div>
-            <strong>Run uv sync in the project directory</strong>
-            <pre class="ts-code">uv sync</pre>
-            <p>All dependencies (PyGithub, FastAPI, keyring, etc.) are installed by default — no extras needed.</p>
+
+      <div id="mem-stats" class="mem-stats-row">
+        <div class="loading">Loading…</div>
+      </div>
+
+      <div class="orch-tabs">
+        <button class="orch-tab active" data-orch="checkpoints">Checkpoints</button>
+        <button class="orch-tab" data-orch="strategy">Strategy</button>
+        <button class="orch-tab" data-orch="facts">Facts</button>
+        <button class="orch-tab" data-orch="logs">Session Log</button>
+      </div>
+
+      <div id="orch-checkpoints" class="orch-panel active">
+        <div class="orch-panel-header">
+          <h3>Checkpoints</h3>
+          <button id="btn-new-checkpoint" class="btn btn-sm btn-primary">+ Save Current</button>
+        </div>
+        <div id="new-checkpoint-form" class="checkpoint-form" style="display:none">
+          <div class="form-field">
+            <label>Task description <span class="required">*</span></label>
+            <input type="text" id="cp-task" placeholder="What are you working on?" />
           </div>
+          <div class="form-field">
+            <label>Name <span class="optional">(optional)</span></label>
+            <input type="text" id="cp-name" placeholder="my-feature-v2" />
+          </div>
+          <div class="form-field">
+            <label>Decisions made <span class="optional">(one per line)</span></label>
+            <textarea id="cp-decisions" rows="3" placeholder="Chose JWT over sessions&#10;Use Postgres not SQLite"></textarea>
+          </div>
+          <div class="form-field">
+            <label>Next steps <span class="optional">(one per line)</span></label>
+            <textarea id="cp-next-steps" rows="3" placeholder="Write migration&#10;Add tests"></textarea>
+          </div>
+          <div class="form-field">
+            <label>Notes</label>
+            <textarea id="cp-notes" rows="2" placeholder="Any extra context…"></textarea>
+          </div>
+          <div class="form-actions">
+            <button id="btn-save-checkpoint" class="btn btn-primary">Save Checkpoint</button>
+            <button id="btn-cancel-checkpoint" class="btn btn-ghost">Cancel</button>
+          </div>
+          <div id="cp-save-status" class="cp-status"></div>
+        </div>
+        <div id="checkpoints-list" class="checkpoints-list">
+          <div class="loading">Loading checkpoints…</div>
+        </div>
+      </div>
+
+      <div id="orch-strategy" class="orch-panel">
+        <div class="orch-panel-header">
+          <h3>Strategy</h3>
+          <button id="btn-save-strategy" class="btn btn-sm btn-primary">Save</button>
+        </div>
+        <p class="orch-hint">Free-form markdown. Agents read this to understand your project goals and constraints.</p>
+        <textarea id="strategy-editor" class="strategy-editor" rows="20" placeholder="## Goals&#10;&#10;## Constraints&#10;&#10;## Patterns I prefer&#10;"></textarea>
+        <div id="strategy-status" class="cp-status"></div>
+      </div>
+
+      <div id="orch-facts" class="orch-panel">
+        <div class="orch-panel-header">
+          <h3>Stored Facts</h3>
+          <button id="btn-refresh-facts" class="btn btn-sm btn-ghost">Refresh</button>
+        </div>
+        <div id="facts-list" class="facts-list">
+          <div class="loading">Loading facts…</div>
+        </div>
+      </div>
+
+      <div id="orch-logs" class="orch-panel">
+        <div class="orch-panel-header">
+          <h3>Session Log</h3>
+          <button id="btn-refresh-logs" class="btn btn-sm btn-ghost">Refresh</button>
+        </div>
+        <div id="logs-list" class="logs-list">
+          <div class="loading">Loading log…</div>
         </div>
       </div>
     </div>
 
-    <!-- Server disconnected / No module named mcp -->
-    <div class="ts-card" id="ts-server-disconnect">
-      <div class="ts-card-header">
-        <span class="ts-badge ts-badge-general">General</span>
-        <h3>Server disconnected — "No module named 'mcp'"</h3>
+    <!-- ── Troubleshoot panel ── -->
+    <div id="mcp-panel-troubleshoot" class="mcp-panel">
+      <div class="section-header">
+        <h2>Troubleshoot</h2>
+        <p>Common issues and fixes.</p>
       </div>
-      <p class="ts-desc">
-        The MCP server process exited immediately after starting. The log shows
-        <code>ModuleNotFoundError: No module named 'mcp'</code> even though the package
-        is listed in <code>pyproject.toml</code>. This usually means the virtual environment
-        is missing or stale.
-      </p>
-      <div class="ts-steps">
-        <div class="ts-step">
-          <span class="ts-step-num">1</span>
-          <div>
-            <strong>Re-sync the virtual environment</strong>
-            <pre class="ts-code">cd /path/to/agentic-store-mcp
-uv sync</pre>
-            <p>This installs <code>mcp</code>, <code>PyGithub</code>, <code>keyring</code>, and all other dependencies into the local <code>.venv</code>.</p>
+
+      <div class="ts-card" id="ts-github-401">
+        <div class="ts-card-header">
+          <span class="ts-badge ts-badge-connector">GitHub</span>
+          <h3>401 Bad Credentials</h3>
+        </div>
+        <p class="ts-desc">The GitHub API rejected your token — expired, wrong scopes, or pasted incorrectly.</p>
+        <div class="ts-steps">
+          <div class="ts-step">
+            <span class="ts-step-num">1</span>
+            <div>
+              <strong>Use a Classic PAT, not fine-grained</strong>
+              <p>Fine-grained PATs hit unexpected 401s for org repos. A Classic PAT with <code>repo</code> scope is most reliable.</p>
+            </div>
+          </div>
+          <div class="ts-step">
+            <span class="ts-step-num">2</span>
+            <div>
+              <strong>Generate a new token with the right scope</strong>
+              <ol class="ts-ol">
+                <li>Go to <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens/new</a></li>
+                <li>Note: <code>agentic-store-mcp</code></li>
+                <li>Scopes: check <strong>repo</strong></li>
+                <li>Click Generate token and copy immediately</li>
+              </ol>
+            </div>
+          </div>
+          <div class="ts-step">
+            <span class="ts-step-num">3</span>
+            <div>
+              <strong>Save it in Connectors</strong>
+              <p>Go to <button class="ts-inline-link" data-goto="connectors">Connectors</button> → GitHub → paste token → Save → Test Connection.</p>
+            </div>
           </div>
         </div>
-        <div class="ts-step">
-          <span class="ts-step-num">2</span>
-          <div>
-            <strong>Check for a conflicting VIRTUAL_ENV variable</strong>
-            <p>If another project's venv is active in your shell, <code>uv run</code> may
-            warn <em>"VIRTUAL_ENV does not match the project environment path"</em>.
-            Deactivate it first, then retry:</p>
-            <pre class="ts-code">deactivate
-uv sync</pre>
-          </div>
+        <div class="ts-links">
+          <a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic" target="_blank">GitHub Docs — Create a Classic PAT ↗</a>
         </div>
-        <div class="ts-step">
-          <span class="ts-step-num">3</span>
-          <div>
-            <strong>Restart your AI client</strong>
-            <p>After syncing, restart Claude Desktop / Claude Code / Cursor so the MCP
-            server process is relaunched with the updated environment.</p>
-          </div>
+      </div>
+
+      <div class="ts-card" id="ts-docker-secrets">
+        <div class="ts-card-header">
+          <span class="ts-badge ts-badge-docker">Docker</span>
+          <h3>Secrets configured in webapp not seen by MCP server</h3>
+        </div>
+        <p class="ts-desc">Webapp and MCP server run in separate containers — both must mount the same volume.</p>
+        <div class="ts-steps">
+          <div class="ts-step"><span class="ts-step-num">1</span><div><strong>Start with docker compose</strong><pre class="ts-code">docker compose up -d</pre></div></div>
+          <div class="ts-step"><span class="ts-step-num">2</span><div><strong>Configure secrets here</strong><p>Go to <button class="ts-inline-link" data-goto="connectors">Connectors</button> and save your tokens.</p></div></div>
+          <div class="ts-step"><span class="ts-step-num">3</span><div><strong>Mount the same volume</strong><p>Your client config must include the <code>-v</code> flag. See the <button class="ts-inline-link" data-goto="clients">Clients</button> tab for the snippet.</p></div></div>
+        </div>
+      </div>
+
+      <div class="ts-card" id="ts-deps">
+        <div class="ts-card-header">
+          <span class="ts-badge ts-badge-general">General</span>
+          <h3>Tool returns "PyGithub not installed" or import error</h3>
+        </div>
+        <p class="ts-desc">Dependencies aren't installed yet.</p>
+        <div class="ts-steps">
+          <div class="ts-step"><span class="ts-step-num">1</span><div><strong>Run uv sync</strong><pre class="ts-code">uv sync</pre></div></div>
+        </div>
+      </div>
+
+      <div class="ts-card" id="ts-server-disconnect">
+        <div class="ts-card-header">
+          <span class="ts-badge ts-badge-general">General</span>
+          <h3>Server disconnected — "No module named 'mcp'"</h3>
+        </div>
+        <p class="ts-desc">MCP server exited immediately. Virtual environment is missing or stale.</p>
+        <div class="ts-steps">
+          <div class="ts-step"><span class="ts-step-num">1</span><div><strong>Re-sync the virtual environment</strong><pre class="ts-code">cd /path/to/agentic-store-mcp
+uv sync</pre></div></div>
+          <div class="ts-step"><span class="ts-step-num">2</span><div><strong>Deactivate conflicting venv</strong><pre class="ts-code">deactivate
+uv sync</pre></div></div>
+          <div class="ts-step"><span class="ts-step-num">3</span><div><strong>Restart your AI client</strong><p>Restart Claude Desktop / Cursor so the MCP server relaunches with the updated environment.</p></div></div>
         </div>
       </div>
     </div>
