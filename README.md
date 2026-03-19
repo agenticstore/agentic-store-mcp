@@ -16,15 +16,18 @@
 
 ## 🔒 Why You Need This: Enterprise-Grade AI Security Meets Autonomous Agents
 
-You are building the future using autonomous AI coding assistants and agents like **Claude Code, Cursor, and Windsurf**. Giving them access to the web, your codebase, and persistent memory is a superpower, but passing sensitive enterprise data directly to remote LLM APIs presents a massive security risk. You need comprehensive **AI Data Loss Prevention (DLP)** and **AI security**. You demand clear **audit traces for AI usage** and strict **prompt recording** to ensure compliance and prevent critical data leaks.
+Giving AI assistants like **Claude, Cursor, and Windsurf** access to your codebase and the web is a superpower. But passing sensitive enterprise data to remote LLMs is a massive security risk. 
 
-**AgenticStore MCP Server** solves both halves of the equation. 
+**The Problem:** You want the massive productivity boost of agentic workflows, but you cannot compromise on Data Loss Prevention (DLP), compliance, or leak prevention.
 
-First, it acts as an **LLM Prompt Firewall**, establishing a secure local proxy to intercept, scan, and sanitize any prompts leaving your system to guard against prompt injection and data leaks. Secure your agentic workflows with structured **prompt recording** and generate clear **audit traces for AI usage**. Flag leaked secrets, PII, and API keys, and use local LLM models (like **Ollama**) to sanitize your data *before* it reaches the cloud. 
+**The Solution:** AgenticStore MCP Server solves both halves of the equation:
 
-Second, it provides a robust, production-ready **Model Context Protocol (MCP) Toolkit**, arming your AI assistants with 27 specific tools ranging from self-hosted SearXNG web search to deep persistent semantic memory. 
+* 🛡️ **The LLM Prompt Firewall:** A secure local proxy that intercepts, scans, and sanitizes your prompts *before* they leave your machine. It flags leaked secrets, PII, and API keys, using local models (like Ollama) to sanitize data and generate strict audit traces for all AI usage.
+* 🧰 **The MCP Toolkit:** A robust, production-ready arsenal of 27 tools. Instantly arm your AI with everything from self-hosted SearXNG web search to deep, persistent semantic memory.
 
-Configure your MCP server tools manually or effortlessly through a beautiful local GUI. Zero subscriptions. Zero vendor lock-in.
+Zero subscriptions. Zero vendor lock-in. Configure your MCP tools manually or effortlessly through a beautiful local GUI.
+
+---
 
 <div align="center">
   <h3>🎥 Prompt Firewall Demo</h3>
@@ -192,7 +195,7 @@ Forget manual JSON editing! Use our local web UI to:
 # Ensure it is installed via pip
 pip install agentic-store-mcp --upgrade
 
-# Launch the visual web controller
+# Launch the web UI  automatically bundled with the core package
 agentic-store-webapp 
 ```
 
