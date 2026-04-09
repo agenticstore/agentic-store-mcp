@@ -8,7 +8,7 @@
 [![MCP Compatible](https://img.shields.io/badge/MCP-compatible-green.svg?style=for-the-badge)](https://modelcontextprotocol.io)
 [![PyPI](https://img.shields.io/pypi/v/agentic-store-mcp?color=blue&style=for-the-badge)](https://pypi.org/project/agentic-store-mcp/)
 
-[🚀 Quick Start](#-quick-start-guide-fastest-way-to-install) • [🛡️ Prompt Firewall](#%EF%B8%8F-llm-prompt-firewall--sanitization) • [🗂️ Full Tool Directory](#-tool-directory--all-31-tools) • [🌐 Web Search](#-enabling-web-search) • [🔌 Client Setup](#-connect-to-your-ai-client) • [💻 Claude Code](#-claude-code-cli-integration) • [🖥️ GUI Webapp](https://agenticstore.dev/docs/gui)
+[� Official Documentation](https://agenticstore.dev/docs) • [�🚀 Quick Start](#-quick-start-guide-fastest-way-to-install) • [🛡️ Prompt Firewall](#%EF%B8%8F-llm-prompt-firewall--sanitization) • [🗂️ Full Tool Directory](#-tool-directory--all-31-tools) • [🌐 Web Search](#-enabling-web-search) • [🔌 Client Setup](#-connect-to-your-ai-client) • [💻 Claude Code](#-claude-code-cli-integration) • [🖥️ GUI Webapp](https://agenticstore.dev/docs/gui)
 
 </div>
 
@@ -114,7 +114,7 @@ The **Prompt Firewall** gives you complete control over what natural language da
 - **Local LLM Integration (Optional)**: Connect your local **Ollama** instance. Download open-source models to run completely local, pre-flight prompt sanitization, scanning your code to make it better and safer before sending it to a remote API.
 - **Rule-Based Sanitization**: Easily define regex or grammar rules to block PII, AWS keys, database strings, or proprietary logic.
 
-To enable the firewall and begin collecting **audit traces for AI usage**, start the [GUI Webapp](#v2--mcp-hub-webapp-gui-to-manage-everything) and navigate to the **Firewall** tab to install the certificate and start the proxy.
+To enable the firewall and begin collecting **audit traces for AI usage**, start the [GUI Webapp](#v2--mcp-hub-webapp-gui-to-manage-everything) and navigate to the **Firewall** tab to install the certificate and start the proxy. For deeper technical architecture, read the officially provided [AgenticStore Prompt Firewall Documentation](https://agenticstore.dev/docs/firewall) or visit the main site at [agenticstore.dev](https://agenticstore.dev).
 
 ---
 
@@ -215,7 +215,7 @@ agentic-store-webapp
 
 ## 🔌 Connect to Your AI Client
 
-Because AgenticStore MCP supports both manual configuration and management via the GUI, you can manually add the configuration snippet to your respective client's config file if you prefer. **Remember to restart the client after saving!**
+Because AgenticStore MCP supports both manual configuration and management via the GUI, you can manually add the configuration snippet to your respective client's config file if you prefer. **Remember to restart the client after saving!** For an in-depth guide on linking AI agents properly, visit the [Client Connection Documentation on agenticstore.dev](https://agenticstore.dev/docs/clients).
 
 | Client | Config File Path |
 | :--- | :--- |
