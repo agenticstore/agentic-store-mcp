@@ -533,6 +533,7 @@ async def api_firewall_start():
 
 @app.post("/api/firewall/stop")
 async def api_firewall_stop():
+    import subprocess
     import asyncio as _asyncio
     from agentic_store_mcp.firewall.proxy import stop_proxy
     from agentic_store_mcp.firewall.tls_proxy import stop_tls_proxy
@@ -549,6 +550,8 @@ async def api_firewall_stop():
     if is_system_proxy_set(port):
         try:
             remove_system_proxy()
+            # Extra safety: explicitly disable Wi-Fi proxy to ensure internet stays live
+            subprocess.run(["networksetup", "-setsecurewebproxystate", "Wi-Fi", "off"], capture_output=True)
         except Exception:
             pass
 
@@ -563,6 +566,17 @@ async def api_firewall_stop():
         if attempt == 3:
             _force_free_port(port)
         await _asyncio.sleep(0.5)
+
+    # Clean up env vars so clients (Claude Code, Cursor) don't point at a dead
+    # proxy after an explicit stop. Covers both launchctl (GUI apps / Dock) and
+    # shell profiles (new terminal sessions).
+    _env_keys = ["ANTHROPIC_BASE_URL", "OPENAI_BASE_URL"]
+    for key in _env_keys:
+        try:
+            subprocess.run(["launchctl", "unsetenv", key], capture_output=True)
+        except Exception:
+            pass
+    _shell_profile_remove(_env_keys)
 
     return {"ok": True, "running": False}
 
@@ -850,9 +864,13 @@ class ClientConnectRequest(BaseModel):
     client: str  # "claude_code" | "cursor" | "openai_sdk"
 
 
-def _shell_profile_write(vars: list[tuple[str, str]]) -> None:
-    """Write ANTHROPIC_BASE_URL / OPENAI_BASE_URL to ~/.zshrc and ~/.bash_profile
-    so every new terminal session automatically routes traffic through the firewall."""
+def _shell_profile_write(vars: list[tuple[str, str]], port: int = 8766) -> None:
+    """Write a health-checked proxy activation block to ~/.zshrc and ~/.bash_profile.
+
+    Uses `nc -z` to test the proxy port at shell startup — if the proxy isn't
+    running the env vars are unset instead of pointing at a dead localhost address.
+    This prevents 'connection refused' errors after a crash, sleep, or reboot.
+    """
     import re
     from pathlib import Path
 
@@ -861,11 +879,19 @@ def _shell_profile_write(vars: list[tuple[str, str]]) -> None:
     marker_start = "# >>> AgenticStore Firewall >>>"
     marker_end = "# <<< AgenticStore Firewall <<<"
 
-    lines = [marker_start]
-    for key, value in vars:
-        lines.append(f'export {key}="{value}"')
-    lines.append(marker_end)
-    block = "\n".join(lines) + "\n"
+    # Build a conditional block: set env vars only when the proxy port is live.
+    set_lines = "\n".join(f'  export {key}="{value}"' for key, value in vars)
+    unset_lines = "\n".join(f"  unset {key} 2>/dev/null; true" for key, _ in vars)
+    block = (
+        f"{marker_start}\n"
+        f"# AgenticStore Firewall — only route through proxy when it's actually running\n"
+        f"if nc -z 127.0.0.1 {port} 2>/dev/null; then\n"
+        f"{set_lines}\n"
+        f"else\n"
+        f"{unset_lines}\n"
+        f"fi\n"
+        f"{marker_end}\n"
+    )
 
     for profile in profiles:
         try:
@@ -937,8 +963,8 @@ async def api_client_connect(body: ClientConnectRequest):  # noqa: E402
         if r.returncode != 0:
             errors.append(f"{key}: {r.stderr.strip()}")
 
-    # 2. Shell profiles — new terminal sessions
-    _shell_profile_write(cmds)
+    # 2. Shell profiles — new terminal sessions (health-checked, unsets if proxy is down)
+    _shell_profile_write(cmds, port=port)
 
     if errors:
         raise HTTPException(status_code=500, detail="; ".join(errors))

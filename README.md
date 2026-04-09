@@ -1,14 +1,14 @@
 <div align="center">
 
-# ⚡ AgenticStore MCP Server: LLM Prompt Firewall & AI Security Toolkit 
-**Open-Source Model Context Protocol (MCP) Server for Data Privacy, Prompt Recording, Audit Logs, and 27+ Agent Tools for Claude, Cursor, and Windsurf.**
+# ⚡ AgenticStore MCP Server: LLM Prompt Firewall, Token Optimization & AI Security Toolkit 
+**Open-Source Model Context Protocol (MCP) Server for Data Privacy, Prompt Recording, Audit Logs, and 31 Agent Tools for Claude Code, Cursor, and Windsurf.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg?style=for-the-badge)](https://www.python.org/downloads/)
 [![MCP Compatible](https://img.shields.io/badge/MCP-compatible-green.svg?style=for-the-badge)](https://modelcontextprotocol.io)
 [![PyPI](https://img.shields.io/pypi/v/agentic-store-mcp?color=blue&style=for-the-badge)](https://pypi.org/project/agentic-store-mcp/)
 
-[🚀 Quick Start](#-quick-start-guide-fastest-way-to-install) • [🛡️ Prompt Firewall](#%EF%B8%8F-llm-prompt-firewall--sanitization) • [🗂️ Full Tool Directory](#-tool-directory--all-27-tools) • [🌐 Web Search](#-enabling-web-search) • [🔌 Client Setup](#-connect-to-your-ai-client) • [🖥️ GUI Webapp](https://agenticstore.dev/docs/gui)
+[🚀 Quick Start](#-quick-start-guide-fastest-way-to-install) • [🛡️ Prompt Firewall](#%EF%B8%8F-llm-prompt-firewall--sanitization) • [🗂️ Full Tool Directory](#-tool-directory--all-31-tools) • [🌐 Web Search](#-enabling-web-search) • [🔌 Client Setup](#-connect-to-your-ai-client) • [💻 Claude Code](#-claude-code-cli-integration) • [🖥️ GUI Webapp](https://agenticstore.dev/docs/gui)
 
 </div>
 
@@ -16,14 +16,14 @@
 
 ## 🔒 Why You Need This: Enterprise-Grade AI Security Meets Autonomous Agents
 
-Giving AI assistants like **Claude, Cursor, and Windsurf** access to your codebase and the web is a superpower. But passing sensitive enterprise data to remote LLMs is a massive security risk. 
+Giving AI assistants like **Claude, Cursor, and Windsurf** access to your codebase and the web is a superpower. But passing sensitive enterprise data to remote LLMs is a massive security risk. Furthermore, hitting token limits quickly degrades LLM context windows and increases costs.
 
-**The Problem:** You want the massive productivity boost of agentic workflows, but you cannot compromise on Data Loss Prevention (DLP), compliance, or leak prevention.
+**The Problem:** You want the massive productivity boost of agentic workflows, but you cannot compromise on Data Loss Prevention (DLP), compliance, leak prevention, or token bloat.
 
-**The Solution:** AgenticStore MCP Server solves both halves of the equation:
+**The Solution:** AgenticStore MCP Server solves the entire equation natively:
 
 * 🛡️ **The LLM Prompt Firewall:** A secure local proxy that intercepts, scans, and sanitizes your prompts *before* they leave your machine. It flags leaked secrets, PII, and API keys, using local models (like Ollama) to sanitize data and generate strict audit traces for all AI usage.
-* 🧰 **The MCP Toolkit:** A robust, production-ready arsenal of 27 tools. Instantly arm your AI with everything from self-hosted SearXNG web search to deep, persistent semantic memory.
+* 🧰 **The MCP Toolkit (31 Tools):** A production-ready arsenal. Instantly arm your AI with everything from code analyzers and CVE vulnerability scanners (OSV CVE scans), to context pruners, token optimizers, persistent semantic memory, and self-hosted SearXNG web search.
 
 Zero subscriptions. Zero vendor lock-in. Configure your MCP tools manually or effortlessly through a beautiful local GUI.
 
@@ -69,13 +69,15 @@ Zero subscriptions. Zero vendor lock-in. Configure your MCP tools manually or ef
 | **Audit Traces & Logs** | 📝 Yes (Prompt recording & compliance) | ❌ No |
 | **Local LLM Prompt Sanitization**| 🦙 Yes (Ollama integration) | ❌ No |
 | **Persistent Agent Memory** | 🧠 Yes (survives restarts & sessions) | ❌ No |
+| **Token Optimization & Pruning** | ✂️ Yes (LLM token compression) | ❌ No |
 | **Agentic Web Search** | 🌐 Self-hosted SearXNG | ❌ Usually No |
-| **Capabilities** | 🛠️ 27+ specialized tools | ⛏️ 1 to 5 basic tools |
+| **Capabilities** | 🛠️ 31 specialized tools | ⛏️ 1 to 5 basic tools |
 | **Configuration** | 🖥️ Web GUI Dashboard OR ⚙️ Manual | ⚙️ Manual JSON setup |
 | **Privacy** | 🔒 100% Local Execution | 🔒 Varies |
 
 - **🛡️ LLM Prompt Firewall:** Intercept, sanitize, and perform **prompt recording** for all data leaving your system, ensuring robust **AI security**.
 - **🔒 100% Privacy-First:** Everything runs locally. Generate reliable **audit traces for AI usage** while your code and data never leave your machine unaudited.
+- **✂️ LLM Token Optimization:** Radically reduce your token burn with code structural compression (`token_optimizer`) and relevance-based context trimming (`context_pruner`).
 - **💸 Truly Free:** No accounts, no paywalls, no subscriptions.
 - **🧠 Persistent Agent Memory:** Let your AI remember facts and contexts across sessions seamlessly.
 - **⚡ Plug & Play:** Installs instantly via `uvx` or `pip`. MCP configuration supports both manual JSON and GUI workflows.
@@ -85,13 +87,14 @@ Zero subscriptions. Zero vendor lock-in. Configure your MCP tools manually or ef
 ## 📋 Table of Contents
 
 - [🛡️ LLM Prompt Firewall & Sanitization](#%EF%B8%8F-llm-prompt-firewall--sanitization)
-- [🧰 What's Inside the Toolkit](#-whats-inside-the-toolkit)
+- [🧰 What's Inside the Toolkit](#-whats-inside-the-toolkit-31-mcp-tools)
 - [🚀 Quick Start Guide (Fastest Way to Install)](#-quick-start-guide-fastest-way-to-install)
   - [V0: Python/uvx (Recommended)](#v0--python--uvx-fastest-start-no-docker-needed)
   - [V1: From GitHub Source](#v1--from-github-source-latest-features)
   - [V2: MCP Hub Webapp (UI)](#v2--mcp-hub-webapp-gui-to-manage-everything)
 - [🔌 Connect to Your AI Client](#-connect-to-your-ai-client)
-- [🗂 Tool Directory — All 27 Tools](#-tool-directory--all-27-tools)
+- [🗂 Tool Directory — All 31 Tools](#-tool-directory--all-31-tools)
+- [💻 Claude Code CLI Integration](#-claude-code-cli-integration)
 - [🔎 Enabling Web Search](#-enabling-web-search)
 - [🎛 Overriding Configs & Advanced Usage](#-overriding-configs--advanced-usage)
 
@@ -115,16 +118,21 @@ To enable the firewall and begin collecting **audit traces for AI usage**, start
 
 ---
 
-## 🧰 What's Inside the Toolkit (27 MCP Tools)
+## 🧰 What's Inside the Toolkit (31 MCP Tools)
 
-Equip your AI client with these 4 powerhouse modules containing **27 specific MCP tools**:
+Equip your AI client with these modules containing **31 specific MCP tools**, categorized strategically for maximum productivity:
+
+* 🛡️ **Local Only:** 22 tools executing privately without any external API dependencies.
+* ☁️ **API Required:** 7 tools strictly connecting to remote providers (like the GitHub API or Web connectors).
+* 📝 **Write Access:** 6 tools capable of safely modifying your repos or local files.
+* 👓 **Read Only:** 25 tools limited purely to context ingestion ensuring safety by default.
 
 | Module | Purpose | Key Capabilities | Tools |
 | :--- | :--- | :--- | :---: |
-| 💻 **DevSecOps & Code Analysis** | Codebase mastery & safety | Static analysis, OSV CVE scans, Git commit summaries | **11** |
-| 🌐 **Web Crawling & Search** | Internet access for Agents | Private web search (SearXNG) and deep web crawling | **2** |
-| 🧠 **Persistent Agent Memory** | Agent context persistence | Save/read facts, session checkpoints, changelog generation | **12** |
-| 🔧 **Meta-Tools & Config** | Configuration & discovery | Tool discovery, runtime config management | **2** |
+| 💻 **Code (Codebase, GitHub, Security)** | Codebase mastery & safety | Static analysis, GitHub PRs, OSV CVE scans, CodeQL scanning | **8** |
+| 🌐 **Data (Search & Crawl)** | Internet access for Agents | Private web search (SearXNG) and deep web crawling | **2** |
+| 🧠 **Memory (Productivity & Storage)** | Context manipulation & persistence | Save/read facts, optimize LLM tokens, context pruning | **16** |
+| 🛠️ **Tools & System Config** | Configuration & OS monitoring | Check running host processes, tail system logs, discovery | **5** |
 
 ---
 
@@ -186,9 +194,9 @@ See the [Connect to Your AI Client](#-connect-to-your-ai-client) section to link
 Forget manual JSON editing! Use our local web UI to:
 - 🛡️ **Firewall:** Setup certificates and monitor all intercepted LLM prompts and audit logs for comprehensive **prompt recording**.
 - 🔑 **Connectors:** Enter remote API keys securely (stored in OS keyring).
-- 🛠️ **Tools:** Toggle which of the 27 tools to expose to the AI.
+- 🛠️ **Tools:** Toggle which of the 31 tools to expose to the AI.
 - 💻 **Clients:** Auto-generate configuration for Claude, Cursor, and Windsurf.
-- 🧠 **Memory:** Manage persistent agent states, checkpoints, and logs.
+- 🧠 **Memory:** Manage persistent agent states, checkpoints, token optimization, and logs.
 
 **Start the Hub via Python:**
 ```bash
@@ -248,15 +256,15 @@ Because AgenticStore MCP supports both manual configuration and management via t
 
 <div align="center">
   <br/>
-  <a href="#-agenticstore-mcp-llm-prompt-firewall--ai-security-toolkit">⬆️ Back to Top</a>
+  <a href="#-agenticstore-mcp-server-llm-prompt-firewall-token-optimization--ai-security-toolkit">⬆️ Back to Top</a>
 </div>
 
 ---
 
-## 🗂 Tool Directory — All 27 Tools
+## 🗂 Tool Directory — All 31 Tools
 
 <details>
-<summary><strong>💻 Code Tools & Integrations (11 tools)</strong></summary>
+<summary><strong>📝 Code Module (8 tools)</strong></summary>
 <br/>
 
 ### Codebase Analysis
@@ -264,81 +272,114 @@ Because AgenticStore MCP supports both manual configuration and management via t
 
 | Tool | Capability |
 |------|-------------|
-| `python_lint_checker` | Runs static analysis on Python files (finds bugs, unused imports, complexity). No external deps. |
-| `search_code` | Blazing-fast full-text search across local codebases with regex & file-type filtering. |
-| `get_file` | Read files from defined paths, including specific line-range slicing. |
-| `analyze_commits` | Contextualize agents with recent repo history (diff stats, authors, messages). |
+| `analyze_commits` | Analyze git commit history context (authors, frequency, patterns). |
+| `get_file` | Fetch and read file syntax content straight from GitHub repositories. |
+| `python_lint_checker` | Runs static analysis on Python files (finds bugs, unused imports, structural style). |
+| `search_code` | Blazing-fast full-text code pattern search across local files and GitHub. |
 
-### GitHub Integration 
+### Remote Integration 
 *(Requires a GitHub Personal Access Token. Set via `GITHUB_TOKEN` or MCP Hub).*
 
 | Tool | Capability |
 |------|-------------|
-| `get_repo_info` | Fetch metadata: stars, forks, primary language, open issues. |
-| `manage_issue` | Create, comment on, close, or list issues in accessible repositories. |
-| `create_pr` | Automatically open new internal Pull Requests with title & body definitions. |
+| `create_pr` | Automatically open new internal Pull Requests on GitHub. |
+| `get_repo_info` | Fetch GitHub repo metadata (stars, forks, contributors). |
+| `manage_issue` | Create, update, comment on, and close GitHub issues. |
 
 ### Security & Auditing
-*Agent-driven DevSecOps.*
+*Agent-driven DevSecOps & Supply Chain Verification.*
 
 | Tool | Capability |
 |------|-------------|
-| `repo_scanner` | Detects leaked secrets (API keys), PII, and validates `.gitignore`. |
-| `dependency_audit` | Scans `requirements.txt`, `package.json`, etc. against the OSV CVE database. |
-| `code_scanning_alerts` | Fetches active CodeQL/Security alerts from GitHub. |
-| `dependabot_alerts` | Fetches Dependabot vulnerability alerts from GitHub. |
+| `code_scanning_alerts` | Retrieve CodeQL and Semgrep security findings from GitHub. |
+| `dependabot_alerts` | Fetch automated dependency vulnerability alerts via Dependabot integration. |
+| `dependency_audit` | Scan packages (`requirements.txt`, `package.json`, `go.mod`) dynamically against the OSV CVE database. |
+| `repo_scanner` | Scan for leaked secrets (API keys), PII leaks, and enforce `.gitignore` compliance. |
 
 </details>
 
 <details>
-<summary><strong>🌐 Data & Search (2 tools)</strong></summary>
+<summary><strong>🌐 Data Module (2 tools)</strong></summary>
 <br/>
 
 | Tool | Capability |
 |------|-------------|
-| `agentic_web_crawl` | Extract clean markdown text, headings, and metadata from any URL. Handles redirects beautifully. |
-| `agentic_web_search` | Conduct live web searches via self-hosted SearXNG. Returns structured snippets. |
+| `agentic_web_crawl` | Extract clean markdown text, headings, and SEO metadata signals from any URL. |
+| `agentic_web_search` | Conduct live semantic web searches safely via self-hosted SearXNG. |
 
 </details>
 
 <details>
-<summary><strong>🧠 Memory & Agent Orchestration (12 tools)</strong></summary>
+<summary><strong>🧠 Memory Module (16 tools)</strong></summary>
 <br/>
 
-*Persistent memory lets AI agents hand off work across sessions and restarts. 100% locally stored.*
+*Persistent memory and token reduction guarantees LLM agents can hand off work across massive repos over massive chat sessions safely.*
+
+### Productivity & Token Optimization
+| Tool | Capability |
+|------|-------------|
+| `token_optimizer` | **NEW:** Radically compress code/text before sending to the LLM. Supports three modes (compress, summarize, both) across languages (Python, JS/TS, Go, Rust, Java, C/C++, Shell) by stripping non-functional strings and surfacing structural outlines. Auto-returns saved token metrics. |
+| `context_pruner` | **NEW:** Recommends exactly which files/data to drop to reduce massive token windows by scoring each item by keyword overlap against your active task description. Never wastes network context overhead. |
+| `restore_session` | Load your entire historical workspace context back from a checkpoint. |
+| `spinup_memory` | Initialize a new project memory directory gracefully. |
+| `update_change_log` | Append structured semantic release notes into `CHANGELOG.md`. |
+| `update_learnings` | Log technical discoveries into a perpetual, searchable markdown repository. |
+| `update_milestones` | Track exact milestone progression seamlessly as development scales. |
+| `update_plan` | Edit, append, or overhaul your central architectural `plan.md`. |
 
 ### Storage Primitives
 | Tool | Capability |
 |------|-------------|
-| `memory_write` | Store a key-value fact in local JSON. Survives restarts. |
-| `memory_read` | Retrieve specific (or all) stored facts. |
-| `memory_search` | Fuzzy full-text search across all stored facts. |
-| `memory_log` | Append timestamped entries to an immutable session JSONL log (decision trails). |
-| `memory_checkpoint` | Save a complete snapshot: state, decisions, next steps, and client context. |
-| `memory_restore` | Load a named checkpoint back into the active agent context. |
-
-### Productivity Layer
-| Tool | Capability |
-|------|-------------|
-| `spinup_memory` | Initialize a new project context (stub files for plans, milestones, learnings). |
-| `restore_session` | One-call holistic session restore (loads latest checkpoint, plans, logs, and facts). |
-| `update_plan` | Create or update the active `plan.md` for task tracking. |
-| `update_milestones` | Append or patch individual milestone progress via regex. |
-| `update_learnings` | Log technical discoveries into a growing context directory. |
-| `update_change_log` | Append semantic release notes to `CHANGELOG.md` automatically. |
+| `memory_checkpoint` | Save a total snapshot of conversational states, decisions, and immediate plans. |
+| `memory_log` | Append real-time timestamps logs of session activity. |
+| `memory_read` | Fetch structured facts efficiently. |
+| `memory_restore` | Read and restore state configurations from stored checkpoints. |
+| `memory_search` | Full-text contextual search indexing memory databases perfectly. |
+| `memory_write` | Commit persistent JSON facts directly outliving standard LLM chat windows. |
 
 </details>
 
 <details>
-<summary><strong>🔧 Toolkit Meta-Tools (2 tools)</strong></summary>
+<summary><strong>🛠️ Tools Module (5 tools)</strong></summary>
 <br/>
 
 | Tool | Capability |
 |------|-------------|
-| `tool_search` | List all available toolkit tools, requirements, and descriptions. |
-| `configure` | Dynamically override runtime configurations and module states. |
+| `configure` | Dynamically override runtime configurations and API connectors entirely. |
+| `list_processes` | **NEW:** Instantly query whether specific software systems are successfully running executing `pgrep` & `lsof` bounds across 11 integrated well-known endpoints (e.g Docker, Redis, Postgres, MongoDB, Node, Celery). Return PIDs correctly natively. |
+| `tail_system_logs` | **NEW:** Smart and efficient log file trailing algorithm (seek-from-end). Never crash context windows on gigabyte log files; reads the minimal context necessary by filtering directly by criteria like 'error' and 'exception' bounding memory footprints cleanly to 1000 lines.  |
+| `tool_search` | Retrieve a detailed directory of every available active MCP tool. |
 
 </details>
+
+---
+
+## 💻 Claude Code CLI Integration
+
+AgenticStore MCP is fully compatible with **Claude Code** explicitly for terminal workflows, allowing developers full access to the 31 command capacities directly interacting via the command line.
+
+### Safe CLI Execution Modes
+Automatically install the application directly into your `~/.claude/settings.json` seamlessly resolving connection bindings. The CLI handles both traditional operation and state-of-the-art intercepting proxy verification cleanly via a dynamic CLI command structure. 
+
+**Default Mode:** (For direct API calling — connects to normal Anthropic models purely without firewall tracking):
+```bash
+agentic-store-mcp --install-claude
+```
+- Explicitly registers to the user's `~/.claude/settings.json` locally.
+- Actively forces `launchctl unsetenv` cleanup dropping any stale `ANTHROPIC_BASE_URL` routing bindings to assure 100% stable connection directly to Anthropic standard APIs.
+- Removes proxy-forcing traces dynamically from your target system environment `~/.zshrc`/`~/.bash_profile` — new terminals always start completely clean.
+
+**Firewall Mode:** (Pre-validates proxy stability mapping traffic efficiently directly into Prompt Recoding security boundaries protecting enterprise secrets): 
+```bash
+agentic-store-mcp --install-claude --firewall-mode
+```
+- First natively verifies the AgenticStore firewall proxy is correctly listening across Port 8766 before touching configuration trees preventing deployment breakages completely.
+- Formally injects `launchctl setenv` routing instructions properly writing nc-guarded shell profile blocks into Node.js TLS `ANTHROPIC_BASE_URL` interception directly into Claude. 
+
+*(Note: `--firewall-mode` explicitly refuses to run unaccompanied. It requires `--install-claude` actively passed alongside it).*
+
+### Manual Configuration
+Run `claude mcp add agentic-store-mcp "agentic-store-mcp"`.
 
 ---
 
@@ -415,6 +456,8 @@ This project is licensed under the **MIT License** — free to use, modify, and 
 <br/>
 
 ### 🏷️ Core Technologies & Ecosystem
-AgenticStore is built for the **Model Context Protocol (MCP Server)** ecosystem to provide robust **LLM Security**, a **Prompt Firewall**, and proactive **AI Data Privacy**. It supports comprehensive **Data Loss Prevention (DLP)** through **Prompt Sanitization**, **Prompt Recording**, and **Audit Traces for AI Usage**. Designed for **Autonomous Agents** and **AI Coding Assistants** like **Claude Code**, **Cursor IDE**, and **Windsurf**, it leverages **Persistent Agent Memory**, **AI DevSecOps**, **Web Search** via **SearXNG**, and **Local LLM** capabilities with **Ollama Integration** for reliable **AI Auditing**.
+AgenticStore is built for the **Model Context Protocol (MCP Server)** ecosystem to provide robust **LLM Security**, a **Prompt Firewall**, and proactive **AI Data Privacy**. It supports comprehensive **Data Loss Prevention (DLP)** through **Prompt Sanitization**, **Prompt Recording**, and **Audit Traces for AI Usage**. Designed for **Autonomous Agents** and **AI Coding Assistants** like **Claude Code MCP Integration**, **Cursor IDE MCP**, and **Windsurf**. 
+
+We tackle the hardest scaling problems for modern LLMs natively via **LLM Token Compression**, context window offloading natively via **Context Pruning**, structured code processing via **Token Optimization**, and deep **Persistent Agent Memory**. Combining deep systemic oversight spanning **AI DevSecOps**, **OSV CVE Dependency Scans**, **Static Code Analysis**, local **OS Process Management** (via `list_processes`), dynamic streaming **Log File Tailing**, and private **Agentic Web Search** via **SearXNG**. Scale locally executing reliably with **Ollama Integration** for unbreachable **AI Auditing Requirements**.
 
 </div>

@@ -15,18 +15,26 @@ from pathlib import Path
 
 def _server_command() -> list[str]:
     """Return the command array for running the MCP server."""
-    # Prefer uv run when available; fall back to python
     import shutil
-    project_root = Path(__file__).parent.parent.parent
-    server_py = str(project_root / "server.py")
+    import sys
 
-    uv = shutil.which("uv")
-    if uv:
-        # --directory ensures uv resolves the .venv from the project root
-        # regardless of what working directory the MCP client uses when
-        # launching the server process.
-        return [uv, "run", "--directory", str(project_root), server_py]
-    return [sys.executable, server_py]
+    # 1. Determine if we are in a development clone
+    # webapp/config_writer.py -> webapp/ -> agentic_store_mcp/ -> root
+    project_root = Path(__file__).parent.parent.parent
+    is_clone = (project_root / "pyproject.toml").exists()
+    server_py = project_root / "server.py"
+
+    # 2. If in a clone, prefer uv run to ensure the right venv is used
+    if is_clone and server_py.exists():
+        uv = shutil.which("uv")
+        if uv:
+            return [uv, "run", "--directory", str(project_root), str(server_py)]
+        return [sys.executable, str(server_py)]
+
+    # 3. If installed as a package (pip install), use python -m
+    # This is the most reliable way to ensure we use the same environment
+    # that the webapp is currently running in.
+    return [sys.executable, "-m", "agentic_store_mcp.server"]
 
 
 def _build_mcp_entry(enabled_tools: list[str] | None) -> dict:

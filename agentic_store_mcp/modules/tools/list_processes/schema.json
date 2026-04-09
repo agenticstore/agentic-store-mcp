@@ -1,0 +1,21 @@
+{
+  "name": "list_processes",
+  "description": "Checks whether specific services are currently running on the local machine — by process name or port. Returns running status, PID, and port for Docker, Redis, Postgres, Node, and any named service.\nUse when: you need to verify a dev server, database, or container runtime is up before running commands or tests.\nScope: local machine only. Reads /proc or uses pgrep/lsof — no network calls.\nNot for: reading log output (use tail_system_logs), starting or stopping services, or checking remote hosts.",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "services": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Services to check. Well-known names: docker, dockerd, redis, postgres, mysql, mongodb, nginx, node, python, uvicorn, celery, flower, rabbitmq, git, ssh-agent, gpg-agent, nodemon, watchman, vite, webpack, esbuild, pytest, jest, vitest, eslint, prettier, prometheus, grafana, jaeger, zipkin, opentelemetry-collector, ngrok, cloudflared, cron, vault. Also accepts custom process names or 'port:3000' to check by port. Default: all well-known services.",
+        "default": []
+      },
+      "include_ports": {
+        "type": "boolean",
+        "default": true,
+        "description": "If true, also report which ports each detected process is listening on. Default: true."
+      }
+    }
+  }
+}

@@ -39,10 +39,20 @@ _MCP_KEY = "agentic-store-local"
 # ─── Shared MCP server entry ──────────────────────────────────────────────────
 
 def _mcp_entry() -> dict:
-    uv = shutil.which("uv") or "uv"
+    import sys
+    uv = shutil.which("uv")
+    is_clone = (REPO_ROOT / "pyproject.toml").exists()
+    server_py = REPO_ROOT / "server.py"
+
+    if is_clone and server_py.exists() and uv:
+        return {
+            "command": uv,
+            "args": ["run", "--directory", str(REPO_ROOT), "server.py"],
+        }
+    
     return {
-        "command": uv,
-        "args": ["run", "--directory", str(REPO_ROOT), "server.py"],
+        "command": sys.executable,
+        "args": ["-m", "agentic_store_mcp.server"],
     }
 
 # ─── Shared rules text ────────────────────────────────────────────────────────

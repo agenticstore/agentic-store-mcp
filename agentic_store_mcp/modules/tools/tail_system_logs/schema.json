@@ -1,0 +1,29 @@
+{
+  "name": "tail_system_logs",
+  "description": "Reads the last N lines of a local log file — ideal for debugging runtime errors from dev servers, npm run dev, uvicorn, or any process that writes to a file.\nUse when: a process errored and you need to see recent log output, you're tailing a dev server log, or you want to check system/application logs without leaving the agent session.\nScope: local filesystem only. Read-only. Any file the current user can read.\nNot for: streaming live log output (returns a snapshot), checking if a process is running (use list_processes), or reading structured log files as JSON (returns raw lines).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": ["path"],
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Absolute path to the log file. Example: '/var/log/nginx/error.log' or '/tmp/dev-server.log'."
+      },
+      "lines": {
+        "type": "integer",
+        "default": 50,
+        "description": "Number of lines to read from the end of the file. Default: 50. Max: 1000."
+      },
+      "filter": {
+        "type": "string",
+        "description": "Optional: only return lines containing this string (case-insensitive). Useful for filtering 'error', 'warn', 'exception'."
+      },
+      "encoding": {
+        "type": "string",
+        "default": "utf-8",
+        "description": "File encoding. Default: 'utf-8'. Use 'latin-1' for legacy log files with non-UTF characters."
+      }
+    }
+  }
+}

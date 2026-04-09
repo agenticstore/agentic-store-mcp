@@ -54,7 +54,18 @@ def get_all_clients() -> list[Client]:
     cursor_config = _home() / ".cursor" / "mcp.json"
     antigravity_config = _home() / ".config" / "antigravity" / "mcp.json"
 
+    # Claude Code (CLI) — config lives in ~/.claude/settings.json under "mcpServers".
+    # No GUI launch: it's a terminal tool. The config key path is different from
+    # Claude Desktop, so write_config handles it via a dedicated merge strategy.
+    claude_code_config = _home() / ".claude" / "settings.json"
+
     return [
+        Client(
+            slug="claude-code",
+            name="Claude Code",
+            config_path=claude_code_config,
+            launch_cmd=[],  # CLI tool — no GUI app to launch
+        ),
         Client(
             slug="claude-desktop",
             name="Claude Desktop",
@@ -120,12 +131,12 @@ def restart_client(slug: str, sync_first: bool = False) -> dict:
         # Give the HTTP response a moment to be sent before we kill the client.
         time.sleep(0.5)
 
-        # Optionally sync the MCP environment first so missing packages
-        # (e.g. `mcp`) don't cause an immediate server-disconnected error.
+        # Only attempt uv sync if we are in a development clone (has pyproject.toml).
         if sync_first:
+            project_root = Path(__file__).parent.parent.parent
+            is_clone = (project_root / "pyproject.toml").exists()
             uv = shutil.which("uv")
-            if uv:
-                project_root = Path(__file__).parent.parent.parent
+            if sync_first and is_clone and uv:
                 subprocess.run([uv, "sync"], cwd=project_root, check=False)  # noqa: S603
 
         # Kill the running client process.
