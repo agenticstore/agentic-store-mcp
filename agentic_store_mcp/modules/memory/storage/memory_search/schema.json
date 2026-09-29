@@ -1,0 +1,15 @@
+{
+  "name": "memory_search",
+  "description": "Full-text searches across all memory: facts, strategy notes, and checkpoint metadata.\nUse when: locating a fact whose key you don't remember, finding which checkpoint contains certain context, or auditing what the agent knows.\nScope: local filesystem. No network access.\nNot for: reading a specific fact by key (use memory_read), restoring a checkpoint (use memory_restore).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": ["query"],
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Case-insensitive keyword or phrase to search across all memory sources."
+      }
+    }
+  }
+}

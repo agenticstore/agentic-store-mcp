@@ -1,0 +1,31 @@
+{
+  "name": "context_pruner",
+  "description": "Analyzes a list of files or tools currently in an agent's context and recommends which can be safely dropped for the current task — reducing token usage without losing task-critical information.\nUse when: context window is filling up, you have many files open and need to trim, or an agent wants to know which loaded resources are irrelevant to the active task.\nScope: local analysis only — scores items by keyword overlap with the task description. No network access, no file reads.\nNot for: compressing file content (use token_optimizer), managing persisted memory facts (use memory_write/memory_read), or reading files (use get_file).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": ["task", "items"],
+    "properties": {
+      "task": {
+        "type": "string",
+        "description": "One or two sentences describing the current task or goal. Used as the relevance signal."
+      },
+      "items": {
+        "type": "array",
+        "description": "List of context items to evaluate. Each item is a string: a file path, tool name, or short description.",
+        "items": { "type": "string" },
+        "minItems": 1
+      },
+      "keep_top_n": {
+        "type": "integer",
+        "default": 5,
+        "description": "How many items to recommend keeping (highest relevance). Default: 5. Items beyond this threshold are candidates to drop."
+      },
+      "verbose": {
+        "type": "boolean",
+        "default": false,
+        "description": "If true, include per-item relevance scores and the matched keywords. Default: false."
+      }
+    }
+  }
+}

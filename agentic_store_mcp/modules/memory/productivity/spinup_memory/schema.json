@@ -1,0 +1,33 @@
+{
+  "name": "spinup_memory",
+  "description": "Initializes the centralized agent memory for a project — creates the memory directory, seeds project facts, and writes a starter strategy template.\nUse when: starting a new project, onboarding a new agent to an existing project, or resetting a project's memory baseline.\nScope: local filesystem (~/.config/agentic-store/memory/). No network access.\nNot for: restoring a prior session (use restore_session), writing individual facts (use memory_write), or reading current state (use restore_session).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": ["project_name"],
+    "properties": {
+      "project_name": {
+        "type": "string",
+        "description": "Short name for the project. Example: 'agentic-store-mcp'."
+      },
+      "description": {
+        "type": "string",
+        "description": "One-sentence description of the project."
+      },
+      "stack": {
+        "type": "string",
+        "description": "Tech stack summary. Example: 'Python 3.12, FastAPI, PostgreSQL'."
+      },
+      "goals": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "High-level project goals."
+      },
+      "reset": {
+        "type": "boolean",
+        "description": "If true, clears existing facts and rewrites strategy. Default: false.",
+        "default": false
+      }
+    }
+  }
+}

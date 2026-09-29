@@ -1,0 +1,33 @@
+{
+  "name": "memory_log",
+  "description": "Appends an event to the agent session log, or reads recent log entries.\nUse when: recording decisions made, actions taken, or errors encountered during a session; or when reviewing what happened in a previous session.\nScope: local append-only log (~/.config/agentic-store/memory/session.jsonl). No network access.\nNot for: storing persistent facts (use memory_write), saving a full session snapshot (use memory_checkpoint).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "mode": {
+        "type": "string",
+        "enum": ["append", "read"],
+        "description": "append (default) — add an entry. read — return recent entries.",
+        "default": "append"
+      },
+      "event": {
+        "type": "string",
+        "description": "Short event label. Required when mode=append. Example: 'file_edited', 'decision_made'."
+      },
+      "detail": {
+        "type": "string",
+        "description": "Optional detail string for the log entry."
+      },
+      "data": {
+        "type": "object",
+        "description": "Optional extra structured data to store alongside the log entry."
+      },
+      "limit": {
+        "type": "integer",
+        "description": "Max entries to return when mode=read. Default: 20.",
+        "default": 20
+      }
+    }
+  }
+}

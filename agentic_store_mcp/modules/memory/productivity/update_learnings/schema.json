@@ -1,0 +1,23 @@
+{
+  "name": "update_learnings",
+  "description": "Appends a new learning or insight to the project learnings log in agent memory.\nUse when: discovering a useful pattern, solving a tricky bug, or capturing a decision rationale that should inform future sessions.\nScope: local filesystem (learnings.md in memory dir). No network access.\nNot for: saving full session context (use memory_checkpoint), tracking milestone progress (use update_milestones).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": ["learning"],
+    "properties": {
+      "learning": {
+        "type": "string",
+        "description": "The insight or learning to record. Be specific and actionable."
+      },
+      "category": {
+        "type": "string",
+        "description": "Optional category tag. Example: 'architecture', 'debugging', 'patterns', 'gotcha'."
+      },
+      "source": {
+        "type": "string",
+        "description": "Optional context — where or how this was learned. Example: 'PyGithub 2.x migration'."
+      }
+    }
+  }
+}

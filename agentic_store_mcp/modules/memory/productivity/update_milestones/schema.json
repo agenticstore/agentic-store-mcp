@@ -1,0 +1,26 @@
+{
+  "name": "update_milestones",
+  "description": "Updates the milestones tracker in agent memory — either replaces the full document or updates a single milestone's status inline.\nUse when: marking a milestone complete, adding new milestones, or syncing milestone state after work sessions.\nScope: local filesystem (milestones.md in memory dir). No network access.\nNot for: tracking a full plan narrative (use update_plan), logging session events (use memory_log).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "content": {
+        "type": "string",
+        "description": "Full markdown milestones document. Replaces existing file when provided."
+      },
+      "milestone": {
+        "type": "string",
+        "description": "Milestone name/identifier to update inline (used with status)."
+      },
+      "status": {
+        "type": "string",
+        "description": "New status for the milestone. Example: 'COMPLETE', 'IN PROGRESS', 'BLOCKED'."
+      },
+      "notes": {
+        "type": "string",
+        "description": "Optional notes to append beneath the milestone status line."
+      }
+    }
+  }
+}

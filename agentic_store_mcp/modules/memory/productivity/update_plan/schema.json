@@ -1,0 +1,20 @@
+{
+  "name": "update_plan",
+  "description": "Writes or updates the project plan document stored in agent memory.\nUse when: creating an initial plan, revising scope, or updating the current approach after major decisions.\nScope: local filesystem (plan.md in memory dir). No network access.\nNot for: tracking milestone status (use update_milestones), logging decisions per-session (use memory_checkpoint), or reading the plan back (use restore_session).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": ["content"],
+    "properties": {
+      "content": {
+        "type": "string",
+        "description": "Full markdown content for the plan. Replaces existing plan unless append=true."
+      },
+      "append": {
+        "type": "boolean",
+        "description": "If true, append content to the existing plan instead of replacing it. Default: false.",
+        "default": false
+      }
+    }
+  }
+}

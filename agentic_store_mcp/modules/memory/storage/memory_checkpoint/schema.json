@@ -1,0 +1,42 @@
+{
+  "name": "memory_checkpoint",
+  "description": "Saves a named snapshot of current session context for cross-client or cross-session continuity.\nUse when: pausing work and handing off to another client, ending a session with intent to resume, or bookmarking a significant milestone.\nScope: local filesystem (~/.config/agentic-store/memory/checkpoints/). No network access.\nNot for: storing individual facts (use memory_write), logging events (use memory_log).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": ["task"],
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Checkpoint name. Auto-generated timestamp if omitted. Letters, digits, hyphens, underscores only. 'latest' is reserved."
+      },
+      "task": {
+        "type": "string",
+        "description": "One-sentence description of what you were working on. Required."
+      },
+      "decisions": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Key decisions made during this session."
+      },
+      "next_steps": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Planned next actions when resuming."
+      },
+      "client": {
+        "type": "string",
+        "description": "Current client context. Example: 'claude-desktop', 'cursor'."
+      },
+      "active_files": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "File paths relevant to the current task."
+      },
+      "notes": {
+        "type": "string",
+        "description": "Any additional free-form notes."
+      }
+    }
+  }
+}

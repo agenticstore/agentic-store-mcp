@@ -1,0 +1,28 @@
+{
+  "name": "update_change_log",
+  "description": "Appends a human-readable entry to the project changelog in agent memory.\nUse when: completing a feature, fixing a bug, or making a notable architectural change worth recording for collaborators or future agents.\nScope: local filesystem (CHANGELOG.md in memory dir). No network access.\nNot for: session event logging (use memory_log), milestone tracking (use update_milestones).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": ["description", "change_type"],
+    "properties": {
+      "description": {
+        "type": "string",
+        "description": "What changed. Be concise but specific."
+      },
+      "change_type": {
+        "type": "string",
+        "enum": ["feat", "fix", "refactor", "docs", "test", "chore", "breaking"],
+        "description": "Type of change: feat (new feature), fix (bug fix), refactor, docs, test, chore, breaking (breaking change)."
+      },
+      "version": {
+        "type": "string",
+        "description": "Optional version tag. Example: 'v1.2.0'. Groups entries under a version header."
+      },
+      "scope": {
+        "type": "string",
+        "description": "Optional scope — what area of the project. Example: 'webapp', 'memory', 'github-tools'."
+      }
+    }
+  }
+}

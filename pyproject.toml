@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-store-mcp"
-version = "1.0.2"
+version = "1.0.3"
 description = "Model Context Protocol (MCP) Server for AI Data Privacy: LLM prompt firewall, audit logs, and 31 MCP tools for Claude, Cursor, and Windsurf."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -65,7 +65,6 @@ exclude = [
   "**/node_modules",
   "dist",
   "build",
-  "memory",
   ".project-memory",
   ".project-memory/**",
   "skills",

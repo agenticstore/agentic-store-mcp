@@ -1,0 +1,18 @@
+{
+  "name": "memory_read",
+  "description": "Reads facts from the persistent agent memory store.\nUse when: recalling previously stored decisions, preferences, or context at the start of a session.\nScope: local filesystem (~/.config/agentic-store/memory/facts.json). No network access.\nNot for: searching memory (use memory_search), reading session logs (use memory_log with mode=read), or restoring a full checkpoint (use memory_restore).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "key": {
+        "type": "string",
+        "description": "Specific fact key to retrieve. Omit to list all facts."
+      },
+      "category": {
+        "type": "string",
+        "description": "Filter by category. Only applies when key is omitted. Example: 'project'."
+      }
+    }
+  }
+}

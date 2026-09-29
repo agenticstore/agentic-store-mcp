@@ -1,0 +1,31 @@
+{
+  "name": "token_optimizer",
+  "description": "Compresses code or text to reduce token count before sending to a remote LLM — removes comments, docstrings, blank lines, and optionally produces a concise structural summary.\nUse when: a file or snippet is too large for a prompt, you need to trim context before an LLM call, or you want to estimate compression savings.\nScope: local text processing only. No network access. Works on any language.\nNot for: permanent file modification (source is unchanged), context window management of files-in-session (use context_pruner), or reading files from disk (combine with get_file).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": ["text"],
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "The code or text to compress."
+      },
+      "mode": {
+        "type": "string",
+        "enum": ["compress", "summarize", "both"],
+        "default": "compress",
+        "description": "'compress': remove comments, docstrings, blank lines, leading whitespace (preserves structure). 'summarize': return a compact structural outline (functions, classes, key logic). 'both': compress first, then append summary."
+      },
+      "language": {
+        "type": "string",
+        "default": "auto",
+        "description": "Language hint for comment stripping: 'python', 'javascript', 'typescript', 'go', 'rust', 'java', 'c', 'cpp', 'shell', 'auto'. Default: 'auto' (detected from content)."
+      },
+      "preserve_structure": {
+        "type": "boolean",
+        "default": true,
+        "description": "If true, keep one blank line between top-level definitions (classes, functions) for readability. Default: true."
+      }
+    }
+  }
+}

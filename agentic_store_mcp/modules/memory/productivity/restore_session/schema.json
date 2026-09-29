@@ -1,0 +1,23 @@
+{
+  "name": "restore_session",
+  "description": "Restores full agent session context in one call — loads checkpoint, plan, milestones, recent learnings, and recent log entries.\nUse when: starting a new session, switching clients, or waking up an agent after a break. Call this first before any work.\nScope: local filesystem. No network access.\nNot for: restoring only a checkpoint (use memory_restore), reading a single fact (use memory_read).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "checkpoint": {
+        "type": "string",
+        "description": "Checkpoint name to restore. Defaults to 'latest'.",
+        "default": "latest"
+      },
+      "include": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["checkpoint", "plan", "milestones", "learnings", "facts", "logs", "changelog"]
+        },
+        "description": "Which sections to include. Omit to include all."
+      }
+    }
+  }
+}

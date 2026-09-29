@@ -1,0 +1,15 @@
+{
+  "name": "memory_restore",
+  "description": "Loads a saved checkpoint to restore session context.\nUse when: resuming work after switching clients, starting a new session after a break, or inspecting what was happening at a previous save point.\nScope: local filesystem. No network access.\nNot for: reading individual facts (use memory_read), searching (use memory_search). Use name='latest' to restore the most recent checkpoint.",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": ["name"],
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Checkpoint name to restore. Use 'latest' for the most recently saved checkpoint."
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "memory_write",
+  "description": "Writes or updates a persistent fact in the agent memory store.\nUse when: storing decisions, preferences, project details, or any key-value data that should persist across sessions and clients.\nScope: local filesystem (~/.config/agentic-store/memory/facts.json). No network access.\nNot for: logging events (use memory_log), saving session snapshots (use memory_checkpoint), or retrieving facts (use memory_read).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": ["key", "value"],
+    "properties": {
+      "key": {
+        "type": "string",
+        "description": "Unique fact identifier. Example: 'project_language', 'user_preferred_style'."
+      },
+      "value": {
+        "description": "Value to store. Can be a string, number, boolean, list, or object.",
+        "oneOf": [
+          {"type": "string"},
+          {"type": "number"},
+          {"type": "boolean"},
+          {"type": "array"},
+          {"type": "object"}
+        ]
+      },
+      "category": {
+        "type": "string",
+        "description": "Optional grouping label. Example: 'project', 'preferences', 'context'. Defaults to 'facts'.",
+        "default": "facts"
+      }
+    }
+  }
+}

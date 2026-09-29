@@ -39,7 +39,19 @@ docker-compose.override.yml
 searxng/settings.yml
 searxng/uwsgi.ini
 
-# Agent Private — not for public repo
-memory/
-skills/
-CLAUDE.md
+# Agent Private — not for public repo (root-only; package memory tools are public code)
+/memory/
+/.project-memory/
+/.claude/
+/.codex/
+/.agents/
+/.agent/
+/skills/
+/CLAUDE.md
+/AGENTS.md
+
+# Local test environment and security material
+/testing/
+.ruff_cache/
+*.pem
+*.key
