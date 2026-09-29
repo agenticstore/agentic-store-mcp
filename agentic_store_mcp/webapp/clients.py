@@ -1,9 +1,11 @@
 """
 clients.py — MCP client definitions: config paths and launch commands.
 """
+
 from __future__ import annotations
 
 import shutil
+import os
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -20,7 +22,11 @@ class Client:
     def launch_supported(self) -> bool:
         if not self.launch_cmd:
             return False
-        binary = self.launch_cmd[-1] if self.launch_cmd[0] in ("open", "start") else self.launch_cmd[0]
+        binary = (
+            self.launch_cmd[-1]
+            if self.launch_cmd[0] in ("open", "start")
+            else self.launch_cmd[0]
+        )
         if self.launch_cmd[0] == "open":
             return sys.platform == "darwin"
         if self.launch_cmd[0] == "start":
@@ -36,12 +42,20 @@ def get_all_clients() -> list[Client]:
     platform = sys.platform
 
     if platform == "darwin":
-        claude_config = _home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+        claude_config = (
+            _home()
+            / "Library"
+            / "Application Support"
+            / "Claude"
+            / "claude_desktop_config.json"
+        )
         claude_launch = ["open", "-a", "Claude"]
         cursor_launch = ["open", "-a", "Cursor"]
         antigravity_launch = ["open", "-a", "Antigravity"]
     elif platform == "win32":
-        claude_config = _home() / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
+        claude_config = (
+            _home() / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
+        )
         claude_launch = ["start", "", "Claude"]
         cursor_launch = ["start", "", "Cursor"]
         antigravity_launch = []  # not supported on Windows yet
@@ -60,6 +74,12 @@ def get_all_clients() -> list[Client]:
     claude_code_config = _home() / ".claude" / "settings.json"
 
     return [
+        Client(
+            slug="codex",
+            name="GPT / OpenAI Codex",
+            config_path=Path(os.environ.get("CODEX_HOME", str(_home() / ".codex")))
+            / "config.toml",
+        ),
         Client(
             slug="claude-code",
             name="Claude Code",
@@ -100,7 +120,10 @@ def launch_client(slug: str) -> dict:
     if not c:
         return {"ok": False, "error": f"Unknown client: {slug}"}
     if not c.launch_cmd:
-        return {"ok": False, "error": f"Launch not supported for {c.name} on this platform"}
+        return {
+            "ok": False,
+            "error": f"Launch not supported for {c.name} on this platform",
+        }
     if not c.launch_supported():
         return {"ok": False, "error": f"Launch binary not found for {c.name}"}
     try:
@@ -123,7 +146,10 @@ def restart_client(slug: str, sync_first: bool = False) -> dict:
     if not c:
         return {"ok": False, "error": f"Unknown client: {slug}"}
     if not c.launch_cmd:
-        return {"ok": False, "error": f"Launch not supported for {c.name} on this platform"}
+        return {
+            "ok": False,
+            "error": f"Launch not supported for {c.name} on this platform",
+        }
     if not c.launch_supported():
         return {"ok": False, "error": f"Launch binary not found for {c.name}"}
 

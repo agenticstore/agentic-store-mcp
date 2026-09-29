@@ -118,6 +118,10 @@ To enable the firewall and begin collecting **audit traces for AI usage**, start
 
 ---
 
+### GPT / OpenAI clients and custom redaction
+
+MCP Hub → Clients now includes **GPT / OpenAI Codex**, with automatic TOML configuration and selected-tool support. The Codex CLI must be installed to apply the configuration. The Firewall dashboard also supports OpenAI SDK applications alongside Claude Code. Connect **GPT / OpenAI SDK** to route Chat Completions and Responses requests through `http://127.0.0.1:8766/openai/v1`. Settings now include **Redaction Replacement** for your own literal placeholder; blank restores the typed defaults. See the [OpenAI setup and coverage guide](docs/setup/openai.md).
+
 ## 🧰 What's Inside the Toolkit (31 MCP Tools)
 
 Equip your AI client with these modules containing **31 specific MCP tools**, categorized strategically for maximum productivity:
@@ -461,3 +465,9 @@ AgenticStore is built for the **Model Context Protocol (MCP Server)** ecosystem 
 We tackle the hardest scaling problems for modern LLMs natively via **LLM Token Compression**, context window offloading natively via **Context Pruning**, structured code processing via **Token Optimization**, and deep **Persistent Agent Memory**. Combining deep systemic oversight spanning **AI DevSecOps**, **OSV CVE Dependency Scans**, **Static Code Analysis**, local **OS Process Management** (via `list_processes`), dynamic streaming **Log File Tailing**, and private **Agentic Web Search** via **SearXNG**. Scale locally executing reliably with **Ollama Integration** for unbreachable **AI Auditing Requirements**.
 
 </div>
+
+Codex with ChatGPT login can route model requests through the TLS firewall using the **GPT / Codex** connection control. HTTP and outgoing JSON WebSocket prompts are supported; restart Codex and verify a new recording. See [Codex proxy setup](docs/setup/openai.md#codex-with-chatgpt-login).
+
+Firewall Audit Log now filters **Blocked / errors** and **Sanitized** entries and includes a **Reveal original matched values** toggle. New audit findings store original matches locally; originals are hidden from the default response and display. Older category-only entries cannot recover original values. **Clear** removes the saved audit details.
+
+When you stop the dashboard with Ctrl+C, AgenticStore restores the macOS HTTP/HTTPS proxy settings saved before installation and then stops its listener. A separate watchdog restores routing after an unexpected server or proxy failure. See [network proxy recovery](docs/setup/openai.md#network-proxy-recovery) for limitations.

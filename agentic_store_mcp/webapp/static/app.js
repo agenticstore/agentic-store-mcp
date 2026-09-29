@@ -626,6 +626,7 @@ async function loadLogs() {
   const el = document.getElementById("logs-list");
   try {
     const data = await api("GET", "/api/memory/logs?limit=50");
+    if (requestId !== firewallLogRequest) return;
     if (!data.entries.length) {
       el.innerHTML = `<div class="no-items">No log entries yet.</div>`;
       return;
@@ -755,13 +756,13 @@ async function loadFirewallStatus() {
     hint.style.display = data.running ? "block" : "none";
     const clientsCard = document.getElementById("fw-clients-card");
     if (clientsCard) clientsCard.style.display = data.running ? "block" : "none";
-    if (data.running) loadClientStatus();
+    await loadClientStatus();
 
     // Update endpoints with actual port
     ["fw-endpoint-anthropic", "fw-endpoint-openai", "fw-endpoint-google"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) {
-        const suffix = id === "fw-endpoint-openai" ? "/openai" : id === "fw-endpoint-google" ? "/google" : "";
+        const suffix = id === "fw-endpoint-openai" ? "/openai/v1" : id === "fw-endpoint-google" ? "/google" : "";
         el.textContent = `http://localhost:${data.port}${suffix}`;
       }
     });
@@ -785,6 +786,8 @@ async function loadFirewallStatus() {
 async function loadFirewallConfig() {
   try {
     const data = await api("GET", "/api/firewall/config");
+
+    document.getElementById("fw-redaction-text").value = data.redaction_text || "";
 
     // Deterministic toggles
     document.getElementById("fw-det-pii").checked = data.deterministic?.pii ?? true;
@@ -954,6 +957,7 @@ document.getElementById("btn-fw-save")?.addEventListener("click", async () => {
         model: selectedModel,
         custom_rules: customRules,
       },
+      redaction_text: document.getElementById("fw-redaction-text").value || null,
       mode: modeEl?.value || "redact",
     });
     statusEl.textContent = "✓ Settings saved";
@@ -978,12 +982,16 @@ document.addEventListener("click", (e) => {
 });
 
 // Audit log
+let firewallLogRequest = 0;
 async function loadFirewallLogs() {
+  const requestId = ++firewallLogRequest;
   const el = document.getElementById("fw-logs-list");
   try {
-    const data = await api("GET", "/api/firewall/logs?limit=100");
+    const reveal = document.getElementById("fw-log-originals")?.checked === true;
+    const filter = document.getElementById("fw-log-filter")?.value || "all";
+    const data = await api("GET", `/api/firewall/logs?limit=100&show_originals=${reveal}&event_filter=${encodeURIComponent(filter)}`);
     if (!data.entries.length) {
-      el.innerHTML = `<div class="no-items">No audit entries yet. Start the firewall and send a request through Claude.</div>`;
+      el.innerHTML = `<div class="no-items">No matching audit entries.</div>`;
       return;
     }
     const persistNote = `<div class="fw-log-persist-note">Showing ${data.entries.length} entries — log persists across restarts. <a href="#" onclick="document.getElementById('btn-fw-clear-logs').click();return false">Clear</a> to reset.</div>`;
@@ -1006,8 +1014,8 @@ async function loadFirewallLogs() {
         <div class="fw-log-findings" id="fw-log-findings-${i}" style="display:none">
           ${findings.map(f => `
             <div class="fw-finding-row">
-              <span class="fw-finding-type">${f.type || f.layer || ""}</span>
-              <span class="fw-finding-original">${escapeHtml(String(f.original || ""))}</span>
+              <span class="fw-finding-type">${escapeHtml(String(f.type || f.layer || ""))}</span>
+              <span class="fw-finding-original">${escapeHtml(String(reveal ? (f.original ?? "Unavailable for this entry") : "Hidden"))}</span>
               <span class="fw-finding-arrow">→</span>
               <span class="fw-finding-replacement">${escapeHtml(String(f.replacement || f.reason || ""))}</span>
             </div>`).join("")}
@@ -1015,9 +1023,9 @@ async function loadFirewallLogs() {
       return `
         <div class="fw-log-row ${hasFindings ? "fw-log-row-expandable" : ""}" data-idx="${i}">
           <span class="fw-log-ts">${ts}</span>
-          <span class="fw-log-event ${eventCls}">${e.event}</span>
+          <span class="fw-log-event ${eventCls}">${escapeHtml(String(e.event))}</span>
           ${safeBadge}
-          <span class="fw-log-detail">${e.detail}</span>
+          <span class="fw-log-detail">${escapeHtml(String(e.detail))}</span>
           ${hasFindings ? `<span class="fw-log-expand-icon" id="fw-log-icon-${i}" title="Expand">▶</span>` : ""}
         </div>
         ${findingsHtml}`;
@@ -1099,6 +1107,11 @@ document.getElementById("btn-fw-tester-run")?.addEventListener("click", async ()
   }
 });
 
+document.getElementById("fw-log-filter")?.addEventListener("change", loadFirewallLogs);
+document.getElementById("fw-log-originals")?.addEventListener("change", () => {
+  document.querySelectorAll("#fw-logs-list .fw-finding-original").forEach(el => { el.textContent = "Hidden"; });
+  loadFirewallLogs();
+});
 document.getElementById("btn-fw-refresh-logs")?.addEventListener("click", loadFirewallLogs);
 
 document.getElementById("btn-fw-clear-logs")?.addEventListener("click", async () => {
@@ -1136,8 +1149,8 @@ function _stopLogAutoRefresh() {
 const SYS_STEPS = [
   { id: "ca_generate", label: "Generate CA certificate",         hint: "" },
   { id: "ca_install",  label: "Trust CA in login keychain",       hint: "No password required" },
-  { id: "net_proxy",   label: "Configure macOS network proxy",   hint: "" },
   { id: "tls_start",   label: "Start TLS proxy",                 hint: "" },
+  { id: "net_proxy",   label: "Configure macOS network proxy",   hint: "" },
 ];
 
 async function loadSystemProxyStatus() {
@@ -1271,9 +1284,10 @@ document.getElementById("btn-sys-modal-close")?.addEventListener("click", () => 
 
 async function loadClientStatus() {
   try {
-    const data = await (await fetch("/api/firewall/client/status")).json();
+    const data = await (await fetch("/api/firewall/client/status", { cache: "no-store" })).json();
     _setClientBadge("claude", !!data.ANTHROPIC_BASE_URL);
-    _setClientBadge("cursor", !!data.OPENAI_BASE_URL);
+    _setClientBadge("openai", !!data.OPENAI_BASE_URL);
+    _setClientBadge("codex", /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(data.HTTPS_PROXY || ""));
   } catch (_) {}
 }
 
@@ -1281,7 +1295,7 @@ function _setClientBadge(id, connected) {
   const badge = document.getElementById(`fw-client-${id}-badge`);
   const btn = document.querySelector(`#fw-client-${id} .fw-client-connect-btn`);
   if (badge) {
-    badge.textContent = connected ? "connected" : "disconnected";
+    badge.textContent = connected ? "configured · restart client" : "disconnected";
     badge.className = `fw-client-badge ${connected ? "badge-connected" : "badge-disconnected"}`;
   }
   if (btn) {
@@ -1296,6 +1310,14 @@ document.querySelectorAll(".fw-client-connect-btn").forEach((btn) => {
     const client = btn.dataset.client;
     const action = btn.dataset.action;
     btn.disabled = true;
+    let result = btn.closest(".fw-client-row").querySelector(".fw-client-result");
+    if (!result) {
+      result = document.createElement("span");
+      result.className = "fw-client-result";
+      result.setAttribute("role", "status");
+      btn.closest(".fw-client-row").appendChild(result);
+    }
+    result.textContent = "Applying…";
     try {
       const resp = await fetch(`/api/firewall/client/${action}`, {
         method: "POST",
@@ -1304,10 +1326,11 @@ document.querySelectorAll(".fw-client-connect-btn").forEach((btn) => {
       });
       if (!resp.ok) {
         const err = await resp.json();
-        alert(`Failed: ${err.detail}`);
+        result.textContent = `Failed: ${typeof err.detail === "string" ? err.detail : JSON.stringify(err.detail)}`;
       } else {
         await loadClientStatus();
-        const clientId = client === "claude_code" ? "claude" : "cursor";
+        result.textContent = action === "connect" ? "Configured. Fully quit and restart your client." : "Disconnected.";
+        const clientId = client === "claude_code" ? "claude" : client === "openai_sdk" ? "openai" : client === "codex" ? "codex" : "cursor";
         const notice = document.getElementById(`fw-restart-${clientId}`);
         if (notice) notice.style.display = action === "connect" ? "block" : "none";
         // Show env var banner on connect (Claude only)
@@ -1315,7 +1338,7 @@ document.querySelectorAll(".fw-client-connect-btn").forEach((btn) => {
         if (banner) banner.classList.toggle("visible", action === "connect");
       }
     } catch (e) {
-      alert(`Error: ${e.message}`);
+      result.textContent = `Error: ${e.message}`;
     } finally {
       btn.disabled = false;
     }
@@ -1407,7 +1430,7 @@ async function loadRecordingToggleState() {
     const chk = document.getElementById("fw-rec-toggle");
     if (chk) chk.checked = cfg.recording === true;
     const status = document.getElementById("fw-rec-status");
-    if (status) status.textContent = cfg.recording ? "Recording is ON — prompts are being saved locally." : "Recording is OFF.";
+    if (status) status.textContent = cfg.recording ? "Recording is ON — only prompts reaching this proxy are saved. Check for a new provider entry after sending a prompt." : "Recording is OFF.";
   } catch (_) {}
 }
 
@@ -1420,7 +1443,7 @@ document.getElementById("fw-rec-toggle")?.addEventListener("change", async (e) =
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled }),
     });
-    if (status) status.textContent = enabled ? "Recording is ON — prompts are being saved locally." : "Recording is OFF.";
+    if (status) status.textContent = enabled ? "Recording is ON — only prompts reaching this proxy are saved. Check for a new provider entry after sending a prompt." : "Recording is OFF.";
   } catch (err) {
     if (status) status.textContent = `Error: ${err.message}`;
     e.target.checked = !enabled; // revert

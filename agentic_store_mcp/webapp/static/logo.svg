@@ -1,0 +1,29 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark rounded background -->
+  <rect width="48" height="48" rx="10" fill="#09090B"/>
+
+  <!-- Connection lines (hub-and-spoke: agent nodes → central hex) -->
+  <line x1="24" y1="6"  x2="24" y2="15" stroke="#FFFFFF" stroke-width="1.5" stroke-opacity="0.6"/>
+  <line x1="24" y1="33" x2="24" y2="42" stroke="#FFFFFF" stroke-width="1.5" stroke-opacity="0.6"/>
+  <line x1="6"  y1="24" x2="15" y2="24" stroke="#FFFFFF" stroke-width="1.5" stroke-opacity="0.6"/>
+  <line x1="33" y1="24" x2="42" y2="24" stroke="#FFFFFF" stroke-width="1.5" stroke-opacity="0.6"/>
+
+  <!-- Central hexagon (the exchange/store hub) -->
+  <polygon
+    points="24,13 30,17 30,25 24,29 18,25 18,17"
+    fill="#10B981"
+    stroke="#34D399"
+    stroke-width="1"
+  />
+  <!-- Hollow inner hex -->
+  <polygon
+    points="24,17 27.5,19 27.5,23 24,25 20.5,23 20.5,19"
+    fill="#09090B"
+  />
+
+  <!-- Agent nodes (the tools/capabilities plugging in) -->
+  <circle cx="24" cy="5"  r="3.5" fill="#06B6D4"/>
+  <circle cx="24" cy="43" r="3.5" fill="#06B6D4"/>
+  <circle cx="5"  cy="24" r="3.5" fill="#06B6D4"/>
+  <circle cx="43" cy="24" r="3.5" fill="#06B6D4"/>
+</svg>

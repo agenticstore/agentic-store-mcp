@@ -37,4 +37,4 @@ RUN uv sync --frozen --no-dev
 
 # MCP stdio — no port needed
 # Override with: docker run ... agentic-store-mcp webapp.py --host 0.0.0.0
-ENTRYPOINT ["uv", "run", "server.py"]
+ENTRYPOINT ["/app/.venv/bin/python", "server.py"]

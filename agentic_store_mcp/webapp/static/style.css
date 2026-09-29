@@ -63,17 +63,6 @@ header {
   letter-spacing: -0.02em;
 }
 .logo-accent { color: var(--accent); }
-.logo-dot {
-  width: 7px; height: 7px;
-  background: var(--accent);
-  border-radius: 50%;
-  display: inline-block;
-  animation: pulse-dot 2.5s ease-in-out infinite;
-}
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(74,222,128,0.5); }
-  50% { opacity: 0.7; box-shadow: 0 0 0 5px rgba(74,222,128,0); }
-}
 .tagline { color: var(--text-dim); font-size: 12px; }
 
 /* ── Main ───────────────────────────────────────────────────────────────────── */
@@ -1137,3 +1126,7 @@ footer a:hover { color: var(--accent); }
 }
 .fw-env-banner.visible { display: block; }
 .fw-env-banner code { background: rgba(74,222,128,0.1); color: var(--accent); border: none; }
+
+.fw-log-controls { display:flex; flex-wrap:wrap; align-items:center; gap:16px; margin:16px 0; }
+.fw-log-controls > span { color:var(--text-muted); font-size:13px; }
+.fw-finding-original { overflow-wrap:anywhere; white-space:pre-wrap; }

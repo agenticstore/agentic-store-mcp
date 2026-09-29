@@ -14,13 +14,14 @@ Routes:
   POST /api/launch                 → {client} → subprocess launch
   GET  /api/memory/status          → {last_checkpoint, fact_count, log_size_kb}
 """
+
 from __future__ import annotations
 
 import asyncio as _asyncio
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncIterator
+from typing import AsyncIterator, Literal
 
 
 def _is_docker() -> bool:
@@ -39,31 +40,68 @@ async def _auto_restore_proxy() -> None:
     """
     if _is_docker():
         return
+    config: dict = {}
     try:
         from agentic_store_mcp.firewall.rules import load_config
+
         config = load_config()
         if not config.get("enabled"):
+            from agentic_store_mcp.firewall.system_proxy import (
+                SNAPSHOT_FILE,
+                is_system_proxy_set,
+                remove_system_proxy,
+            )
+
+            if SNAPSHOT_FILE.exists() or is_system_proxy_set(config.get("port", 8766)):
+                remove_system_proxy(config.get("port", 8766))
             return
 
         port = config.get("port", 8766)
 
         from agentic_store_mcp.firewall.ca_manager import is_ca_installed
-        from agentic_store_mcp.firewall.system_proxy import is_system_proxy_set, set_system_proxy
+        from agentic_store_mcp.firewall.system_proxy import set_system_proxy
 
         if is_ca_installed():
-            from agentic_store_mcp.firewall.tls_proxy import is_tls_proxy_running, start_tls_proxy
+            from agentic_store_mcp.firewall.tls_proxy import (
+                is_tls_proxy_running,
+                start_tls_proxy,
+            )
+
             if not is_tls_proxy_running():
                 start_tls_proxy(port)
-                await _asyncio.sleep(1.0)  # let mitmproxy bind
+            set_system_proxy(port)
+            from agentic_store_mcp.firewall.watchdog import start_watchdog
+
+            start_watchdog(port)
         else:
             from agentic_store_mcp.firewall.proxy import is_proxy_running, start_proxy
+
+            from agentic_store_mcp.firewall.system_proxy import (
+                SNAPSHOT_FILE,
+                is_system_proxy_set,
+                remove_system_proxy,
+            )
+
+            if SNAPSHOT_FILE.exists() or is_system_proxy_set(port):
+                remove_system_proxy(port)
             if not is_proxy_running() and _is_port_free(port):
                 await start_proxy(port)
+    except Exception as exc:
+        import logging
 
-        if not is_system_proxy_set(port):
-            set_system_proxy(port)
-    except Exception:
-        pass  # best-effort — never break app startup
+        logging.getLogger(__name__).error("Proxy recovery failed: %s", exc)
+        try:
+            from agentic_store_mcp.firewall.system_proxy import remove_system_proxy
+
+            remove_system_proxy(config.get("port", 8766))
+        except Exception:
+            logging.getLogger(__name__).exception("Could not restore network settings")
+            try:
+                from agentic_store_mcp.firewall.watchdog import start_watchdog
+
+                start_watchdog(config.get("port", 8766))
+            except OSError:
+                logging.getLogger(__name__).exception("Could not launch proxy watchdog")
 
 
 def _setup_sleep_wake() -> None:
@@ -71,11 +109,16 @@ def _setup_sleep_wake() -> None:
     if _is_docker():
         return
     try:
-        from agentic_store_mcp.firewall.system_proxy import watch_sleep_wake, remove_system_proxy
+        from agentic_store_mcp.firewall.system_proxy import (
+            watch_sleep_wake,
+            remove_system_proxy,
+        )
 
         def _on_sleep() -> None:
             try:
-                remove_system_proxy()
+                from agentic_store_mcp.firewall.rules import load_config
+
+                remove_system_proxy(load_config().get("port", 8766))
             except Exception:
                 pass
 
@@ -96,7 +139,39 @@ async def _lifespan(app: "FastAPI") -> AsyncIterator[None]:  # noqa: F821
     _event_loop = _asyncio.get_running_loop()
     await _auto_restore_proxy()
     _setup_sleep_wake()
-    yield
+    try:
+        yield
+    finally:
+        # Uvicorn runs this after Ctrl+C/SIGTERM. Restore routing before
+        # stopping listeners so no new request is sent to a dead local port.
+        from agentic_store_mcp.firewall.system_proxy import remove_system_proxy
+        from agentic_store_mcp.firewall.tls_proxy import stop_tls_proxy
+        from agentic_store_mcp.firewall.proxy import stop_proxy
+        from agentic_store_mcp.firewall.rules import load_config
+        import logging
+        import subprocess
+
+        port = load_config().get("port", 8766)
+        try:
+            remove_system_proxy(port)
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "Could not restore network settings on shutdown"
+            )
+        try:
+            for key in ("ANTHROPIC_BASE_URL", "OPENAI_BASE_URL", "HTTPS_PROXY"):
+                result = subprocess.run(
+                    ["launchctl", "getenv", key], capture_output=True, text=True
+                )
+                if result.stdout.strip().startswith(f"http://127.0.0.1:{port}"):
+                    subprocess.run(["launchctl", "unsetenv", key], capture_output=True)
+        except OSError:
+            pass
+        try:
+            await stop_proxy()
+        finally:
+            stop_tls_proxy()
+        _event_loop = None
 
 
 from fastapi import FastAPI, HTTPException
@@ -104,18 +179,21 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 HERE = Path(__file__).parent
 TEMPLATES_DIR = HERE / "templates"
 STATIC_DIR = HERE / "static"
 
-app = FastAPI(title="AgenticStore Setup", docs_url=None, redoc_url=None, lifespan=_lifespan)
+app = FastAPI(
+    title="AgenticStore Setup", docs_url=None, redoc_url=None, lifespan=_lifespan
+)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 # ─── Index ────────────────────────────────────────────────────────────────────
+
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -130,14 +208,17 @@ async def api_env():
 
 # ─── Tools ────────────────────────────────────────────────────────────────────
 
+
 @app.get("/api/tools")
 async def api_tools():
     from agentic_store_mcp.webapp.discovery import build_catalog
+
     tools = build_catalog()
     return {"tools": tools, "total": len(tools)}
 
 
 # ─── Connectors ───────────────────────────────────────────────────────────────
+
 
 @app.get("/api/connectors")
 async def api_connectors():
@@ -149,28 +230,33 @@ async def api_connectors():
         fields = []
         for f in c.fields:
             service_key = f"{c.slug}_{f.name}"
-            fields.append({
-                "name": f.name,
-                "label": f.label,
-                "description": f.description,
-                "secret": f.secret,
-                "required": f.required,
-                "placeholder": f.placeholder,
-                "env_var": f.env_var,
-                "has_token": get_token(service_key) is not None,
-            })
-        result.append({
-            "slug": c.slug,
-            "name": c.name,
-            "description": c.description,
-            "docs_url": c.docs_url,
-            "test_supported": c.test_supported,
-            "fields": fields,
-            "configured": all(
-                get_token(f"{c.slug}_{fld.name}") is not None
-                for fld in c.fields if fld.required
-            ),
-        })
+            fields.append(
+                {
+                    "name": f.name,
+                    "label": f.label,
+                    "description": f.description,
+                    "secret": f.secret,
+                    "required": f.required,
+                    "placeholder": f.placeholder,
+                    "env_var": f.env_var,
+                    "has_token": get_token(service_key) is not None,
+                }
+            )
+        result.append(
+            {
+                "slug": c.slug,
+                "name": c.name,
+                "description": c.description,
+                "docs_url": c.docs_url,
+                "test_supported": c.test_supported,
+                "fields": fields,
+                "configured": all(
+                    get_token(f"{c.slug}_{fld.name}") is not None
+                    for fld in c.fields
+                    if fld.required
+                ),
+            }
+        )
     return {"connectors": result}
 
 
@@ -196,13 +282,17 @@ async def api_test_connector(slug: str):
         has_token = get_token(service_key) is not None
         if not has_token:
             return {"ok": False, "detail": "No token configured"}
-        return {"ok": True, "detail": "Token present (live API test not available in setup)"}
+        return {
+            "ok": True,
+            "detail": "Token present (live API test not available in setup)",
+        }
     return {"ok": False, "detail": "Test not implemented"}
 
 
 def _github_token_source(service_key: str) -> tuple[str | None, str]:
     """Return (token, source_label) so tests can report where the token came from."""
     import os
+
     upper = service_key.upper()
     for env_var in (upper, f"{upper}_TOKEN", f"{upper}_KEY"):
         val = os.environ.get(env_var)
@@ -211,6 +301,7 @@ def _github_token_source(service_key: str) -> tuple[str | None, str]:
 
     try:
         import keyring
+
         val = keyring.get_password("agentic-store-mcp", service_key)
         if val:
             return val, "OS keyring"
@@ -219,6 +310,7 @@ def _github_token_source(service_key: str) -> tuple[str | None, str]:
 
     from pathlib import Path
     import json
+
     tokens_file = Path.home() / ".config" / "agentic-store" / "tokens.json"
     try:
         data = json.loads(tokens_file.read_text(encoding="utf-8"))
@@ -236,14 +328,21 @@ async def _test_github(connector) -> dict:
     token, source = _github_token_source(service_key)
 
     if not token:
-        return {"ok": False, "detail": "No token configured — enter one in the field above and click Save."}
+        return {
+            "ok": False,
+            "detail": "No token configured — enter one in the field above and click Save.",
+        }
 
     try:
         from github import Github, Auth
+
         g = Github(auth=Auth.Token(token))
         user = g.get_user()
         login = user.login
-        return {"ok": True, "detail": f"Authenticated as {login}  (token source: {source})"}
+        return {
+            "ok": True,
+            "detail": f"Authenticated as {login}  (token source: {source})",
+        }
     except ImportError:
         return {"ok": False, "detail": "PyGithub not installed. Run: uv sync"}
     except Exception as e:
@@ -255,6 +354,7 @@ async def _test_github(connector) -> dict:
 
 # ─── Token CRUD ───────────────────────────────────────────────────────────────
 
+
 class SetTokenRequest(BaseModel):
     service: str
     token: str
@@ -263,6 +363,7 @@ class SetTokenRequest(BaseModel):
 @app.post("/api/token")
 async def api_set_token(body: SetTokenRequest):
     from agentic_store_mcp.secrets import set_token
+
     if not body.service or not body.token:
         raise HTTPException(status_code=400, detail="service and token are required")
     set_token(body.service, body.token)
@@ -272,6 +373,7 @@ async def api_set_token(body: SetTokenRequest):
 @app.get("/api/token/{service}")
 async def api_get_token(service: str):
     from agentic_store_mcp.secrets import get_token
+
     has = get_token(service) is not None
     return {"service": service, "has_token": has}
 
@@ -279,24 +381,29 @@ async def api_get_token(service: str):
 @app.delete("/api/token/{service}")
 async def api_delete_token(service: str):
     from agentic_store_mcp.secrets import remove_token
+
     remove_token(service)
     return {"ok": True, "service": service}
 
 
 # ─── Clients ──────────────────────────────────────────────────────────────────
 
+
 @app.get("/api/clients")
 async def api_clients():
     from agentic_store_mcp.webapp.clients import get_all_clients
+
     result = []
     for c in get_all_clients():
-        result.append({
-            "slug": c.slug,
-            "name": c.name,
-            "config_path": str(c.config_path),
-            "launch_supported": c.launch_supported(),
-            "config_exists": c.config_path.exists(),
-        })
+        result.append(
+            {
+                "slug": c.slug,
+                "name": c.name,
+                "config_path": str(c.config_path),
+                "launch_supported": c.launch_supported(),
+                "config_exists": c.config_path.exists(),
+            }
+        )
     return {"clients": result}
 
 
@@ -308,6 +415,7 @@ class ApplyRequest(BaseModel):
 @app.post("/api/apply")
 async def api_apply(body: ApplyRequest):
     from agentic_store_mcp.webapp.config_writer import write_config
+
     result = write_config(body.client, body.enabled_tools)
     if not result["ok"]:
         raise HTTPException(status_code=500, detail=result["error"])
@@ -321,6 +429,7 @@ class LaunchRequest(BaseModel):
 @app.post("/api/launch")
 async def api_launch(body: LaunchRequest):
     from agentic_store_mcp.webapp.clients import launch_client
+
     result = launch_client(body.client)
     if not result["ok"]:
         raise HTTPException(status_code=500, detail=result["error"])
@@ -335,6 +444,7 @@ class RestartRequest(BaseModel):
 @app.post("/api/restart")
 async def api_restart(body: RestartRequest):
     from agentic_store_mcp.webapp.clients import restart_client
+
     result = restart_client(body.client, sync_first=body.sync_first)
     if not result["ok"]:
         raise HTTPException(status_code=500, detail=result["error"])
@@ -343,10 +453,12 @@ async def api_restart(body: RestartRequest):
 
 # ─── Memory ───────────────────────────────────────────────────────────────────
 
+
 @app.get("/api/memory/status")
 async def api_memory_status():
     try:
         from agentic_store_mcp.memory_store import get_status
+
         return get_status()
     except ImportError:
         return {"available": False}
@@ -355,6 +467,7 @@ async def api_memory_status():
 @app.get("/api/memory/facts")
 async def api_memory_facts():
     from agentic_store_mcp.memory_store import list_facts
+
     facts = list_facts()
     return {"facts": facts, "total": len(facts)}
 
@@ -362,6 +475,7 @@ async def api_memory_facts():
 @app.get("/api/memory/strategy")
 async def api_memory_strategy():
     from agentic_store_mcp.memory_store import read_strategy
+
     return {"content": read_strategy()}
 
 
@@ -372,6 +486,7 @@ class StrategyRequest(BaseModel):
 @app.post("/api/memory/strategy")
 async def api_memory_strategy_write(body: StrategyRequest):
     from agentic_store_mcp.memory_store import write_strategy
+
     write_strategy(body.content)
     return {"ok": True}
 
@@ -379,6 +494,7 @@ async def api_memory_strategy_write(body: StrategyRequest):
 @app.get("/api/memory/checkpoints")
 async def api_memory_checkpoints():
     from agentic_store_mcp.memory_store import list_checkpoints
+
     checkpoints = list_checkpoints()
     return {"checkpoints": checkpoints, "total": len(checkpoints)}
 
@@ -395,14 +511,18 @@ class CheckpointRequest(BaseModel):
 @app.post("/api/memory/checkpoint")
 async def api_memory_checkpoint(body: CheckpointRequest):
     from agentic_store_mcp.memory_store import save_checkpoint
+
     try:
-        name = save_checkpoint(body.name or None, {
-            "task": body.task,
-            "decisions": body.decisions,
-            "next_steps": body.next_steps,
-            "client": body.client,
-            "context": {"notes": body.notes},
-        })
+        name = save_checkpoint(
+            body.name or None,
+            {
+                "task": body.task,
+                "decisions": body.decisions,
+                "next_steps": body.next_steps,
+                "client": body.client,
+                "context": {"notes": body.notes},
+            },
+        )
         return {"ok": True, "name": name}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -415,15 +535,19 @@ class RestoreRequest(BaseModel):
 @app.post("/api/memory/restore")
 async def api_memory_restore(body: RestoreRequest):
     from agentic_store_mcp.memory_store import load_checkpoint
+
     data = load_checkpoint(body.name)
     if data is None:
-        raise HTTPException(status_code=404, detail=f"Checkpoint not found: {body.name!r}")
+        raise HTTPException(
+            status_code=404, detail=f"Checkpoint not found: {body.name!r}"
+        )
     return {"ok": True, "checkpoint": data}
 
 
 @app.delete("/api/memory/checkpoint/{name}")
 async def api_memory_delete_checkpoint(name: str):
     from agentic_store_mcp.memory_store import delete_checkpoint
+
     deleted = delete_checkpoint(name)
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Checkpoint not found: {name!r}")
@@ -433,6 +557,7 @@ async def api_memory_delete_checkpoint(name: str):
 @app.get("/api/memory/logs")
 async def api_memory_logs(limit: int = 50):
     from agentic_store_mcp.memory_store import read_logs
+
     entries = read_logs(limit)
     return {"entries": entries, "total": len(entries)}
 
@@ -446,12 +571,14 @@ import json as _json  # noqa: E402
 def _is_any_proxy_running() -> bool:
     from agentic_store_mcp.firewall.proxy import is_proxy_running
     from agentic_store_mcp.firewall.tls_proxy import is_tls_proxy_running
+
     return is_proxy_running() or is_tls_proxy_running()
 
 
 def _is_port_free(port: int) -> bool:
     """Try to bind the port — the only accurate test of whether a server can use it."""
     import socket
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
@@ -459,21 +586,6 @@ def _is_port_free(port: int) -> bool:
             return True
         except OSError:
             return False
-
-
-def _force_free_port(port: int) -> None:
-    """SIGTERM any process still holding the port (best-effort, macOS/Linux)."""
-    import subprocess
-    try:
-        result = subprocess.run(
-            ["lsof", "-ti", f"tcp:{port}"],
-            capture_output=True, text=True, timeout=3,
-        )
-        for pid_str in result.stdout.strip().splitlines():
-            if pid_str.strip().isdigit():
-                subprocess.run(["kill", "-TERM", pid_str.strip()], capture_output=True)
-    except Exception:
-        pass
 
 
 @app.get("/api/firewall/status")
@@ -519,16 +631,24 @@ async def api_firewall_start():
         return {"ok": True, "running": True, "system_mode": is_ca_installed()}
 
     if not _is_port_free(port):
-        raise HTTPException(status_code=409, detail=f"Port {port} is already in use. Free it first or change the port.")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Port {port} is already in use. Free it first or change the port.",
+        )
 
     config["enabled"] = True
     save_config(config)
     await start_proxy(port)
 
     from agentic_store_mcp.firewall.audit import log_event
+
     log_event("session_start", f"Firewall session started on port {port}")
 
-    return {"ok": True, "running": _is_any_proxy_running(), "system_mode": is_ca_installed()}
+    return {
+        "ok": True,
+        "running": _is_any_proxy_running(),
+        "system_mode": is_ca_installed(),
+    }
 
 
 @app.post("/api/firewall/stop")
@@ -537,7 +657,10 @@ async def api_firewall_stop():
     import asyncio as _asyncio
     from agentic_store_mcp.firewall.proxy import stop_proxy
     from agentic_store_mcp.firewall.tls_proxy import stop_tls_proxy
-    from agentic_store_mcp.firewall.system_proxy import is_system_proxy_set, remove_system_proxy
+    from agentic_store_mcp.firewall.system_proxy import (
+        is_system_proxy_set,
+        remove_system_proxy,
+    )
     from agentic_store_mcp.firewall.rules import load_config, save_config
 
     config = load_config()
@@ -549,28 +672,26 @@ async def api_firewall_stop():
     # to localhost:8766 before we kill the listener — prevents internet cutoff.
     if is_system_proxy_set(port):
         try:
-            remove_system_proxy()
-            # Extra safety: explicitly disable Wi-Fi proxy to ensure internet stays live
-            subprocess.run(["networksetup", "-setsecurewebproxystate", "Wi-Fi", "off"], capture_output=True)
+            remove_system_proxy(port)
         except Exception:
-            pass
+            raise HTTPException(
+                status_code=500,
+                detail="Could not restore system proxy; listener was left running",
+            )
 
     await stop_proxy()
     stop_tls_proxy()
 
-    # Poll until the port is genuinely free (mitmproxy can be slow to release).
-    # Force-kill any lingering process if it doesn't free within ~3 seconds.
+    # Allow our listener to release the port; never kill another process by port.
     for attempt in range(6):
         if _is_port_free(port):
             break
-        if attempt == 3:
-            _force_free_port(port)
         await _asyncio.sleep(0.5)
 
     # Clean up env vars so clients (Claude Code, Cursor) don't point at a dead
     # proxy after an explicit stop. Covers both launchctl (GUI apps / Dock) and
     # shell profiles (new terminal sessions).
-    _env_keys = ["ANTHROPIC_BASE_URL", "OPENAI_BASE_URL"]
+    _env_keys = ["ANTHROPIC_BASE_URL", "OPENAI_BASE_URL", "HTTPS_PROXY"]
     for key in _env_keys:
         try:
             subprocess.run(["launchctl", "unsetenv", key], capture_output=True)
@@ -584,12 +705,16 @@ async def api_firewall_stop():
 @app.get("/api/firewall/config")
 async def api_firewall_config_get():
     from agentic_store_mcp.firewall.rules import load_config
-    from agentic_store_mcp.firewall.sanitizers.llm_reviewer import PREDEFINED_SYSTEM_PROMPT
+    from agentic_store_mcp.firewall.sanitizers.llm_reviewer import (
+        PREDEFINED_SYSTEM_PROMPT,
+    )
+
     config = load_config()
     return {**config, "predefined_prompt": PREDEFINED_SYSTEM_PROMPT}
 
 
 class FirewallConfigRequest(BaseModel):
+    redaction_text: str | None = Field(default=None, max_length=200)
     deterministic: dict | None = None
     llm: dict | None = None
     mode: str | None = None
@@ -609,13 +734,19 @@ async def api_firewall_config_save(body: FirewallConfigRequest):
         config["mode"] = body.mode
     if body.port is not None:
         config["port"] = body.port
+    if "redaction_text" in body.model_fields_set:
+        config["redaction_text"] = body.redaction_text or None
     save_config(config)
     return {"ok": True}
 
 
 @app.get("/api/firewall/models")
 async def api_firewall_models():
-    from agentic_store_mcp.firewall.sanitizers.llm_reviewer import list_models, is_ollama_running
+    from agentic_store_mcp.firewall.sanitizers.llm_reviewer import (
+        list_models,
+        is_ollama_running,
+    )
+
     if not await is_ollama_running():
         return {"available": False, "models": []}
     models = await list_models()
@@ -634,7 +765,7 @@ async def api_firewall_models_pull(body: PullModelRequest):
         try:
             async for chunk in pull_model(body.model):
                 yield f"data: {_json.dumps(chunk)}\n\n"
-            yield "data: {\"done\": true}\n\n"
+            yield 'data: {"done": true}\n\n'
         except Exception as e:
             yield f"data: {_json.dumps({'error': str(e)})}\n\n"
 
@@ -644,25 +775,33 @@ async def api_firewall_models_pull(body: PullModelRequest):
 @app.delete("/api/firewall/models/{model_name:path}")
 async def api_firewall_models_delete(model_name: str):
     from agentic_store_mcp.firewall.sanitizers.llm_reviewer import delete_model
+
     await delete_model(model_name)
     return {"ok": True}
 
 
 @app.get("/api/firewall/logs")
-async def api_firewall_logs(limit: int = 100):
+async def api_firewall_logs(
+    limit: int = 100,
+    show_originals: bool = False,
+    event_filter: Literal["all", "errors", "sanitized"] = "all",
+):
     from agentic_store_mcp.firewall.audit import read_logs
-    entries = read_logs(limit)
+
+    entries = read_logs(limit, show_originals=show_originals, event_filter=event_filter)
     return {"entries": entries, "total": len(entries)}
 
 
 @app.delete("/api/firewall/logs")
 async def api_firewall_logs_clear():
     from agentic_store_mcp.firewall.audit import clear_logs
+
     clear_logs()
     return {"ok": True}
 
 
 # ─── System Proxy (TLS MITM) ──────────────────────────────────────────────────
+
 
 @app.get("/api/firewall/system/status")
 async def api_system_proxy_status():
@@ -670,13 +809,16 @@ async def api_system_proxy_status():
     from agentic_store_mcp.firewall.system_proxy import is_system_proxy_set
     from agentic_store_mcp.firewall.tls_proxy import is_tls_proxy_running
     from agentic_store_mcp.firewall.rules import load_config
+
     config = load_config()
     port = config.get("port", 8766)
     return {
         "ca_installed": is_ca_installed(),
         "proxy_configured": is_system_proxy_set(port),
         "tls_proxy_running": is_tls_proxy_running(),
-        "fully_active": is_ca_installed() and is_system_proxy_set(port) and is_tls_proxy_running(),
+        "fully_active": is_ca_installed()
+        and is_system_proxy_set(port)
+        and is_tls_proxy_running(),
         "port": port,
     }
 
@@ -684,14 +826,20 @@ async def api_system_proxy_status():
 @app.post("/api/firewall/system/install")
 async def api_system_proxy_install():
     """SSE stream — runs full install sequence and emits step events."""
-    from agentic_store_mcp.firewall.ca_manager import ensure_ca_generated, install_ca_to_keychain, is_ca_installed
+    from agentic_store_mcp.firewall.ca_manager import (
+        ensure_ca_generated,
+        install_ca_to_keychain,
+        is_ca_installed,
+    )
     from agentic_store_mcp.firewall.system_proxy import set_system_proxy
-    from agentic_store_mcp.firewall.tls_proxy import start_tls_proxy
+    from agentic_store_mcp.firewall.tls_proxy import start_tls_proxy, stop_tls_proxy
     from agentic_store_mcp.firewall.rules import load_config
+    from agentic_store_mcp.firewall.watchdog import start_watchdog
 
     async def _stream():
         def step(id: str, status: str, message: str, error: str = ""):
             import json
+
             return f"data: {json.dumps({'step': id, 'status': status, 'message': message, 'error': error})}\n\n"
 
         config = load_config()
@@ -710,37 +858,55 @@ async def api_system_proxy_install():
         if is_ca_installed():
             yield step("ca_install", "done", "CA already trusted in login keychain")
         else:
-            yield step("ca_install", "running", "Trusting CA certificate in login keychain…")
+            yield step(
+                "ca_install", "running", "Trusting CA certificate in login keychain…"
+            )
             try:
                 install_ca_to_keychain()
-                yield step("ca_install", "done", "Certificate trusted in login keychain")
+                yield step(
+                    "ca_install", "done", "Certificate trusted in login keychain"
+                )
             except Exception as e:
                 yield step("ca_install", "error", "Keychain install failed", str(e))
                 return
 
-        # Step 3 — Configure system proxy
-        yield step("net_proxy", "running", "Configuring macOS network proxy settings…")
-        try:
-            services = set_system_proxy(port)
-            yield step("net_proxy", "done", f"Proxy set on: {', '.join(services)}")
-        except Exception as e:
-            yield step("net_proxy", "error", "Network proxy config failed", str(e))
-            return
-
-        # Step 4 — Start TLS proxy
+        # Start and verify the listener before routing the entire machine.
         yield step("tls_start", "running", "Starting TLS proxy…")
         try:
             start_tls_proxy(port)
-            import asyncio
-            await asyncio.sleep(1.5)  # allow mitmproxy to bind
-            from agentic_store_mcp.firewall.audit import log_event as _log_evt
-            _log_evt("session_start", f"System proxy session started on port {port}")
             yield step("tls_start", "done", f"TLS proxy running on localhost:{port}")
         except Exception as e:
             yield step("tls_start", "error", "TLS proxy failed to start", str(e))
             return
 
-        yield step("complete", "done", "System proxy is active — all AI traffic is now sanitized")
+        yield step("net_proxy", "running", "Configuring macOS network proxy settings…")
+        try:
+            services = set_system_proxy(port)
+            start_watchdog(port)
+            from agentic_store_mcp.firewall.rules import save_config
+            from agentic_store_mcp.firewall.audit import log_event as _log_evt
+
+            config["enabled"] = True
+            save_config(config)
+            _log_evt("session_start", f"System proxy session started on port {port}")
+            yield step("net_proxy", "done", f"Proxy set on: {', '.join(services)}")
+        except Exception as e:
+            from agentic_store_mcp.firewall.system_proxy import SNAPSHOT_FILE
+
+            if SNAPSHOT_FILE.exists():
+                try:
+                    start_watchdog(port)
+                except OSError:
+                    pass
+            stop_tls_proxy()
+            yield step("net_proxy", "error", "Network proxy config failed", str(e))
+            return
+
+        yield step(
+            "complete",
+            "done",
+            "System proxy is active — all AI traffic is now sanitized",
+        )
 
     return _StreamingResponse(_stream(), media_type="text/event-stream")
 
@@ -751,6 +917,7 @@ async def api_system_proxy_uninstall():
     from agentic_store_mcp.firewall.ca_manager import remove_ca_from_keychain
     from agentic_store_mcp.firewall.system_proxy import remove_system_proxy
     from agentic_store_mcp.firewall.tls_proxy import stop_tls_proxy
+    from agentic_store_mcp.firewall.rules import load_config, save_config
 
     async def _stream():
         import json
@@ -758,24 +925,34 @@ async def api_system_proxy_uninstall():
         def step(id: str, status: str, message: str, error: str = ""):
             return f"data: {json.dumps({'step': id, 'status': status, 'message': message, 'error': error})}\n\n"
 
+        yield step("net_proxy", "running", "Restoring system proxy settings…")
+        try:
+            remove_system_proxy(load_config().get("port", 8766))
+            yield step("net_proxy", "done", "Previous system proxy settings restored")
+        except Exception as e:
+            yield step("net_proxy", "error", "Could not restore proxy settings", str(e))
+            return
+
         yield step("tls_stop", "running", "Stopping TLS proxy…")
         try:
             stop_tls_proxy()
+            config = load_config()
+            config["enabled"] = False
+            save_config(config)
             yield step("tls_stop", "done", "TLS proxy stopped")
         except Exception as e:
             yield step("tls_stop", "error", "Could not stop proxy", str(e))
 
-        yield step("net_proxy", "running", "Removing system proxy settings…")
-        try:
-            remove_system_proxy()
-            yield step("net_proxy", "done", "System proxy settings removed")
-        except Exception as e:
-            yield step("net_proxy", "error", "Could not remove proxy settings", str(e))
-
-        yield step("ca_remove", "running", "Removing CA from System Keychain — password dialog may appear…")
+        yield step(
+            "ca_remove",
+            "running",
+            "Removing CA from System Keychain — password dialog may appear…",
+        )
         try:
             remove_ca_from_keychain()
-            yield step("ca_remove", "done", "CA certificate removed from System Keychain")
+            yield step(
+                "ca_remove", "done", "CA certificate removed from System Keychain"
+            )
         except Exception as e:
             yield step("ca_remove", "error", "Could not remove CA cert", str(e))
 
@@ -792,8 +969,13 @@ class SanitizeTestRequest(BaseModel):
 async def api_firewall_test_sanitize(body: SanitizeTestRequest):  # noqa: E402
     """Run text through the full sanitization pipeline and return findings."""
     from agentic_store_mcp.firewall.rules import load_config
-    from agentic_store_mcp.firewall.sanitizers.deterministic import sanitize as det_sanitize
-    from agentic_store_mcp.firewall.sanitizers.llm_reviewer import is_ollama_running, review as llm_review
+    from agentic_store_mcp.firewall.sanitizers.deterministic import (
+        sanitize as det_sanitize,
+    )
+    from agentic_store_mcp.firewall.sanitizers.llm_reviewer import (
+        is_ollama_running,
+        review as llm_review,
+    )
 
     config = load_config()
     text = body.text
@@ -801,7 +983,12 @@ async def api_firewall_test_sanitize(body: SanitizeTestRequest):  # noqa: E402
 
     redacted, det_findings = det_sanitize(text, config)
     findings.extend(
-        {"layer": "deterministic", "type": f.type, "original": f.original, "replacement": f.replacement}
+        {
+            "layer": "deterministic",
+            "type": f.type,
+            "original": f.original,
+            "replacement": f.replacement,
+        }
         for f in det_findings
     )
 
@@ -809,7 +996,9 @@ async def api_firewall_test_sanitize(body: SanitizeTestRequest):  # noqa: E402
     llm_result = None
     if llm_cfg.get("enabled") and llm_cfg.get("model") and await is_ollama_running():
         try:
-            llm_result = await llm_review(redacted, llm_cfg["model"], llm_cfg.get("custom_rules", []))
+            llm_result = await llm_review(
+                redacted, llm_cfg["model"], llm_cfg.get("custom_rules", [])
+            )
             for f in llm_result.get("findings", []):
                 findings.append({"layer": "llm", **f})
         except Exception as e:
@@ -817,7 +1006,9 @@ async def api_firewall_test_sanitize(body: SanitizeTestRequest):  # noqa: E402
 
     return {
         "original": body.text,
-        "redacted": llm_result.get("redacted_prompt", redacted) if llm_result and "redacted_prompt" in llm_result else redacted,
+        "redacted": llm_result.get("redacted_prompt", redacted)
+        if llm_result and "redacted_prompt" in llm_result
+        else redacted,
         "findings": findings,
         "safe": llm_result.get("safe", True) if llm_result else True,
         "llm_used": llm_result is not None and "error" not in llm_result,
@@ -836,7 +1027,10 @@ async def api_firewall_test():
     port = config.get("port", 8766)
 
     if not is_tls_proxy_running():
-        return {"ok": False, "error": "TLS proxy is not running. Install & start the system proxy first."}
+        return {
+            "ok": False,
+            "error": "TLS proxy is not running. Install & start the system proxy first.",
+        }
 
     if not CA_CERT_PEM.exists():
         return {"ok": False, "error": "CA certificate not found."}
@@ -860,8 +1054,9 @@ async def api_firewall_test():
 
 # ─── Client connect / disconnect ──────────────────────────────────────────────
 
+
 class ClientConnectRequest(BaseModel):
-    client: str  # "claude_code" | "cursor" | "openai_sdk"
+    client: Literal["claude_code", "cursor", "openai_sdk", "codex"]
 
 
 def _shell_profile_write(vars: list[tuple[str, str]], port: int = 8766) -> None:
@@ -896,6 +1091,29 @@ def _shell_profile_write(vars: list[tuple[str, str]], port: int = 8766) -> None:
     for profile in profiles:
         try:
             content = profile.read_text(encoding="utf-8") if profile.exists() else ""
+            existing_block = re.search(
+                rf"{re.escape(marker_start)}.*?{re.escape(marker_end)}",
+                content,
+                re.DOTALL,
+            )
+            if existing_block:
+                saved = dict(
+                    re.findall(
+                        r'export (ANTHROPIC_BASE_URL|OPENAI_BASE_URL|HTTPS_PROXY)="([^"\n]+)"',
+                        existing_block.group(),
+                    )
+                )
+                saved.update(dict(vars))
+                set_lines = "\n".join(
+                    f'  export {key}="{value}"' for key, value in saved.items()
+                )
+                unset_lines = "\n".join(
+                    f"  unset {key} 2>/dev/null; true" for key in saved
+                )
+                block = (
+                    f"{marker_start}\nif nc -z 127.0.0.1 {port} 2>/dev/null; then\n"
+                    f"{set_lines}\nelse\n{unset_lines}\nfi\n{marker_end}\n"
+                )
             # Remove any existing block
             content = re.sub(
                 rf"{re.escape(marker_start)}.*?{re.escape(marker_end)}\n?",
@@ -923,9 +1141,21 @@ def _shell_profile_remove(keys: list[str]) -> None:
             if not profile.exists():
                 continue
             content = profile.read_text(encoding="utf-8")
+
+            def remove_vars(match):
+                block = match.group()
+                for key in keys:
+                    block = re.sub(
+                        rf"^.*(?:export|unset) {re.escape(key)}(?:=| ).*\n?",
+                        "",
+                        block,
+                        flags=re.MULTILINE,
+                    )
+                return block if "export " in block else ""
+
             content = re.sub(
                 rf"{re.escape(marker_start)}.*?{re.escape(marker_end)}\n?",
-                "",
+                remove_vars,
                 content,
                 flags=re.DOTALL,
             )
@@ -943,22 +1173,36 @@ async def api_client_connect(body: ClientConnectRequest):  # noqa: E402
     """
     import subprocess
     from agentic_store_mcp.firewall.rules import load_config
+
     config = load_config()
     port = config.get("port", 8766)
     base = f"http://127.0.0.1:{port}"
 
+    if body.client == "codex":
+        from agentic_store_mcp.firewall.tls_proxy import is_tls_proxy_running
+        from agentic_store_mcp.firewall.ca_manager import is_ca_installed
+
+        if not is_tls_proxy_running() or not is_ca_installed():
+            raise HTTPException(
+                status_code=409,
+                detail="Install the system proxy certificate and start the TLS proxy before connecting Codex.",
+            )
+
     cmds: list[tuple[str, str]] = []
-    if body.client in ("claude_code", "openai_sdk"):
+    if body.client == "codex":
+        cmds.append(("HTTPS_PROXY", base))
+    if body.client == "claude_code":
         cmds.append(("ANTHROPIC_BASE_URL", base))
     if body.client in ("cursor", "openai_sdk"):
-        cmds.append(("OPENAI_BASE_URL", f"{base}/openai"))
+        cmds.append(("OPENAI_BASE_URL", f"{base}/openai/v1"))
 
     # 1. launchctl — GUI apps (Dock/Finder)
     errors = []
     for key, value in cmds:
         r = subprocess.run(
             ["launchctl", "setenv", key, value],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if r.returncode != 0:
             errors.append(f"{key}: {r.stderr.strip()}")
@@ -975,8 +1219,11 @@ async def api_client_connect(body: ClientConnectRequest):  # noqa: E402
 async def api_client_disconnect(body: ClientConnectRequest):  # noqa: E402
     """Remove injected env vars from launchctl and shell profiles."""
     import subprocess
+
     keys: list[str] = []
-    if body.client in ("claude_code", "openai_sdk"):
+    if body.client == "codex":
+        keys.append("HTTPS_PROXY")
+    if body.client == "claude_code":
         keys.append("ANTHROPIC_BASE_URL")
     if body.client in ("cursor", "openai_sdk"):
         keys.append("OPENAI_BASE_URL")
@@ -986,7 +1233,8 @@ async def api_client_disconnect(body: ClientConnectRequest):  # noqa: E402
     for key in keys:
         r = subprocess.run(
             ["launchctl", "unsetenv", key],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if r.returncode != 0:
             errors.append(f"{key}: {r.stderr.strip()}")
@@ -1003,10 +1251,12 @@ async def api_client_disconnect(body: ClientConnectRequest):  # noqa: E402
 async def api_client_status():  # noqa: E402
     """Return which clients currently have the env vars injected."""
     import subprocess
+
     def _get(key: str) -> str | None:
         r = subprocess.run(
             ["launchctl", "getenv", key],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         v = r.stdout.strip()
         return v if v else None
@@ -1014,10 +1264,12 @@ async def api_client_status():  # noqa: E402
     return {
         "ANTHROPIC_BASE_URL": _get("ANTHROPIC_BASE_URL"),
         "OPENAI_BASE_URL": _get("OPENAI_BASE_URL"),
+        "HTTPS_PROXY": _get("HTTPS_PROXY"),
     }
 
 
 # ─── Recordings ───────────────────────────────────────────────────────────────
+
 
 class RecordingToggleRequest(BaseModel):
     enabled: bool
@@ -1026,6 +1278,7 @@ class RecordingToggleRequest(BaseModel):
 @app.post("/api/firewall/recording/toggle")
 async def api_recording_toggle(body: RecordingToggleRequest):
     from agentic_store_mcp.firewall.rules import load_config, save_config
+
     config = load_config()
     config["recording"] = body.enabled
     save_config(config)
@@ -1035,6 +1288,7 @@ async def api_recording_toggle(body: RecordingToggleRequest):
 @app.get("/api/firewall/recordings")
 async def api_recordings(limit: int = 50):
     from agentic_store_mcp.firewall.recorder import read_recordings, recordings_size_kb
+
     entries = read_recordings(limit)
     return {"entries": entries, "total": len(entries), "size_kb": recordings_size_kb()}
 
@@ -1042,6 +1296,7 @@ async def api_recordings(limit: int = 50):
 @app.delete("/api/firewall/recordings")
 async def api_recordings_clear():
     from agentic_store_mcp.firewall.recorder import clear_recordings
+
     clear_recordings()
     return {"ok": True}
 
@@ -1049,6 +1304,7 @@ async def api_recordings_clear():
 @app.get("/api/firewall/recordings/{index}")
 async def api_recording_detail(index: int, limit: int = 50):
     from agentic_store_mcp.firewall.recorder import read_recordings
+
     entries = read_recordings(limit)
     if index < 0 or index >= len(entries):
         raise HTTPException(status_code=404, detail="Recording not found")

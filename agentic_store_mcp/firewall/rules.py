@@ -1,4 +1,5 @@
 """Persist firewall configuration and user-defined rules."""
+
 from __future__ import annotations
 
 import json
@@ -22,6 +23,7 @@ DEFAULT_CONFIG: dict = {
     },
     "mode": "redact",
     "recording": False,
+    "redaction_text": None,
 }
 
 
@@ -33,7 +35,10 @@ def load_config() -> dict:
         merged = DEFAULT_CONFIG.copy()
         merged.update(data)
         if "deterministic" in data:
-            merged["deterministic"] = {**DEFAULT_CONFIG["deterministic"], **data["deterministic"]}
+            merged["deterministic"] = {
+                **DEFAULT_CONFIG["deterministic"],
+                **data["deterministic"],
+            }
         if "llm" in data:
             merged["llm"] = {**DEFAULT_CONFIG["llm"], **data["llm"]}
         return merged

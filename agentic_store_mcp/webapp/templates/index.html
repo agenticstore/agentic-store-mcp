@@ -121,14 +121,33 @@
           <button class="btn btn-sm btn-ghost" disabled>Connect</button>
         </div>
 
-        <!-- OpenAI SDK — COMING SOON -->
-        <div class="fw-client-row coming-soon-row">
+        <div class="fw-client-row" id="fw-client-openai">
           <div class="fw-client-info">
-            <span class="fw-client-name">OpenAI SDK</span>
-            <span class="fw-client-var">OPENAI_BASE_URL</span>
+            <span class="fw-client-name">GPT / OpenAI SDK</span>
+            <span class="fw-client-var">OPENAI_BASE_URL · Chat Completions &amp; Responses</span>
           </div>
-          <span class="badge-coming-soon">Coming Soon</span>
-          <button class="btn btn-sm btn-ghost" disabled>Connect</button>
+          <span id="fw-client-openai-badge" class="fw-client-badge badge-disconnected">disconnected</span>
+          <button class="btn btn-sm btn-primary fw-client-connect-btn" data-client="openai_sdk" data-action="connect">Connect</button>
+        </div>
+        <div id="fw-restart-openai" class="fw-restart-notice" style="display:none">
+          Restart your API application in a new terminal. Apps using an explicit base URL must point to the endpoint below.
+        </div>
+        <div class="fw-endpoint-row">
+          <span class="fw-endpoint-label">GPT / OpenAI</span>
+          <code id="fw-endpoint-openai">http://localhost:8766/openai/v1</code>
+          <button class="btn btn-sm btn-ghost btn-fw-copy" data-target="fw-endpoint-openai">Copy</button>
+        </div>
+
+        <div class="fw-client-row" id="fw-client-codex">
+          <div class="fw-client-info">
+            <span class="fw-client-name">GPT / Codex (ChatGPT login)</span>
+            <span class="fw-client-var">HTTPS_PROXY · requires trusted system proxy certificate</span>
+          </div>
+          <span id="fw-client-codex-badge" class="fw-client-badge badge-disconnected">disconnected</span>
+          <button class="btn btn-sm btn-primary fw-client-connect-btn" data-client="codex" data-action="connect">Connect</button>
+        </div>
+        <div id="fw-restart-codex" class="fw-restart-notice" style="display:none">
+          Fully quit Codex and reopen it from Dock/Finder, or run the CLI in a new terminal. Confirm a new chatgpt.com entry in Recordings to verify traffic reaches the proxy.
         </div>
 
         <!-- Gemini — COMING SOON -->
@@ -142,7 +161,7 @@
         </div>
 
       </div>
-      <p class="fw-clients-note">This version supports <strong>Claude Code</strong> only. Open a new terminal after connecting for the env var to take effect.</p>
+      <p class="fw-clients-note">Supports <strong>Claude Code and OpenAI API applications</strong>. ChatGPT web and desktop traffic is not covered by this connection. Open a new terminal after connecting for the env var to take effect.</p>
     </div>
 
     <!-- Sub-tabs: Settings | Audit Log | Recordings -->
@@ -191,6 +210,10 @@
       </div>
 
       <div class="fw-card">
+        <h3 class="fw-card-title">Redaction Replacement</h3>
+        <label for="fw-redaction-text">Custom replacement text</label>
+        <input id="fw-redaction-text" type="text" maxlength="200" placeholder="Leave blank for default typed tokens" class="form-input" />
+        <p class="fw-card-desc">Replace detected sensitive text with your own label, such as [PRIVATE]. Leave blank to use [REDACTED_EMAIL], [REDACTED_SECRET], and other typed defaults. Applies to deterministic rules.</p>
         <h3 class="fw-card-title">Action Mode</h3>
         <div class="fw-mode-options">
           <label class="fw-mode-option" id="fw-mode-redact-opt">
@@ -291,6 +314,15 @@
         <div id="fw-tester-result" class="fw-tester-result" style="display:none"></div>
       </div>
 
+      <div class="fw-log-controls">
+        <label>Show <select id="fw-log-filter">
+          <option value="all">All entries</option>
+          <option value="errors">Blocked / errors</option>
+          <option value="sanitized">Sanitized</option>
+        </select></label>
+        <label><input type="checkbox" id="fw-log-originals"> Reveal original matched values</label>
+        <span>Original values are stored locally for new entries. Older entries may not have them.</span>
+      </div>
       <div id="fw-logs-list" class="fw-logs-list">
         <div class="loading">Loading…</div>
       </div>
