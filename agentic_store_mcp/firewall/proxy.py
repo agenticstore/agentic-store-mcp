@@ -155,12 +155,16 @@ async def _proxy_handler(request: Request) -> Response:
     if config.get("recording"):
         from .recorder import record_prompt
 
+        recording_content = config.get("recording_content", "sanitized")
         record_prompt(
             provider=upstream_base,
             model=body.get("model", "unknown"),
-            prompt_text=_extract_prompt_text(body),
+            prompt_text=_extract_prompt_text(
+                body if recording_content == "pre_sanitized" else sanitized_body
+            ),
             redacted=bool(findings),
             findings_count=len(findings),
+            recording_content=recording_content,
         )
 
     upstream_url = upstream_base + clean_path

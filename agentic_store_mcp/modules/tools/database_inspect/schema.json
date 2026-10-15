@@ -1,0 +1,24 @@
+{
+  "name": "database_inspect",
+  "description": "Inspects a local SQLite database without changing it. Returns table names, column definitions, indexes, foreign keys, database size, and optional row counts. It opens the database read-only and never executes user-supplied SQL.\nUse when: an agent needs to understand a local SQLite schema before proposing a query, migration, or data-analysis step.\nScope: local SQLite files only. Read-only.\nNot for: running SQL queries or modifying data; use a separate guarded query tool when that is available. PostgreSQL, MySQL, and remote database URLs are not supported by this tool.",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": ["path"],
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Absolute or relative path to a local SQLite database file. Example: '/Users/me/project/data/app.db'."
+      },
+      "include_row_counts": {
+        "type": "boolean",
+        "default": false,
+        "description": "If true, count rows in each table. This can be slow for large databases. Default: false."
+      },
+      "table": {
+        "type": "string",
+        "description": "Optional exact table name to inspect. Omit to inspect all tables, up to 100."
+      }
+    }
+  }
+}

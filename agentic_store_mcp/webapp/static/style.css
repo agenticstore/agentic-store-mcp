@@ -1092,6 +1092,7 @@ footer a:hover { color: var(--accent); }
 .fw-rec-icon { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
 .fw-rec-provider { font-weight: 600; color: var(--text); flex-shrink: 0; }
 .fw-rec-model { color: var(--text-muted); font-size: 12px; flex-shrink: 0; }
+.fw-rec-mode { color: var(--accent); font-size: 11px; flex-shrink: 0; }
 .fw-rec-badge { font-size: 11px; padding: 2px 7px; border-radius: 10px; flex-shrink: 0; }
 .badge-warn { background: rgba(251,191,36,0.1); color: var(--warning); }
 .fw-rec-chars { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }

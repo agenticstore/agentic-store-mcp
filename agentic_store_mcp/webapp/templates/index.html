@@ -343,6 +343,12 @@
               <button id="btn-fw-clear-recs" class="btn btn-sm btn-ghost">Clear All</button>
             </div>
           </div>
+          <label class="fw-label" style="margin-top:8px">Store in local recordings
+            <select id="fw-rec-content" class="fw-input" style="margin-left:8px;width:auto">
+              <option value="sanitized">Sanitized outgoing prompt (recommended)</option>
+              <option value="pre_sanitized">Original pre-sanitization prompt (sensitive)</option>
+            </select>
+          </label>
           <div id="fw-rec-status" style="font-size:12px;color:var(--text-muted);min-height:16px"></div>
         </div>
       </div>

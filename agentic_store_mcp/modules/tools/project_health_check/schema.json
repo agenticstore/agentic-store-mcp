@@ -1,0 +1,20 @@
+{
+  "name": "project_health_check",
+  "description": "Inspects a local project and reports its Git state, detected languages and package manifests, available runtimes, declared test/lint/build commands, and common setup gaps. It never runs project scripts or changes files.\nUse when: starting work in an unfamiliar repository, deciding what validation to run, or diagnosing missing setup before a build or test.\nScope: local filesystem and local Git metadata only. Read-only.\nNot for: executing tests or commands, scanning source code for secrets (use repo_scanner), or auditing dependencies for CVEs (use dependency_audit).",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": ["path"],
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Absolute or relative path to the project directory. Example: '/Users/me/projects/my-app' or '.'."
+      },
+      "include_runtime_versions": {
+        "type": "boolean",
+        "default": true,
+        "description": "Report versions for detected local runtimes when their executables are available. This does not install anything. Default: true."
+      }
+    }
+  }
+}

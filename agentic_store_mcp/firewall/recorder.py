@@ -1,4 +1,4 @@
-"""Prompt recording store — captures full outbound prompt text when enabled."""
+"""Prompt recording store for either forwarded or pre-sanitization prompts."""
 from __future__ import annotations
 
 import json
@@ -14,6 +14,7 @@ def record_prompt(
     prompt_text: str,
     redacted: bool,
     findings_count: int,
+    recording_content: str = "sanitized",
 ) -> None:
     """Append one prompt recording entry."""
     RECORDINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -24,6 +25,7 @@ def record_prompt(
         "prompt": prompt_text,
         "redacted": redacted,
         "findings_count": findings_count,
+        "recording_content": recording_content,
         "char_count": len(prompt_text),
     }
     with open(RECORDINGS_FILE, "a", encoding="utf-8") as f:

@@ -1273,6 +1273,7 @@ async def api_client_status():  # noqa: E402
 
 class RecordingToggleRequest(BaseModel):
     enabled: bool
+    recording_content: str = "sanitized"
 
 
 @app.post("/api/firewall/recording/toggle")
@@ -1280,9 +1281,19 @@ async def api_recording_toggle(body: RecordingToggleRequest):
     from agentic_store_mcp.firewall.rules import load_config, save_config
 
     config = load_config()
+    if body.recording_content not in {"sanitized", "pre_sanitized"}:
+        raise HTTPException(
+            status_code=422,
+            detail="recording_content must be 'sanitized' or 'pre_sanitized'",
+        )
     config["recording"] = body.enabled
+    config["recording_content"] = body.recording_content
     save_config(config)
-    return {"ok": True, "recording": body.enabled}
+    return {
+        "ok": True,
+        "recording": body.enabled,
+        "recording_content": body.recording_content,
+    }
 
 
 @app.get("/api/firewall/recordings")

@@ -1371,6 +1371,7 @@ async function loadRecordings() {
           <span class="fw-rec-icon">▶</span>
           <span class="fw-rec-provider">${escapeHtml(r.provider || "")}</span>
           <span class="fw-rec-model">${escapeHtml(r.model || "")}</span>
+          <span class="fw-rec-mode">${r.recording_content === "pre_sanitized" ? "original" : "sanitized"}</span>
           <span class="fw-rec-badge ${r.redacted ? 'badge-warn' : 'badge-ok'}">${r.redacted ? `✦ ${r.findings_count} finding${r.findings_count !== 1 ? 's' : ''}` : '✓ clean'}</span>
           <span class="fw-rec-chars">${r.char_count} chars</span>
           <span class="fw-rec-time">${new Date(r.timestamp).toLocaleString()}</span>
@@ -1429,24 +1430,44 @@ async function loadRecordingToggleState() {
     const cfg = await (await fetch("/api/firewall/config")).json();
     const chk = document.getElementById("fw-rec-toggle");
     if (chk) chk.checked = cfg.recording === true;
+    const content = document.getElementById("fw-rec-content");
+    if (content) content.value = cfg.recording_content || "sanitized";
     const status = document.getElementById("fw-rec-status");
-    if (status) status.textContent = cfg.recording ? "Recording is ON — only prompts reaching this proxy are saved. Check for a new provider entry after sending a prompt." : "Recording is OFF.";
+    if (status) status.textContent = cfg.recording ? `Recording is ON — ${cfg.recording_content === "pre_sanitized" ? "original prompts are stored locally" : "the sanitized prompt forwarded upstream is stored locally"}.` : "Recording is OFF.";
   } catch (_) {}
 }
 
 document.getElementById("fw-rec-toggle")?.addEventListener("change", async (e) => {
   const enabled = e.target.checked;
+  const content = document.getElementById("fw-rec-content")?.value || "sanitized";
   const status = document.getElementById("fw-rec-status");
   try {
     await fetch("/api/firewall/recording/toggle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled }),
+      body: JSON.stringify({ enabled, recording_content: content }),
     });
-    if (status) status.textContent = enabled ? "Recording is ON — only prompts reaching this proxy are saved. Check for a new provider entry after sending a prompt." : "Recording is OFF.";
+    if (status) status.textContent = enabled ? `Recording is ON — ${content === "pre_sanitized" ? "original prompts are stored locally" : "the sanitized prompt forwarded upstream is stored locally"}.` : "Recording is OFF.";
   } catch (err) {
     if (status) status.textContent = `Error: ${err.message}`;
     e.target.checked = !enabled; // revert
+  }
+});
+
+document.getElementById("fw-rec-content")?.addEventListener("change", async (e) => {
+  const checkbox = document.getElementById("fw-rec-toggle");
+  const enabled = checkbox?.checked === true;
+  const content = e.target.value;
+  const status = document.getElementById("fw-rec-status");
+  try {
+    await fetch("/api/firewall/recording/toggle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled, recording_content: content }),
+    });
+    if (status) status.textContent = enabled ? `Recording is ON — ${content === "pre_sanitized" ? "original prompts are stored locally" : "the sanitized prompt forwarded upstream is stored locally"}.` : "Recording is OFF.";
+  } catch (err) {
+    if (status) status.textContent = `Error: ${err.message}`;
   }
 });
 

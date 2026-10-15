@@ -1,0 +1,6 @@
+{
+  "name": "database_query",
+  "description": "Runs a bounded, read-only SELECT or EXPLAIN SELECT query against a local SQLite database. It rejects write statements, multiple statements, PRAGMA, ATTACH, and transaction commands; connections are query-only.\nUse when: inspecting data after database_inspect has identified the relevant schema.\nScope: local SQLite files only. Read-only; returns at most 500 rows and stops long-running queries.\nNot for: schema changes, inserts, updates, deletes, remote databases, or arbitrary SQL scripts.",
+  "connectors": [],
+  "inputSchema": {"type":"object","required":["path","query"],"properties":{"path":{"type":"string","description":"Path to a local SQLite database file."},"query":{"type":"string","description":"One SELECT statement or EXPLAIN SELECT statement. Do not include a trailing semicolon."},"parameters":{"type":"array","items":{},"description":"Optional positional values for ? placeholders."},"max_rows":{"type":"integer","default":100,"description":"Maximum rows returned. Default: 100. Max: 500."}}}
+}

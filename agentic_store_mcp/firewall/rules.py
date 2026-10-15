@@ -23,6 +23,7 @@ DEFAULT_CONFIG: dict = {
     },
     "mode": "redact",
     "recording": False,
+    "recording_content": "sanitized",
     "redaction_text": None,
 }
 

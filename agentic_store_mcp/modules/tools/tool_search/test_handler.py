@@ -259,3 +259,40 @@ def test_tag_summary_structure(tmp_path):
     assert isinstance(summary, dict)
     assert "api_required" in summary
     assert summary["api_required"] == 2  # manage_issue + get_file
+
+
+def test_ranks_exact_name_above_description_match(tmp_path):
+    handler = load_handler()
+    fake_modules = _make_fake_modules(tmp_path)
+    with patch.object(handler, "MODULES_DIR", fake_modules):
+        result = handler.run({"query": "repo scanner"})
+    assert result["error"] is None
+    assert result["result"]["tools"][0]["name"] == "repo_scanner"
+    assert result["result"]["tools"][0]["match_reasons"]
+
+
+def test_returns_optional_input_summary(tmp_path):
+    handler = load_handler()
+    fake_modules = _make_fake_modules(tmp_path)
+    with patch.object(handler, "MODULES_DIR", fake_modules):
+        result = handler.run({"query": "issues", "include_inputs": True})
+    item = result["result"]["tools"][0]
+    assert item["name"] == "manage_issue"
+    assert item["required_inputs"] == []
+    assert "confirmed" in item["input_names"]
+
+
+def test_filters_confirmation_and_connector(tmp_path):
+    handler = load_handler()
+    fake_modules = _make_fake_modules(tmp_path)
+    with patch.object(handler, "MODULES_DIR", fake_modules):
+        result = handler.run({"tags": "requires_confirmation", "connector": "github"})
+    assert [item["name"] for item in result["result"]["tools"]] == ["manage_issue"]
+
+
+def test_unknown_module_returns_actionable_error(tmp_path):
+    handler = load_handler()
+    fake_modules = _make_fake_modules(tmp_path)
+    with patch.object(handler, "MODULES_DIR", fake_modules):
+        result = handler.run({"module": "unknown"})
+    assert "Valid modules" in result["error"]

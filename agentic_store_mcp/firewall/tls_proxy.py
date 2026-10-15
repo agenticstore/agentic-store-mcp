@@ -75,23 +75,27 @@ class _PromptFirewallAddon:
         original = extract_prompt(body)
         sanitized, findings, safe = await _sanitize(body, config)
         blocked = config.get("mode", "redact") == "block" and (findings or not safe)
-        if config.get("recording") and original:
-            from .recorder import record_prompt
-
-            response = body.get("response", body)
-            record_prompt(
-                provider=flow.request.pretty_host,
-                model=response.get("model", "unknown"),
-                prompt_text=original,
-                redacted=bool(findings),
-                findings_count=len(findings),
-            )
         if blocked:
             message.drop()
             flow.kill()
             log_event("blocked", "Model WebSocket prompt blocked", findings, safe=False)
             return
         message.content = json.dumps(sanitized).encode()
+        if config.get("recording") and original:
+            from .recorder import record_prompt
+
+            response = body.get("response", body)
+            recording_content = config.get("recording_content", "sanitized")
+            record_prompt(
+                provider=flow.request.pretty_host,
+                model=response.get("model", "unknown"),
+                prompt_text=extract_prompt(
+                    body if recording_content == "pre_sanitized" else sanitized
+                ),
+                redacted=bool(findings),
+                findings_count=len(findings),
+                recording_content=recording_content,
+            )
         if original:
             log_event(
                 "redacted" if findings else "clean",
@@ -165,12 +169,18 @@ class _PromptFirewallAddon:
         if config.get("recording"):
             from .recorder import record_prompt
 
+            recording_content = config.get("recording_content", "sanitized")
             record_prompt(
                 provider=flow.request.pretty_host,
                 model=body.get("model", "unknown"),
-                prompt_text=original_text,
+                prompt_text=(
+                    original_text
+                    if recording_content == "pre_sanitized"
+                    else extract_prompt(body)
+                ),
                 redacted=bool(findings),
                 findings_count=len(findings),
+                recording_content=recording_content,
             )
 
 

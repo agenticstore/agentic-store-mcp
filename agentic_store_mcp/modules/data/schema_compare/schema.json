@@ -1,0 +1,6 @@
+{
+  "name": "schema_compare",
+  "description": "Compares the column schema of two local CSV, JSON, JSONL, or SQLite sources. Returns columns unique to each side, shared columns, and type differences without returning data rows.\nUse when: checking whether two exports, datasets, or SQLite tables are compatible before migration or transformation.\nScope: local filesystem only. Read-only.\nNot for: comparing row values, moving data, or querying remote databases.",
+  "connectors": [],
+  "inputSchema": {"type":"object","required":["left_path","right_path"],"properties":{"left_path":{"type":"string","description":"First local data file or SQLite database."},"right_path":{"type":"string","description":"Second local data file or SQLite database."},"left_table":{"type":"string","description":"Required when left_path is SQLite and has more than one table."},"right_table":{"type":"string","description":"Required when right_path is SQLite and has more than one table."}}}
+}
