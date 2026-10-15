@@ -1,0 +1,1 @@
+{"name":"git_change_summary","description":"Return staged and unstaged files, diff statistics, changed symbols, generated-file detection, and a bounded local Git diff summary.","input_schema":{"type":"object","properties":{"path":{"type":"string","description":"Git repository directory."},"max_diff_chars":{"type":"integer","default":12000,"maximum":50000}}}}

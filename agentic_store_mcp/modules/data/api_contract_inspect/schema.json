@@ -1,0 +1,1 @@
+{"name":"api_contract_inspect","description":"Inspect a local OpenAPI JSON/YAML, GraphQL, or JSON Schema contract for endpoints, auth schemes, required fields, and examples.","input_schema":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}}

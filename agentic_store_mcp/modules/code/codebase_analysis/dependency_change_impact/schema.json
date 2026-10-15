@@ -1,0 +1,1 @@
+{"name":"dependency_change_impact","description":"Compare a Git ref to local dependency manifest changes and estimate affected Python or JavaScript/TypeScript imports.","input_schema":{"type":"object","properties":{"path":{"type":"string"},"base_ref":{"type":"string","default":"HEAD"}}}}
