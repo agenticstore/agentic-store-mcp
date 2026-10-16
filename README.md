@@ -393,7 +393,7 @@ Because AgenticStore MCP supports both manual configuration and management via t
 | `tool_profile_manage` | Save and apply named MCP tool profiles after a client restart. |
 | `tool_profile_audit` | Explain profile capabilities, risk annotations, and connector needs. |
 | `decision_log` | Track key development decisions, rationale, alternatives, and risks. |
-| `task_board` | Maintain granular development work, blockers, and acceptance criteria. |
+| `task_board` (Agent Board) | JIRA for AI Agents: local tickets, sprints, tags, dependencies, blockers, comments, issue links, and acceptance criteria. |
 | `risk_register` | Track release and architectural risks with mitigation and status. |
 | `handoff_bundle` | Assemble a portable development handoff from lifecycle artifacts. |
 

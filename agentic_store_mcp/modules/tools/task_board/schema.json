@@ -1,43 +1,37 @@
 {
   "name": "task_board",
-  "description": "Read, add, or update local development tasks with status, dependencies, acceptance criteria, blockers, and artifacts. Writes require confirm_write=true.",
+  "description": "Agent Board — JIRA for AI Agents. Create a local, structured development board with tasks, priorities, dependencies, blockers, acceptance criteria, comments, activity history, and ready-work summaries. Writes require confirm_write=true.",
   "inputSchema": {
     "type": "object",
     "properties": {
       "action": {
         "type": "string",
-        "enum": [
-          "list",
-          "add",
-          "update"
-        ],
-        "default": "list"
+        "enum": ["list", "get", "summary", "add", "update", "transition", "comment", "assign_sprint", "link_issue", "log_issue", "archive", "set_project"],
+        "default": "list",
+        "description": "list, get, and summary are read-only. add creates a ticket; log_issue creates a bug ticket. All other actions write the board."
       },
-      "path": {
-        "type": "string"
-      },
-      "task": {
-        "type": "object"
-      },
-      "id": {
-        "type": "string"
-      },
-      "changes": {
-        "type": "object"
-      },
-      "confirm_write": {
-        "type": "boolean",
-        "default": false
-      }
+      "path": {"type": "string", "description": "Absolute or relative path to the local Agent Board JSON file."},
+      "filters": {"type": "object", "description": "Optional list filters: status, priority, assignee, label, parent_id, or ready."},
+      "task": {"type": "object", "description": "Ticket for add. Supports title, description, priority, type, assignee, labels, sprint, parent_id, depends_on, acceptance_criteria, blockers, and artifacts."},
+      "issue": {"type": "object", "description": "Bug-ticket payload for log_issue. Uses the same fields as task and defaults type to bug."},
+      "id": {"type": "string", "description": "Task id for get, update, transition, comment, or archive."},
+      "changes": {"type": "object", "description": "Non-status task fields to change with update. Use transition for status changes."},
+      "status": {"type": "string", "enum": ["backlog", "todo", "in_progress", "blocked", "in_review", "done", "cancelled"], "description": "Target status for transition."},
+      "reason": {"type": "string", "description": "Optional transition or archive rationale stored in task history."},
+      "comment": {"type": "string", "description": "Comment body for action=comment. Agent Board records its UTC timestamp."},
+      "sprint": {"type": "string", "description": "Sprint name for assign_sprint, or include it on a ticket payload."},
+      "related_id": {"type": "string", "description": "Existing ticket id to link with action=link_issue."},
+      "relationship": {"type": "string", "enum": ["blocks", "blocked_by", "relates_to", "duplicates", "caused_by"], "default": "relates_to", "description": "Relationship for a linked ticket."},
+      "project": {"type": "object", "description": "Project metadata for set_project: name, description, repository, or updated_by."},
+      "allow_incomplete_dependencies": {"type": "boolean", "default": false, "description": "Allow a task to transition to done while dependencies are incomplete."},
+      "confirm_write": {"type": "boolean", "default": false, "description": "Must be true for add, update, transition, comment, archive, and set_project."}
     },
-    "required": [
-      "path"
-    ]
+    "required": ["path"]
   },
   "annotations": {
-    "title": "Task Board",
+    "title": "Agent Board — JIRA for AI Agents",
     "readOnlyHint": false,
-    "destructiveHint": true,
+    "destructiveHint": false,
     "idempotentHint": false,
     "openWorldHint": false
   }
