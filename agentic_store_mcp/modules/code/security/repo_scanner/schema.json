@@ -1,6 +1,6 @@
 {
   "name": "repo_scanner",
-  "description": "Scans local source files for leaked secrets (API keys, tokens, passwords, private keys), PII (emails, SSNs, credit cards), and missing .gitignore protections. Works on any language — scans file content, not package metadata.\nUse when: user asks about hardcoded credentials, leaked tokens, .env exposure, or PII in source files.\nScope: local directory — no network access, no GitHub API.\nNot for: package vulnerabilities (use dependency_audit), code quality issues (use python_lint_checker), or GitHub code scanning findings from a remote repo (use code_scanning_alerts).",
+  "description": "Scans local source files for leaked secrets (API keys, tokens, passwords, private keys), PII (emails, SSNs, credit cards), and missing .gitignore protections. Works on any language \u2014 scans file content, not package metadata.\nUse when: user asks about hardcoded credentials, leaked tokens, .env exposure, or PII in source files.\nScope: local directory \u2014 no network access, no GitHub API.\nNot for: package vulnerabilities (use dependency_audit), code quality issues (use python_lint_checker), or GitHub code scanning findings from a remote repo (use code_scanning_alerts).",
   "connectors": [],
   "inputSchema": {
     "type": "object",
@@ -15,6 +15,15 @@
         "default": "all"
       }
     },
-    "required": ["path"]
+    "required": [
+      "path"
+    ]
+  },
+  "annotations": {
+    "title": "Repo Scanner",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
   }
 }

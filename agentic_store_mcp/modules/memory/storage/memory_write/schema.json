@@ -4,7 +4,10 @@
   "connectors": [],
   "inputSchema": {
     "type": "object",
-    "required": ["key", "value"],
+    "required": [
+      "key",
+      "value"
+    ],
     "properties": {
       "key": {
         "type": "string",
@@ -13,11 +16,21 @@
       "value": {
         "description": "Value to store. Can be a string, number, boolean, list, or object.",
         "oneOf": [
-          {"type": "string"},
-          {"type": "number"},
-          {"type": "boolean"},
-          {"type": "array"},
-          {"type": "object"}
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "array"
+          },
+          {
+            "type": "object"
+          }
         ]
       },
       "category": {
@@ -26,5 +39,12 @@
         "default": "facts"
       }
     }
+  },
+  "annotations": {
+    "title": "Memory Write",
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false
   }
 }

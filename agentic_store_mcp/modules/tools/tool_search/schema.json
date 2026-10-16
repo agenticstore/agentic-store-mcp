@@ -1,1 +1,47 @@
-{"name":"tool_search","description":"Finds the best available MCP tools for a task with ranked natural-language matching, safety/capability filters, connector filters, and optional input summaries. Understands related terms such as semantic → vector/relevance and database → SQLite/schema/query. Use when: choosing the right tool before acting, finding local-only or read-only tools, or checking required inputs. Scope: reads the local tool registry only; no network access. Not for: executing a tool, configuring credentials, or managing MCP client configuration.","connectors":[],"inputSchema":{"type":"object","properties":{"query":{"type":"string","description":"Natural-language task or keywords. Matches names, descriptions, capabilities, and related terms. Optional."},"tags":{"type":"string","description":"Comma-separated filters: api_required, local_only, network_access, write_tool, read_only, requires_confirmation."},"module":{"type":"string","description":"Top-level module: code, data, memory, or tools."},"submodule":{"type":"string","description":"Optional submodule filter, such as codebase_analysis or security."},"connector":{"type":"string","description":"Only return tools requiring this connector, for example github."},"max_results":{"type":"integer","default":20,"description":"Maximum ranked tools returned. Max: 100."},"include_inputs":{"type":"boolean","default":false,"description":"Include required input names and all supported input names per result."}}}}
+{
+  "name": "tool_search",
+  "description": "Finds the best available MCP tools for a task with ranked natural-language matching, safety/capability filters, connector filters, and optional input summaries. Understands related terms such as semantic \u2192 vector/relevance and database \u2192 SQLite/schema/query. Use when: choosing the right tool before acting, finding local-only or read-only tools, or checking required inputs. Scope: reads the local tool registry only; no network access. Not for: executing a tool, configuring credentials, or managing MCP client configuration.",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Natural-language task or keywords. Matches names, descriptions, capabilities, and related terms. Optional."
+      },
+      "tags": {
+        "type": "string",
+        "description": "Comma-separated filters: api_required, local_only, network_access, write_tool, read_only, requires_confirmation."
+      },
+      "module": {
+        "type": "string",
+        "description": "Top-level module: code, data, memory, or tools."
+      },
+      "submodule": {
+        "type": "string",
+        "description": "Optional submodule filter, such as codebase_analysis or security."
+      },
+      "connector": {
+        "type": "string",
+        "description": "Only return tools requiring this connector, for example github."
+      },
+      "max_results": {
+        "type": "integer",
+        "default": 20,
+        "description": "Maximum ranked tools returned. Max: 100."
+      },
+      "include_inputs": {
+        "type": "boolean",
+        "default": false,
+        "description": "Include required input names and all supported input names per result."
+      }
+    }
+  },
+  "annotations": {
+    "title": "Tool Search",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

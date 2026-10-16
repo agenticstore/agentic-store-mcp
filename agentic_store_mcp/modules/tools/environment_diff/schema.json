@@ -1,0 +1,26 @@
+{
+  "name": "environment_diff",
+  "description": "Compare two local .env-style files by variable names and masked value fingerprints; never returns secret values.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "left_path": {
+        "type": "string"
+      },
+      "right_path": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "left_path",
+      "right_path"
+    ]
+  },
+  "annotations": {
+    "title": "Environment Diff",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "task_board",
+  "description": "Read, add, or update local development tasks with status, dependencies, acceptance criteria, blockers, and artifacts. Writes require confirm_write=true.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "list",
+          "add",
+          "update"
+        ],
+        "default": "list"
+      },
+      "path": {
+        "type": "string"
+      },
+      "task": {
+        "type": "object"
+      },
+      "id": {
+        "type": "string"
+      },
+      "changes": {
+        "type": "object"
+      },
+      "confirm_write": {
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "required": [
+      "path"
+    ]
+  },
+  "annotations": {
+    "title": "Task Board",
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "idempotentHint": false,
+    "openWorldHint": false
+  }
+}

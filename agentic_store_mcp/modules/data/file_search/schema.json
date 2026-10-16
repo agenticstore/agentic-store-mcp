@@ -2,5 +2,45 @@
   "name": "file_search",
   "description": "Searches text files in a local directory for a literal query. Returns bounded matching paths, line numbers, and excerpts while respecting common ignored directories.\nUse when: locating data fields, config values, references, or documentation across a project.\nScope: local filesystem only. Read-only. Searches at most 2,000 files and returns at most 200 matches.\nNot for: scanning for secrets or PII (use repo_scanner), or searching remote repositories.",
   "connectors": [],
-  "inputSchema": {"type":"object","required":["path","query"],"properties":{"path":{"type":"string","description":"Directory to search."},"query":{"type":"string","description":"Literal text to match, case-insensitively by default."},"case_sensitive":{"type":"boolean","default":false,"description":"Match case exactly. Default: false."},"file_extensions":{"type":"array","items":{"type":"string"},"description":"Optional extensions such as ['.py', '.json', '.md']."},"max_results":{"type":"integer","default":50,"description":"Maximum matches to return. Default: 50. Max: 200."}}}
+  "inputSchema": {
+    "type": "object",
+    "required": [
+      "path",
+      "query"
+    ],
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Directory to search."
+      },
+      "query": {
+        "type": "string",
+        "description": "Literal text to match, case-insensitively by default."
+      },
+      "case_sensitive": {
+        "type": "boolean",
+        "default": false,
+        "description": "Match case exactly. Default: false."
+      },
+      "file_extensions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Optional extensions such as ['.py', '.json', '.md']."
+      },
+      "max_results": {
+        "type": "integer",
+        "default": 50,
+        "description": "Maximum matches to return. Default: 50. Max: 200."
+      }
+    }
+  },
+  "annotations": {
+    "title": "File Search",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
 }

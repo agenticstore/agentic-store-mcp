@@ -4,7 +4,9 @@
   "connectors": [],
   "inputSchema": {
     "type": "object",
-    "required": ["content"],
+    "required": [
+      "content"
+    ],
     "properties": {
       "content": {
         "type": "string",
@@ -16,5 +18,12 @@
         "default": false
       }
     }
+  },
+  "annotations": {
+    "title": "Update Plan",
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "idempotentHint": false,
+    "openWorldHint": false
   }
 }

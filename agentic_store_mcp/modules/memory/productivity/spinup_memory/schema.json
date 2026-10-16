@@ -1,10 +1,12 @@
 {
   "name": "spinup_memory",
-  "description": "Initializes the centralized agent memory for a project — creates the memory directory, seeds project facts, and writes a starter strategy template.\nUse when: starting a new project, onboarding a new agent to an existing project, or resetting a project's memory baseline.\nScope: local filesystem (~/.config/agentic-store/memory/). No network access.\nNot for: restoring a prior session (use restore_session), writing individual facts (use memory_write), or reading current state (use restore_session).",
+  "description": "Initializes the centralized agent memory for a project \u2014 creates the memory directory, seeds project facts, and writes a starter strategy template.\nUse when: starting a new project, onboarding a new agent to an existing project, or resetting a project's memory baseline.\nScope: local filesystem (~/.config/agentic-store/memory/). No network access.\nNot for: restoring a prior session (use restore_session), writing individual facts (use memory_write), or reading current state (use restore_session).",
   "connectors": [],
   "inputSchema": {
     "type": "object",
-    "required": ["project_name"],
+    "required": [
+      "project_name"
+    ],
     "properties": {
       "project_name": {
         "type": "string",
@@ -20,7 +22,9 @@
       },
       "goals": {
         "type": "array",
-        "items": {"type": "string"},
+        "items": {
+          "type": "string"
+        },
         "description": "High-level project goals."
       },
       "reset": {
@@ -29,5 +33,12 @@
         "default": false
       }
     }
+  },
+  "annotations": {
+    "title": "Spinup Memory",
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false
   }
 }

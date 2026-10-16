@@ -2,5 +2,33 @@
   "name": "file_inspect",
   "description": "Inspects a local file without reading its full contents. Returns path, size, extension, detected text/binary type, encoding estimate, SHA-256 hash, line count for text files, and a bounded preview.\nUse when: deciding how to safely read or process a file before using a data tool.\nScope: local filesystem only. Read-only; previews are capped at 8 KB.\nNot for: searching many files (use file_search), profiling structured data (use data_profile), or modifying files.",
   "connectors": [],
-  "inputSchema": {"type":"object","required":["path"],"properties":{"path":{"type":"string","description":"Absolute or relative path to a readable local file."},"include_hash":{"type":"boolean","default":true,"description":"Calculate SHA-256. Default: true."},"preview_bytes":{"type":"integer","default":2048,"description":"Bytes to preview from the file start. Default: 2048. Max: 8192."}}}
+  "inputSchema": {
+    "type": "object",
+    "required": [
+      "path"
+    ],
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Absolute or relative path to a readable local file."
+      },
+      "include_hash": {
+        "type": "boolean",
+        "default": true,
+        "description": "Calculate SHA-256. Default: true."
+      },
+      "preview_bytes": {
+        "type": "integer",
+        "default": 2048,
+        "description": "Bytes to preview from the file start. Default: 2048. Max: 8192."
+      }
+    }
+  },
+  "annotations": {
+    "title": "File Inspect",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
 }

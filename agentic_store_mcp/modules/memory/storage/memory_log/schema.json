@@ -7,8 +7,11 @@
     "properties": {
       "mode": {
         "type": "string",
-        "enum": ["append", "read"],
-        "description": "append (default) — add an entry. read — return recent entries.",
+        "enum": [
+          "append",
+          "read"
+        ],
+        "description": "append (default) \u2014 add an entry. read \u2014 return recent entries.",
         "default": "append"
       },
       "event": {
@@ -29,5 +32,12 @@
         "default": 20
       }
     }
+  },
+  "annotations": {
+    "title": "Memory Log",
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false
   }
 }

@@ -1,1 +1,34 @@
-{"name":"workspace_snapshot","description":"Create a bounded local workspace manifest with Git state, selected file hashes, manifests, and environment facts. Can compare to or explicitly write a local JSON snapshot.","input_schema":{"type":"object","properties":{"path":{"type":"string"},"max_files":{"type":"integer","default":500,"maximum":2000},"compare_to":{"type":"string"},"output_path":{"type":"string"},"confirm_write":{"type":"boolean","default":false}}}}
+{
+  "name": "workspace_snapshot",
+  "description": "Create a bounded local workspace manifest with Git state, selected file hashes, manifests, and environment facts. Can compare to or explicitly write a local JSON snapshot.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string"
+      },
+      "max_files": {
+        "type": "integer",
+        "default": 500,
+        "maximum": 2000
+      },
+      "compare_to": {
+        "type": "string"
+      },
+      "output_path": {
+        "type": "string"
+      },
+      "confirm_write": {
+        "type": "boolean",
+        "default": false
+      }
+    }
+  },
+  "annotations": {
+    "title": "Workspace Snapshot",
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "name": "decision_log",
+  "description": "Read or append structured development decisions with rationale, alternatives, risks, and artifact links. Appends require confirm_write=true.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "read",
+          "append"
+        ],
+        "default": "read"
+      },
+      "path": {
+        "type": "string"
+      },
+      "decision": {
+        "type": "object"
+      },
+      "limit": {
+        "type": "integer",
+        "default": 50
+      },
+      "confirm_write": {
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "required": [
+      "path"
+    ]
+  },
+  "annotations": {
+    "title": "Decision Log",
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false
+  }
+}

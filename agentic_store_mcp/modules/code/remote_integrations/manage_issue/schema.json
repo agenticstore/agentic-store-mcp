@@ -1,7 +1,9 @@
 {
   "name": "manage_issue",
-  "description": "Creates, updates, closes, or triages issues in a GitHub repository. Always returns a preview first — call with confirmed=false (default) to review, then confirmed=true to execute. Requires GitHub connector token with 'repo' scope.\nUse when: user wants to create a bug report, update an issue title/body, add labels, assign someone, or close an issue on GitHub.\nScope: remote GitHub API — write operation, requires token.\nNot for: creating pull requests (use create_pr), reading issue lists (use get_repo_info), or local git operations.",
-  "connectors": ["github"],
+  "description": "Creates, updates, closes, or triages issues in a GitHub repository. Always returns a preview first \u2014 call with confirmed=false (default) to review, then confirmed=true to execute. Requires GitHub connector token with 'repo' scope.\nUse when: user wants to create a bug report, update an issue title/body, add labels, assign someone, or close an issue on GitHub.\nScope: remote GitHub API \u2014 write operation, requires token.\nNot for: creating pull requests (use create_pr), reading issue lists (use get_repo_info), or local git operations.",
+  "connectors": [
+    "github"
+  ],
   "inputSchema": {
     "type": "object",
     "properties": {
@@ -11,7 +13,12 @@
       },
       "action": {
         "type": "string",
-        "enum": ["create", "update", "close", "label"],
+        "enum": [
+          "create",
+          "update",
+          "close",
+          "label"
+        ],
         "description": "Action to perform. 'create': open a new issue. 'update': edit title/body. 'close': close the issue. 'label': add/replace labels and assignees."
       },
       "issue_number": {
@@ -28,12 +35,16 @@
       },
       "labels": {
         "type": "array",
-        "items": {"type": "string"},
+        "items": {
+          "type": "string"
+        },
         "description": "Labels to apply. Example: ['bug', 'high-priority']. For 'label' action, replaces existing labels."
       },
       "assignees": {
         "type": "array",
-        "items": {"type": "string"},
+        "items": {
+          "type": "string"
+        },
         "description": "GitHub usernames to assign. Example: ['alice', 'bob']. For 'label' action, replaces existing assignees."
       },
       "confirmed": {
@@ -42,6 +53,16 @@
         "default": false
       }
     },
-    "required": ["repo", "action"]
+    "required": [
+      "repo",
+      "action"
+    ]
+  },
+  "annotations": {
+    "title": "Manage Issue",
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "idempotentHint": false,
+    "openWorldHint": true
   }
 }

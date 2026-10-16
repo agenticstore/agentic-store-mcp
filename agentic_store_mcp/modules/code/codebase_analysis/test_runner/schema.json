@@ -1,1 +1,40 @@
-{"name":"test_runner","description":"Run an allowlisted local test, lint, build, or typecheck command with a bounded timeout. Requires confirm_execute=true because it executes project scripts.","input_schema":{"type":"object","properties":{"path":{"type":"string"},"task":{"type":"string","enum":["test","lint","build","typecheck"]},"timeout_seconds":{"type":"integer","default":120,"maximum":300},"confirm_execute":{"type":"boolean","default":false}},"required":["task"]}}
+{
+  "name": "test_runner",
+  "description": "Run an allowlisted local test, lint, build, or typecheck command with a bounded timeout. Requires confirm_execute=true because it executes project scripts.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string"
+      },
+      "task": {
+        "type": "string",
+        "enum": [
+          "test",
+          "lint",
+          "build",
+          "typecheck"
+        ]
+      },
+      "timeout_seconds": {
+        "type": "integer",
+        "default": 120,
+        "maximum": 300
+      },
+      "confirm_execute": {
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "required": [
+      "task"
+    ]
+  },
+  "annotations": {
+    "title": "Test Runner",
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "idempotentHint": false,
+    "openWorldHint": false
+  }
+}

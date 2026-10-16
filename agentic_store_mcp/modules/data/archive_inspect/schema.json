@@ -1,1 +1,29 @@
-{"name":"archive_inspect","description":"Lists entries and sizes in a local ZIP or TAR archive without extracting it. Use when an agent needs to understand archive contents safely before selecting files to process. Scope: local filesystem only and read-only; never extracts files and returns at most 5,000 entries. Not for archive creation or extraction.","connectors":[],"inputSchema":{"type":"object","required":["path"],"properties":{"path":{"type":"string","description":"Path to a ZIP, TAR, TAR.GZ, TAR.BZ2, or TAR.XZ archive."},"max_entries":{"type":"integer","default":200,"description":"Maximum entries returned. Max: 5000."}}}}
+{
+  "name": "archive_inspect",
+  "description": "Lists entries and sizes in a local ZIP or TAR archive without extracting it. Use when an agent needs to understand archive contents safely before selecting files to process. Scope: local filesystem only and read-only; never extracts files and returns at most 5,000 entries. Not for archive creation or extraction.",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": [
+      "path"
+    ],
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Path to a ZIP, TAR, TAR.GZ, TAR.BZ2, or TAR.XZ archive."
+      },
+      "max_entries": {
+        "type": "integer",
+        "default": 200,
+        "description": "Maximum entries returned. Max: 5000."
+      }
+    }
+  },
+  "annotations": {
+    "title": "Archive Inspect",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

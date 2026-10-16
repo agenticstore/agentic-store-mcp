@@ -29,6 +29,15 @@
         "default": 20
       }
     },
-    "required": ["url"]
+    "required": [
+      "url"
+    ]
+  },
+  "annotations": {
+    "title": "Agentic Web Crawl",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
   }
 }

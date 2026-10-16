@@ -4,7 +4,10 @@
   "connectors": [],
   "inputSchema": {
     "type": "object",
-    "required": ["description", "change_type"],
+    "required": [
+      "description",
+      "change_type"
+    ],
     "properties": {
       "description": {
         "type": "string",
@@ -12,7 +15,15 @@
       },
       "change_type": {
         "type": "string",
-        "enum": ["feat", "fix", "refactor", "docs", "test", "chore", "breaking"],
+        "enum": [
+          "feat",
+          "fix",
+          "refactor",
+          "docs",
+          "test",
+          "chore",
+          "breaking"
+        ],
         "description": "Type of change: feat (new feature), fix (bug fix), refactor, docs, test, chore, breaking (breaking change)."
       },
       "version": {
@@ -21,8 +32,15 @@
       },
       "scope": {
         "type": "string",
-        "description": "Optional scope — what area of the project. Example: 'webapp', 'memory', 'github-tools'."
+        "description": "Optional scope \u2014 what area of the project. Example: 'webapp', 'memory', 'github-tools'."
       }
     }
+  },
+  "annotations": {
+    "title": "Update Change Log",
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false
   }
 }

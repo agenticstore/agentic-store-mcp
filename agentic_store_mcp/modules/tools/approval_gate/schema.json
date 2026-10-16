@@ -1,0 +1,48 @@
+{
+  "name": "approval_gate",
+  "description": "Create, read, or resolve an explicit local approval record for a sensitive agent action. Writes require confirm_write=true.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "read",
+          "request",
+          "resolve"
+        ],
+        "default": "read"
+      },
+      "path": {
+        "type": "string"
+      },
+      "request": {
+        "type": "object"
+      },
+      "decision": {
+        "type": "string",
+        "enum": [
+          "approved",
+          "rejected"
+        ]
+      },
+      "reason": {
+        "type": "string"
+      },
+      "confirm_write": {
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "required": [
+      "path"
+    ]
+  },
+  "annotations": {
+    "title": "Approval Gate",
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "idempotentHint": false,
+    "openWorldHint": false
+  }
+}

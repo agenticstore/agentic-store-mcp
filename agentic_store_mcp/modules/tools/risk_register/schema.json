@@ -1,0 +1,44 @@
+{
+  "name": "risk_register",
+  "description": "Read, add, or update local development risks with severity, mitigation, owner, due date, and status. Writes require confirm_write=true.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "list",
+          "add",
+          "update"
+        ],
+        "default": "list"
+      },
+      "path": {
+        "type": "string"
+      },
+      "risk": {
+        "type": "object"
+      },
+      "id": {
+        "type": "string"
+      },
+      "changes": {
+        "type": "object"
+      },
+      "confirm_write": {
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "required": [
+      "path"
+    ]
+  },
+  "annotations": {
+    "title": "Risk Register",
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "idempotentHint": false,
+    "openWorldHint": false
+  }
+}

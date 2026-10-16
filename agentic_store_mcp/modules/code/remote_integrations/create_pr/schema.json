@@ -1,7 +1,9 @@
 {
   "name": "create_pr",
-  "description": "Opens a pull request in a GitHub repository. Always returns a preview first — call with confirmed=false (default) to review, then confirmed=true to execute. Requires GitHub connector token with 'repo' scope.\nUse when: user wants to open a pull request to merge a branch into a target branch.\nScope: remote GitHub API — write operation, requires token.\nNot for: creating issues (use manage_issue), pushing commits (use local git), or reviewing existing PRs (use get_repo_info).",
-  "connectors": ["github"],
+  "description": "Opens a pull request in a GitHub repository. Always returns a preview first \u2014 call with confirmed=false (default) to review, then confirmed=true to execute. Requires GitHub connector token with 'repo' scope.\nUse when: user wants to open a pull request to merge a branch into a target branch.\nScope: remote GitHub API \u2014 write operation, requires token.\nNot for: creating issues (use manage_issue), pushing commits (use local git), or reviewing existing PRs (use get_repo_info).",
+  "connectors": [
+    "github"
+  ],
   "inputSchema": {
     "type": "object",
     "properties": {
@@ -37,6 +39,17 @@
         "default": false
       }
     },
-    "required": ["repo", "title", "head"]
+    "required": [
+      "repo",
+      "title",
+      "head"
+    ]
+  },
+  "annotations": {
+    "title": "Create Pr",
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": true
   }
 }

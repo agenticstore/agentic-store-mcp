@@ -1,6 +1,6 @@
 {
   "name": "analyze_commits",
-  "description": "Analyzes local git commit history — authors, frequency, recent changes, and commit patterns. No API key required; reads directly from the local git repository.\nUse when: user asks about who committed what, recent changes, commit history, activity patterns, or wants to understand how a local repo has evolved.\nScope: local git repository only — no network access. Run git commands via subprocess.\nNot for: remote GitHub repo metadata (use get_repo_info), fetching remote files (use get_file), or searching code patterns (use search_code).",
+  "description": "Analyzes local git commit history \u2014 authors, frequency, recent changes, and commit patterns. No API key required; reads directly from the local git repository.\nUse when: user asks about who committed what, recent changes, commit history, activity patterns, or wants to understand how a local repo has evolved.\nScope: local git repository only \u2014 no network access. Run git commands via subprocess.\nNot for: remote GitHub repo metadata (use get_repo_info), fetching remote files (use get_file), or searching code patterns (use search_code).",
   "connectors": [],
   "inputSchema": {
     "type": "object",
@@ -27,6 +27,15 @@
         "default": 50
       }
     },
-    "required": ["path"]
+    "required": [
+      "path"
+    ]
+  },
+  "annotations": {
+    "title": "Analyze Commits",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
   }
 }

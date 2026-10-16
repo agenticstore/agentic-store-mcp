@@ -1,0 +1,34 @@
+{
+  "name": "plan_validator",
+  "description": "Validate an agent plan for structured steps, success criteria, and missing approval markers before execution. Read-only.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "plan": {
+        "type": "object"
+      },
+      "plan_path": {
+        "type": "string"
+      }
+    },
+    "anyOf": [
+      {
+        "required": [
+          "plan"
+        ]
+      },
+      {
+        "required": [
+          "plan_path"
+        ]
+      }
+    ]
+  },
+  "annotations": {
+    "title": "Plan Validator",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

@@ -1,1 +1,34 @@
-{"name":"file_read","description":"Reads a bounded range from a local text file. Use when an agent needs exact file content after file_inspect or file_search. Scope: local filesystem only and read-only; returns at most 2,000 lines. Not for binary files, directory scanning, or file modification.","connectors":[],"inputSchema":{"type":"object","required":["path"],"properties":{"path":{"type":"string","description":"Path to a local text file."},"start_line":{"type":"integer","default":1,"description":"First one-based line to read."},"max_lines":{"type":"integer","default":200,"description":"Maximum lines to return. Max: 2000."}}}}
+{
+  "name": "file_read",
+  "description": "Reads a bounded range from a local text file. Use when an agent needs exact file content after file_inspect or file_search. Scope: local filesystem only and read-only; returns at most 2,000 lines. Not for binary files, directory scanning, or file modification.",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": [
+      "path"
+    ],
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Path to a local text file."
+      },
+      "start_line": {
+        "type": "integer",
+        "default": 1,
+        "description": "First one-based line to read."
+      },
+      "max_lines": {
+        "type": "integer",
+        "default": 200,
+        "description": "Maximum lines to return. Max: 2000."
+      }
+    }
+  },
+  "annotations": {
+    "title": "File Read",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

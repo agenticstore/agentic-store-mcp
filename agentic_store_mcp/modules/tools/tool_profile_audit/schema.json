@@ -1,0 +1,22 @@
+{
+  "name": "tool_profile_audit",
+  "description": "Audit a saved profile\u2019s enabled tools, MCP risk annotations, connector requirements, and missing tool names. Read-only.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "store_path": {
+        "type": "string"
+      }
+    }
+  },
+  "annotations": {
+    "title": "Tool Profile Audit",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

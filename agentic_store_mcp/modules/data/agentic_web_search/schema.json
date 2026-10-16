@@ -24,6 +24,15 @@
         "default": 10
       }
     },
-    "required": ["query"]
+    "required": [
+      "query"
+    ]
+  },
+  "annotations": {
+    "title": "Agentic Web Search",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
   }
 }

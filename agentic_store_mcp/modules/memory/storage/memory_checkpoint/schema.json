@@ -4,7 +4,9 @@
   "connectors": [],
   "inputSchema": {
     "type": "object",
-    "required": ["task"],
+    "required": [
+      "task"
+    ],
     "properties": {
       "name": {
         "type": "string",
@@ -16,12 +18,16 @@
       },
       "decisions": {
         "type": "array",
-        "items": {"type": "string"},
+        "items": {
+          "type": "string"
+        },
         "description": "Key decisions made during this session."
       },
       "next_steps": {
         "type": "array",
-        "items": {"type": "string"},
+        "items": {
+          "type": "string"
+        },
         "description": "Planned next actions when resuming."
       },
       "client": {
@@ -30,7 +36,9 @@
       },
       "active_files": {
         "type": "array",
-        "items": {"type": "string"},
+        "items": {
+          "type": "string"
+        },
         "description": "File paths relevant to the current task."
       },
       "notes": {
@@ -38,5 +46,12 @@
         "description": "Any additional free-form notes."
       }
     }
+  },
+  "annotations": {
+    "title": "Memory Checkpoint",
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false
   }
 }

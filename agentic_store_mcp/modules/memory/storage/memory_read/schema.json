@@ -14,5 +14,12 @@
         "description": "Filter by category. Only applies when key is omitted. Example: 'project'."
       }
     }
+  },
+  "annotations": {
+    "title": "Memory Read",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
   }
 }

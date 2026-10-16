@@ -65,6 +65,12 @@ Examples:
         default=None,
     )
     p.add_argument(
+        "--profile",
+        metavar="NAME",
+        help="Load a named local tool profile from ~/.config/agentic-store/tool-profiles.json. Restart MCP clients after changing profiles.",
+        default=None,
+    )
+    p.add_argument(
         "--list", "-l",
         action="store_true",
         help="Print available tools and exit (no server started)",
@@ -101,6 +107,7 @@ Examples:
 def _load_tools(
     modules_filter: set[str] | None = None,
     tools_filter: set[str] | None = None,
+    profile_name: str | None = None,
 ) -> dict[str, dict[str, Any]]:
     """
     Walk modules/ and load matching tools.
@@ -141,6 +148,19 @@ def _load_tools(
                     if (tool_dir / "handler.py").exists():
                         _register_tool(tools, tool_dir, slug, submodule=child_dir.name, tools_filter=tools_filter)
 
+    if profile_name:
+        profile_path = Path.home() / ".config" / "agentic-store" / "tool-profiles.json"
+        try:
+            profiles = json.loads(profile_path.read_text()).get("profiles", {})
+            profile = profiles.get(profile_name)
+        except (OSError, json.JSONDecodeError):
+            profile = None
+        if profile is None:
+            _warn(f"Tool profile '{profile_name}' was not found at {profile_path}")
+            return {}
+        control_tools = {"tool_orchestrator", "tool_profile_manage", "tool_profile_audit"}
+        allowed = set(profile.get("enabled_tools", [])) | control_tools
+        tools = {name: info for name, info in tools.items() if name in allowed}
     return tools
 
 
@@ -192,9 +212,9 @@ def _register_tool(
     tools[tool_name] = {
         "description": schema.get("description", ""),
         "input_schema": schema.get(
-            "inputSchema",
-            {"type": "object", "properties": {}},
+            "inputSchema", schema.get("input_schema", {"type": "object", "properties": {}})
         ),
+        "annotations": schema.get("annotations", {}),
         "run": handler_module.run,
         "module": slug,
         "submodule": submodule,
@@ -216,6 +236,7 @@ async def _serve(tools: dict[str, dict[str, Any]]) -> None:
                 name=name,
                 description=info["description"],
                 inputSchema=info["input_schema"],
+                annotations=info.get("annotations") or None,
             )
             for name, info in tools.items()
         ]

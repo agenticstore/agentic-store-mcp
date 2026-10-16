@@ -4,7 +4,9 @@
   "connectors": [],
   "inputSchema": {
     "type": "object",
-    "required": ["path"],
+    "required": [
+      "path"
+    ],
     "properties": {
       "path": {
         "type": "string",
@@ -20,5 +22,12 @@
         "description": "Optional exact table name to inspect. Omit to inspect all tables, up to 100."
       }
     }
+  },
+  "annotations": {
+    "title": "Database Inspect",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
   }
 }

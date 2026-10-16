@@ -1,0 +1,47 @@
+{
+  "name": "tool_profile_manage",
+  "description": "Create, read, update, delete, or select named AgenticStore tool profiles. Profile writes require confirm_write=true and take effect after an MCP-client restart.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "list",
+          "read",
+          "create",
+          "update",
+          "delete",
+          "apply"
+        ],
+        "default": "list"
+      },
+      "name": {
+        "type": "string"
+      },
+      "enabled_tools": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "description": {
+        "type": "string"
+      },
+      "store_path": {
+        "type": "string"
+      },
+      "confirm_write": {
+        "type": "boolean",
+        "default": false
+      }
+    }
+  },
+  "annotations": {
+    "title": "Tool Profile Manage",
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "idempotentHint": false,
+    "openWorldHint": false
+  }
+}

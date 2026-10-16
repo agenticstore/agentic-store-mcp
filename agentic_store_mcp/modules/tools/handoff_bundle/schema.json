@@ -1,0 +1,50 @@
+{
+  "name": "handoff_bundle",
+  "description": "Assemble a portable development handoff from explicit plan, task, risk, decision, and checkpoint artifacts. Writing requires confirm_write=true.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "goal": {
+        "type": "string"
+      },
+      "summary": {
+        "type": "string"
+      },
+      "plan_path": {
+        "type": "string"
+      },
+      "task_board_path": {
+        "type": "string"
+      },
+      "risk_register_path": {
+        "type": "string"
+      },
+      "decision_log_path": {
+        "type": "string"
+      },
+      "checkpoint_path": {
+        "type": "string"
+      },
+      "next_actions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "output_path": {
+        "type": "string"
+      },
+      "confirm_write": {
+        "type": "boolean",
+        "default": false
+      }
+    }
+  },
+  "annotations": {
+    "title": "Handoff Bundle",
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false
+  }
+}

@@ -1,14 +1,14 @@
 <div align="center">
 
 # ⚡ AgenticStore MCP Server: LLM Prompt Firewall, Token Optimization & AI Security Toolkit 
-**Open-Source Model Context Protocol (MCP) Server for Data Privacy, Prompt Recording, Audit Logs, and 59 Agent Tools for Claude Code, Cursor, and Windsurf.**
+**Open-Source Model Context Protocol (MCP) Server for Data Privacy, Prompt Recording, Audit Logs, and 74 Agent Tools for Claude Code, Cursor, and Windsurf.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg?style=for-the-badge)](https://www.python.org/downloads/)
 [![MCP Compatible](https://img.shields.io/badge/MCP-compatible-green.svg?style=for-the-badge)](https://modelcontextprotocol.io)
 [![PyPI](https://img.shields.io/pypi/v/agentic-store-mcp?color=blue&style=for-the-badge)](https://pypi.org/project/agentic-store-mcp/)
 
-[� Official Documentation](https://agenticstore.dev/docs) • [�🚀 Quick Start](#-quick-start-guide-fastest-way-to-install) • [🛡️ Prompt Firewall](#%EF%B8%8F-llm-prompt-firewall--sanitization) • [🗂️ Full Tool Directory](#-tool-directory--all-59-tools) • [🌐 Web Search](#-enabling-web-search) • [🔌 Client Setup](#-connect-to-your-ai-client) • [💻 Claude Code](#-claude-code-cli-integration) • [🖥️ GUI Webapp](https://agenticstore.dev/docs/gui)
+[� Official Documentation](https://agenticstore.dev/docs) • [�🚀 Quick Start](#-quick-start-guide-fastest-way-to-install) • [🛡️ Prompt Firewall](#%EF%B8%8F-llm-prompt-firewall--sanitization) • [🗂️ Full Tool Directory](#-tool-directory--all-74-tools) • [🌐 Web Search](#-enabling-web-search) • [🔌 Client Setup](#-connect-to-your-ai-client) • [💻 Claude Code](#-claude-code-cli-integration) • [🖥️ GUI Webapp](https://agenticstore.dev/docs/gui)
 
 </div>
 
@@ -23,7 +23,7 @@ Giving AI assistants like **Claude, Cursor, and Windsurf** access to your codeba
 **The Solution:** AgenticStore MCP Server solves the entire equation natively:
 
 * 🛡️ **The LLM Prompt Firewall:** A secure local proxy that intercepts, scans, and sanitizes your prompts *before* they leave your machine. It flags leaked secrets, PII, and API keys, using local models (like Ollama) to sanitize data and generate strict audit traces for all AI usage.
-* 🧰 **The MCP Toolkit (59 Tools):** A production-ready arsenal. Instantly arm your AI with code analyzers and CVE vulnerability scanners, project health checks, safe local data inspection, context pruners, token optimizers, persistent semantic memory, and self-hosted SearXNG web search.
+* 🧰 **The MCP Toolkit (74 Tools):** A production-ready arsenal. Instantly arm your AI with code analyzers and CVE vulnerability scanners, project health checks, safe local data inspection, context pruners, token optimizers, persistent semantic memory, and self-hosted SearXNG web search.
 
 Zero subscriptions. Zero vendor lock-in. Configure your MCP tools manually or effortlessly through a beautiful local GUI.
 
@@ -87,13 +87,13 @@ Zero subscriptions. Zero vendor lock-in. Configure your MCP tools manually or ef
 ## 📋 Table of Contents
 
 - [🛡️ LLM Prompt Firewall & Sanitization](#%EF%B8%8F-llm-prompt-firewall--sanitization)
-- [🧰 What's Inside the Toolkit](#-whats-inside-the-toolkit-59-mcp-tools)
+- [🧰 What's Inside the Toolkit](#-whats-inside-the-toolkit-74-mcp-tools)
 - [🚀 Quick Start Guide (Fastest Way to Install)](#-quick-start-guide-fastest-way-to-install)
   - [V0: Python/uvx (Recommended)](#v0--python--uvx-fastest-start-no-docker-needed)
   - [V1: From GitHub Source](#v1--from-github-source-latest-features)
   - [V2: MCP Hub Webapp (UI)](#v2--mcp-hub-webapp-gui-to-manage-everything)
 - [🔌 Connect to Your AI Client](#-connect-to-your-ai-client)
-- [🗂 Tool Directory — All 59 Tools](#-tool-directory--all-59-tools)
+- [🗂 Tool Directory — All 74 Tools](#-tool-directory--all-74-tools)
 - [💻 Claude Code CLI Integration](#-claude-code-cli-integration)
 - [🔎 Enabling Web Search](#-enabling-web-search)
 - [🎛 Overriding Configs & Advanced Usage](#-overriding-configs--advanced-usage)
@@ -122,21 +122,21 @@ To enable the firewall and begin collecting **audit traces for AI usage**, start
 
 MCP Hub → Clients now includes **GPT / OpenAI Codex**, with automatic TOML configuration and selected-tool support. The Codex CLI must be installed to apply the configuration. The Firewall dashboard also supports OpenAI SDK applications alongside Claude Code. Connect **GPT / OpenAI SDK** to route Chat Completions and Responses requests through `http://127.0.0.1:8766/openai/v1`. Settings now include **Redaction Replacement** for your own literal placeholder; blank restores the typed defaults. Prompt recordings store the **sanitized prompt that is forwarded upstream** by default. In the Firewall → Recordings tab, you can explicitly choose to retain the original pre-sanitization prompt locally when an investigation requires it. See the [OpenAI setup and coverage guide](docs/setup/openai.md).
 
-## 🧰 What's Inside the Toolkit (51 MCP Tools)
+## 🧰 What's Inside the Toolkit (74 MCP Tools)
 
-Equip your AI client with these modules containing **59 specific MCP tools**, categorized strategically for maximum productivity:
+Equip your AI client with these modules containing **74 specific MCP tools**, categorized strategically for maximum productivity:
 
-* 🛡️ **Local Only:** 32 tools executing privately without any external API dependencies.
-* ☁️ **API Required:** 7 tools strictly connecting to remote providers (like the GitHub API or Web connectors).
-* 📝 **Write Access:** 7 tools capable of safely modifying your repos or local files.
-* 👓 **Read Only:** 34 tools limited purely to context ingestion ensuring safety by default.
+* 🛡️ **Local Only:** 62 tools with `openWorldHint: false`; they stay within local or configured closed environments.
+* ☁️ **Open World:** 12 tools that can reach public web or remote-provider systems.
+* 📝 **Stateful:** 21 tools that can write local state, execute a bounded action, or change an external system; explicit confirmation is required where applicable.
+* 👓 **Read Only:** 53 tools marked retry-safe through MCP annotations.
 
 | Module | Purpose | Key Capabilities | Tools |
 | :--- | :--- | :--- | :---: |
-| 💻 **Code (Codebase, GitHub, Security)** | Codebase mastery & safety | Static analysis, symbol references, GitHub PRs, OSV CVE scans, CodeQL scanning | **17** |
-| 🌐 **Data (Search, Files & Databases)** | Internet and local data access | Web search, file extraction, local file discovery, comparison, relevance search, local vector indexing, quality checks, and safe structured-data queries | **21** |
+| 💻 **Code (Codebase, GitHub, Security)** | Codebase mastery & safety | Static analysis, symbol references, GitHub PRs, OSV CVE scans, CodeQL scanning | **18** |
+| 🌐 **Data (Search, Files & Databases)** | Internet and local data access | Web search, file extraction, local file discovery, comparison, relevance search, local vector indexing, quality checks, and safe structured-data queries | **24** |
 | 🧠 **Memory (Productivity & Storage)** | Context manipulation & persistence | Save/read facts, optimize LLM tokens, context pruning | **14** |
-| 🛠️ **Tools & System Config** | Project, database, and OS inspection | Project health, SQLite schema inspection, process and log checks | **7** |
+| 🛠️ **Tools & System Config** | Project, database, and OS inspection | Project health, SQLite schema inspection, process and log checks | **18** |
 
 ---
 
@@ -198,7 +198,7 @@ See the [Connect to Your AI Client](#-connect-to-your-ai-client) section to link
 Forget manual JSON editing! Use our local web UI to:
 - 🛡️ **Firewall:** Setup certificates and monitor all intercepted LLM prompts and audit logs for comprehensive **prompt recording**.
 - 🔑 **Connectors:** Enter remote API keys securely (stored in OS keyring).
-- 🛠️ **Tools:** Toggle which of the 59 tools to expose to the AI.
+- 🛠️ **Tools:** Toggle which of the 74 tools to expose to the AI.
 - 💻 **Clients:** Auto-generate configuration for Claude, Cursor, and Windsurf.
 - 🧠 **Memory:** Manage persistent agent states, checkpoints, token optimization, and logs.
 
@@ -265,10 +265,10 @@ Because AgenticStore MCP supports both manual configuration and management via t
 
 ---
 
-## 🗂 Tool Directory — All 59 Tools
+## 🗂 Tool Directory — All 74 Tools
 
 <details>
-<summary><strong>📝 Code Module (17 tools)</strong></summary>
+<summary><strong>📝 Code Module (18 tools)</strong></summary>
 <br/>
 
 ### Codebase Analysis
@@ -286,6 +286,7 @@ Because AgenticStore MCP supports both manual configuration and management via t
 | `test_runner` | Run allowlisted local test, lint, build, or type-check commands after explicit confirmation. |
 | `dependency_change_impact` | Estimate local import impact for dependency manifest changes. |
 | `release_readiness_check` | Check local Git and release metadata before publishing. |
+| `dependency_upgrade_plan` | Build a read-only package upgrade plan from manifests and import references. |
 
 ### Remote Integration 
 *(Requires a GitHub Personal Access Token. Set via `GITHUB_TOKEN` or MCP Hub).*
@@ -309,7 +310,7 @@ Because AgenticStore MCP supports both manual configuration and management via t
 </details>
 
 <details>
-<summary><strong>🌐 Data Module (21 tools)</strong></summary>
+<summary><strong>🌐 Data Module (24 tools)</strong></summary>
 <br/>
 
 | Tool | Capability |
@@ -335,6 +336,9 @@ Because AgenticStore MCP supports both manual configuration and management via t
 | `data_contract_check` | Validate local data against reusable JSON contracts. |
 | `api_contract_inspect` | Inspect local OpenAPI, GraphQL, and JSON Schema contracts. |
 | `browser_evidence_capture` | Capture bounded, reproducible public-web research evidence. |
+| `data_lineage_map` | Find local references to a data file across a workspace. |
+| `citation_verify` | Re-check public sources and required terms for research evidence. |
+| `document_compare` | Compare bounded text extracted from local documents. |
 
 </details>
 
@@ -369,7 +373,7 @@ Because AgenticStore MCP supports both manual configuration and management via t
 </details>
 
 <details>
-<summary><strong>🛠️ Tools Module (7 tools)</strong></summary>
+<summary><strong>🛠️ Tools Module (18 tools)</strong></summary>
 <br/>
 
 | Tool | Capability |
@@ -381,6 +385,17 @@ Because AgenticStore MCP supports both manual configuration and management via t
 | `tail_system_logs` | **NEW:** Smart and efficient log file trailing algorithm (seek-from-end). Never crash context windows on gigabyte log files; reads the minimal context necessary by filtering directly by criteria like 'error' and 'exception' bounding memory footprints cleanly to 1000 lines.  |
 | `tool_search` | Find the best MCP tool for a task with ranked natural-language matching, capability/connector filters, and optional input summaries. |
 | `workspace_snapshot` | Create or compare a bounded local workspace manifest with Git state and file hashes. |
+| `task_checkpoint` | Persist or restore a structured local agent task checkpoint. |
+| `plan_validator` | Check a plan for structured steps, success criteria, and approval markers. |
+| `approval_gate` | Create and resolve explicit local approvals for sensitive actions. |
+| `environment_diff` | Compare environment files without exposing secret values. |
+| `tool_orchestrator` | Recommend a focused, risk-aware tool profile for an agent goal. |
+| `tool_profile_manage` | Save and apply named MCP tool profiles after a client restart. |
+| `tool_profile_audit` | Explain profile capabilities, risk annotations, and connector needs. |
+| `decision_log` | Track key development decisions, rationale, alternatives, and risks. |
+| `task_board` | Maintain granular development work, blockers, and acceptance criteria. |
+| `risk_register` | Track release and architectural risks with mitigation and status. |
+| `handoff_bundle` | Assemble a portable development handoff from lifecycle artifacts. |
 
 </details>
 
@@ -388,7 +403,7 @@ Because AgenticStore MCP supports both manual configuration and management via t
 
 ## 💻 Claude Code CLI Integration
 
-AgenticStore MCP is fully compatible with **Claude Code** explicitly for terminal workflows, allowing developers full access to the 59 command capacities directly interacting via the command line.
+AgenticStore MCP is fully compatible with **Claude Code** explicitly for terminal workflows, allowing developers full access to the 74 command capacities directly interacting via the command line.
 
 ### Safe CLI Execution Modes
 Automatically install the application directly into your `~/.claude/settings.json` seamlessly resolving connection bindings. The CLI handles both traditional operation and state-of-the-art intercepting proxy verification cleanly via a dynamic CLI command structure. 
@@ -447,6 +462,16 @@ Overriding configs is related to your **MCP setup**. MCP supports both manual an
 agentic-store-mcp --list
 ```
 *Note: The LLM Prompt Firewall is exclusively configured via the UI. The firewall is only made available on the UI to ensure smooth setup, robust proxy interception, and seamless prompt recording out of the box.*
+
+### Focused tool profiles
+
+AgenticStore can run a focused subset of tools for a specific job. Use `tool_orchestrator` to recommend a profile, save it through `tool_profile_manage`, audit its safety boundaries with `tool_profile_audit`, then restart the MCP client with that profile:
+
+```bash
+agentic-store-mcp --profile private-code-review
+```
+
+Profiles always retain the three profile-control tools. A profile changes the tool list supplied at client connection time, so restarting the client is required after a profile is created or changed.
 
 ---
 

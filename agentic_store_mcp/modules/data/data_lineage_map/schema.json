@@ -1,0 +1,25 @@
+{
+  "name": "data_lineage_map",
+  "description": "Find bounded local code, config, and document references to a data file to infer its workspace lineage. Read-only.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string"
+      },
+      "root": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "path"
+    ]
+  },
+  "annotations": {
+    "title": "Data Lineage Map",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

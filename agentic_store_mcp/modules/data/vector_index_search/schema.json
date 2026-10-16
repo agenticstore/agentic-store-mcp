@@ -1,1 +1,68 @@
-{"name":"vector_index_search","description":"Builds and searches a local vector index using an explicitly configured localhost embedding endpoint such as Ollama. Use when TF-IDF semantic_search is insufficient and an agent needs embedding-based relevance. Indexing writes a local JSON index only after confirm_write=true; embedding requests are rejected unless the endpoint is localhost. Not for remote embedding APIs or automatic background indexing.","connectors":[],"inputSchema":{"type":"object","required":["action","index_path"],"properties":{"action":{"type":"string","enum":["index","search"],"description":"Use index to build a local index or search to query an existing one."},"path":{"type":"string","description":"Directory to index. Required for action=index."},"index_path":{"type":"string","description":"Explicit local path for the JSON vector index."},"query":{"type":"string","description":"Search query. Required for action=search."},"model":{"type":"string","default":"nomic-embed-text","description":"Embedding model served by the local endpoint."},"endpoint":{"type":"string","default":"http://127.0.0.1:11434/api/embed","description":"Localhost embedding API endpoint only."},"file_extensions":{"type":"array","items":{"type":"string"},"description":"Optional source file extension filter when indexing."},"confirm_write":{"type":"boolean","default":false,"description":"Must be true to create or overwrite the index file."},"max_results":{"type":"integer","default":10,"description":"Maximum search results. Max: 100."}}}}
+{
+  "name": "vector_index_search",
+  "description": "Builds and searches a local vector index using an explicitly configured localhost embedding endpoint such as Ollama. Use when TF-IDF semantic_search is insufficient and an agent needs embedding-based relevance. Indexing writes a local JSON index only after confirm_write=true; embedding requests are rejected unless the endpoint is localhost. Not for remote embedding APIs or automatic background indexing.",
+  "connectors": [],
+  "inputSchema": {
+    "type": "object",
+    "required": [
+      "action",
+      "index_path"
+    ],
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "index",
+          "search"
+        ],
+        "description": "Use index to build a local index or search to query an existing one."
+      },
+      "path": {
+        "type": "string",
+        "description": "Directory to index. Required for action=index."
+      },
+      "index_path": {
+        "type": "string",
+        "description": "Explicit local path for the JSON vector index."
+      },
+      "query": {
+        "type": "string",
+        "description": "Search query. Required for action=search."
+      },
+      "model": {
+        "type": "string",
+        "default": "nomic-embed-text",
+        "description": "Embedding model served by the local endpoint."
+      },
+      "endpoint": {
+        "type": "string",
+        "default": "http://127.0.0.1:11434/api/embed",
+        "description": "Localhost embedding API endpoint only."
+      },
+      "file_extensions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Optional source file extension filter when indexing."
+      },
+      "confirm_write": {
+        "type": "boolean",
+        "default": false,
+        "description": "Must be true to create or overwrite the index file."
+      },
+      "max_results": {
+        "type": "integer",
+        "default": 10,
+        "description": "Maximum search results. Max: 100."
+      }
+    }
+  },
+  "annotations": {
+    "title": "Vector Index Search",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

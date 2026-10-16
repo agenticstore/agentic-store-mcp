@@ -4,12 +4,21 @@
   "connectors": [],
   "inputSchema": {
     "type": "object",
-    "required": ["query"],
+    "required": [
+      "query"
+    ],
     "properties": {
       "query": {
         "type": "string",
         "description": "Case-insensitive keyword or phrase to search across all memory sources."
       }
     }
+  },
+  "annotations": {
+    "title": "Memory Search",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
   }
 }

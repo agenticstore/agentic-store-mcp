@@ -1,6 +1,6 @@
 {
   "name": "python_lint_checker",
-  "description": "Static analysis for Python files — detects unused imports, likely bugs, style violations, and high-complexity functions. No code is executed.\nUse when: user asks to lint, review, check quality, or find bugs in Python code.\nScope: Python files only (.py). Local files — no network access.\nNot for: other languages, package vulnerabilities (use dependency_audit), or secrets in files (use repo_scanner).",
+  "description": "Static analysis for Python files \u2014 detects unused imports, likely bugs, style violations, and high-complexity functions. No code is executed.\nUse when: user asks to lint, review, check quality, or find bugs in Python code.\nScope: Python files only (.py). Local files \u2014 no network access.\nNot for: other languages, package vulnerabilities (use dependency_audit), or secrets in files (use repo_scanner).",
   "connectors": [],
   "inputSchema": {
     "type": "object",
@@ -26,10 +26,19 @@
       },
       "summary_only": {
         "type": "boolean",
-        "description": "Return only summary counts — no per-file findings. Fast and compact for large repos. Default: false.",
+        "description": "Return only summary counts \u2014 no per-file findings. Fast and compact for large repos. Default: false.",
         "default": false
       }
     },
-    "required": ["path"]
+    "required": [
+      "path"
+    ]
+  },
+  "annotations": {
+    "title": "Python Lint Checker",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
   }
 }

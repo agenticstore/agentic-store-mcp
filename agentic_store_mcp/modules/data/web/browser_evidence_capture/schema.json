@@ -1,1 +1,40 @@
-{"name":"browser_evidence_capture","description":"Capture bounded text, title, timestamp, and term excerpts from a public web page; optionally save a reproducible local JSON evidence record with confirm_write=true.","input_schema":{"type":"object","properties":{"url":{"type":"string"},"terms":{"type":"array","items":{"type":"string"}},"max_chars":{"type":"integer","default":12000,"maximum":50000},"output_path":{"type":"string"},"confirm_write":{"type":"boolean","default":false}},"required":["url"]}}
+{
+  "name": "browser_evidence_capture",
+  "description": "Capture bounded text, title, timestamp, and term excerpts from a public web page; optionally save a reproducible local JSON evidence record with confirm_write=true.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string"
+      },
+      "terms": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "max_chars": {
+        "type": "integer",
+        "default": 12000,
+        "maximum": 50000
+      },
+      "output_path": {
+        "type": "string"
+      },
+      "confirm_write": {
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "required": [
+      "url"
+    ]
+  },
+  "annotations": {
+    "title": "Browser Evidence Capture",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+  }
+}

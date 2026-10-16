@@ -1,6 +1,60 @@
 {
   "name": "data_transform",
-  "description": "Transforms a local CSV or JSONL file into a new output file. Supports CSV↔JSONL conversion, selecting columns, and exact-match row filtering. It never overwrites the input, and requires confirmed=true before writing.\nUse when: an agent has reviewed a dataset and needs a small, explicit local transformation.\nScope: local filesystem. Writes only the requested new output file after confirmation.\nNot for: arbitrary code execution, overwriting source data, or large ETL jobs.",
+  "description": "Transforms a local CSV or JSONL file into a new output file. Supports CSV\u2194JSONL conversion, selecting columns, and exact-match row filtering. It never overwrites the input, and requires confirmed=true before writing.\nUse when: an agent has reviewed a dataset and needs a small, explicit local transformation.\nScope: local filesystem. Writes only the requested new output file after confirmation.\nNot for: arbitrary code execution, overwriting source data, or large ETL jobs.",
   "connectors": [],
-  "inputSchema": {"type":"object","required":["input_path","output_path","operation","confirmed"],"properties":{"input_path":{"type":"string","description":"Existing .csv or .jsonl source file."},"output_path":{"type":"string","description":"New destination path. Must differ from input_path."},"operation":{"type":"string","enum":["csv_to_jsonl","jsonl_to_csv","filter_equals","select_columns"],"description":"Transformation to perform."},"columns":{"type":"array","items":{"type":"string"},"description":"Required for select_columns."},"filter_column":{"type":"string","description":"Required for filter_equals."},"filter_value":{"type":"string","description":"Required for filter_equals; exact string match."},"confirmed":{"type":"boolean","description":"Must be true to write the output file."}}}
+  "inputSchema": {
+    "type": "object",
+    "required": [
+      "input_path",
+      "output_path",
+      "operation",
+      "confirmed"
+    ],
+    "properties": {
+      "input_path": {
+        "type": "string",
+        "description": "Existing .csv or .jsonl source file."
+      },
+      "output_path": {
+        "type": "string",
+        "description": "New destination path. Must differ from input_path."
+      },
+      "operation": {
+        "type": "string",
+        "enum": [
+          "csv_to_jsonl",
+          "jsonl_to_csv",
+          "filter_equals",
+          "select_columns"
+        ],
+        "description": "Transformation to perform."
+      },
+      "columns": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Required for select_columns."
+      },
+      "filter_column": {
+        "type": "string",
+        "description": "Required for filter_equals."
+      },
+      "filter_value": {
+        "type": "string",
+        "description": "Required for filter_equals; exact string match."
+      },
+      "confirmed": {
+        "type": "boolean",
+        "description": "Must be true to write the output file."
+      }
+    }
+  },
+  "annotations": {
+    "title": "Data Transform",
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "idempotentHint": false,
+    "openWorldHint": false
+  }
 }

@@ -1,1 +1,100 @@
-{"name":"structured_data_query","description":"Run bounded read-only filtering, sorting, grouping, and aggregations over local CSV, JSON, and JSONL files without importing data into a database.","input_schema":{"type":"object","properties":{"path":{"type":"string"},"filters":{"type":"array","items":{"type":"object","properties":{"column":{"type":"string"},"operator":{"type":"string","enum":["eq","ne","gt","gte","lt","lte","contains","in"]},"value":{}}}},"select":{"type":"array","items":{"type":"string"}},"sort":{"type":"object","properties":{"column":{"type":"string"},"direction":{"type":"string","enum":["asc","desc"]}}},"group_by":{"type":"string"},"aggregations":{"type":"array","items":{"type":"object","properties":{"column":{"type":"string"},"operation":{"type":"string","enum":["count","sum","avg","min","max"]}},"required":["operation"]}},"limit":{"type":"integer","default":100,"maximum":500}},"required":["path"]}}
+{
+  "name": "structured_data_query",
+  "description": "Run bounded read-only filtering, sorting, grouping, and aggregations over local CSV, JSON, and JSONL files without importing data into a database.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string"
+      },
+      "filters": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "column": {
+              "type": "string"
+            },
+            "operator": {
+              "type": "string",
+              "enum": [
+                "eq",
+                "ne",
+                "gt",
+                "gte",
+                "lt",
+                "lte",
+                "contains",
+                "in"
+              ]
+            },
+            "value": {}
+          }
+        }
+      },
+      "select": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "sort": {
+        "type": "object",
+        "properties": {
+          "column": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        }
+      },
+      "group_by": {
+        "type": "string"
+      },
+      "aggregations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "column": {
+              "type": "string"
+            },
+            "operation": {
+              "type": "string",
+              "enum": [
+                "count",
+                "sum",
+                "avg",
+                "min",
+                "max"
+              ]
+            }
+          },
+          "required": [
+            "operation"
+          ]
+        }
+      },
+      "limit": {
+        "type": "integer",
+        "default": 100,
+        "maximum": 500
+      }
+    },
+    "required": [
+      "path"
+    ]
+  },
+  "annotations": {
+    "title": "Structured Data Query",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

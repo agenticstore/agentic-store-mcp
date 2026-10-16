@@ -4,7 +4,9 @@
   "connectors": [],
   "inputSchema": {
     "type": "object",
-    "required": ["path"],
+    "required": [
+      "path"
+    ],
     "properties": {
       "path": {
         "type": "string",
@@ -16,5 +18,12 @@
         "description": "Report versions for detected local runtimes when their executables are available. This does not install anything. Default: true."
       }
     }
+  },
+  "annotations": {
+    "title": "Project Health Check",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
   }
 }

@@ -1,0 +1,31 @@
+{
+  "name": "document_compare",
+  "description": "Compare bounded extracted text from two local PDF, DOCX, XLSX, PPTX, HTML, Markdown, or text files. Read-only.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "left_path": {
+        "type": "string"
+      },
+      "right_path": {
+        "type": "string"
+      },
+      "max_chars": {
+        "type": "integer",
+        "default": 30000,
+        "maximum": 100000
+      }
+    },
+    "required": [
+      "left_path",
+      "right_path"
+    ]
+  },
+  "annotations": {
+    "title": "Document Compare",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

@@ -4,12 +4,21 @@
   "connectors": [],
   "inputSchema": {
     "type": "object",
-    "required": ["name"],
+    "required": [
+      "name"
+    ],
     "properties": {
       "name": {
         "type": "string",
         "description": "Checkpoint name to restore. Use 'latest' for the most recently saved checkpoint."
       }
     }
+  },
+  "annotations": {
+    "title": "Memory Restore",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
   }
 }

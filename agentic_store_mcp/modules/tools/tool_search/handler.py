@@ -35,7 +35,8 @@ def _tokens(value: str) -> set[str]:
 def _infer_tags(schema: dict[str, Any]) -> list[str]:
     connectors = schema.get("connectors", [])
     description = schema.get("description", "")
-    properties = schema.get("inputSchema", {}).get("properties", {})
+    properties = schema.get("inputSchema", schema.get("input_schema", {})).get("properties", {})
+    annotations = schema.get("annotations", {})
     tags = []
     if connectors:
         tags.append("api_required")
@@ -43,9 +44,11 @@ def _infer_tags(schema: dict[str, Any]) -> list[str]:
         tags.append("network_access")
     else:
         tags.append("local_only")
-    if "confirmed" in properties or "confirm_write" in properties:
-        tags.extend(["requires_confirmation", "write_tool"])
-    elif WRITE_KEYWORDS.search(description):
+    if "confirmed" in properties or "confirm_write" in properties or "confirm_execute" in properties:
+        tags.append("requires_confirmation")
+    if annotations.get("readOnlyHint") is True:
+        tags.append("read_only")
+    elif annotations.get("readOnlyHint") is False or WRITE_KEYWORDS.search(description):
         tags.append("write_tool")
     else:
         tags.append("read_only")
@@ -62,7 +65,7 @@ def _add_tool(tools: list[dict[str, Any]], tool_dir: Path, module: str, submodul
         return
     if not (tool_dir / "handler.py").exists():
         return
-    input_schema = schema.get("inputSchema", {})
+    input_schema = schema.get("inputSchema", schema.get("input_schema", {}))
     properties = input_schema.get("properties", {})
     tools.append({
         "name": schema.get("name") or tool_dir.name,
@@ -71,6 +74,7 @@ def _add_tool(tools: list[dict[str, Any]], tool_dir: Path, module: str, submodul
         "description": schema.get("description", ""),
         "connectors": schema.get("connectors", []),
         "tags": _infer_tags(schema),
+        "annotations": schema.get("annotations", {}),
         "required_inputs": input_schema.get("required", []),
         "input_names": sorted(properties),
     })
@@ -157,7 +161,7 @@ def run(params: dict[str, Any]) -> dict[str, Any]:
     total = len(ranked)
     rendered = []
     for tool in ranked[:max_results]:
-        item = {key: tool[key] for key in ("name", "module", "submodule", "connectors", "tags", "relevance_score", "match_reasons")}
+        item = {key: tool[key] for key in ("name", "module", "submodule", "connectors", "tags", "annotations", "relevance_score", "match_reasons")}
         item["description"] = tool["description"].split("\n")[0]
         if include_inputs:
             item["required_inputs"] = tool["required_inputs"]

@@ -1,1 +1,19 @@
-{"name":"release_readiness_check","description":"Create a read-only release report for Git cleanliness, version metadata, README, changelog, and ignore configuration, with required follow-up checks.","input_schema":{"type":"object","properties":{"path":{"type":"string"}}}}
+{
+  "name": "release_readiness_check",
+  "description": "Create a read-only release report for Git cleanliness, version metadata, README, changelog, and ignore configuration, with required follow-up checks.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string"
+      }
+    }
+  },
+  "annotations": {
+    "title": "Release Readiness Check",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

@@ -4,7 +4,9 @@
   "connectors": [],
   "inputSchema": {
     "type": "object",
-    "required": ["learning"],
+    "required": [
+      "learning"
+    ],
     "properties": {
       "learning": {
         "type": "string",
@@ -16,8 +18,15 @@
       },
       "source": {
         "type": "string",
-        "description": "Optional context — where or how this was learned. Example: 'PyGithub 2.x migration'."
+        "description": "Optional context \u2014 where or how this was learned. Example: 'PyGithub 2.x migration'."
       }
     }
+  },
+  "annotations": {
+    "title": "Update Learnings",
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false
   }
 }

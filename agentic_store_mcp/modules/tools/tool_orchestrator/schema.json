@@ -1,0 +1,38 @@
+{
+  "name": "tool_orchestrator",
+  "description": "Recommend a focused, risk-aware MCP tool profile from a user goal, privacy preference, and risk level. Read-only; does not apply configuration.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "goal": {
+        "type": "string"
+      },
+      "privacy": {
+        "type": "string",
+        "enum": [
+          "balanced",
+          "local_only"
+        ],
+        "default": "balanced"
+      },
+      "risk_level": {
+        "type": "string",
+        "enum": [
+          "balanced",
+          "read_only"
+        ],
+        "default": "balanced"
+      }
+    },
+    "required": [
+      "goal"
+    ]
+  },
+  "annotations": {
+    "title": "Tool Orchestrator",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

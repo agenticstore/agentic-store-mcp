@@ -1,0 +1,37 @@
+{
+  "name": "task_checkpoint",
+  "description": "Read or explicitly save a structured local checkpoint with a task goal, plan, completed steps, blockers, artifacts, and approval state.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "read",
+          "write"
+        ],
+        "default": "read"
+      },
+      "path": {
+        "type": "string"
+      },
+      "checkpoint": {
+        "type": "object"
+      },
+      "confirm_write": {
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "required": [
+      "path"
+    ]
+  },
+  "annotations": {
+    "title": "Task Checkpoint",
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false
+  }
+}

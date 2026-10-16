@@ -1,0 +1,25 @@
+{
+  "name": "dependency_upgrade_plan",
+  "description": "Read local package manifests and import references to prepare a bounded dependency-upgrade plan without changing packages.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string"
+      },
+      "packages": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "annotations": {
+    "title": "Dependency Upgrade Plan",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

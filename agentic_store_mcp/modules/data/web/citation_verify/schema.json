@@ -1,0 +1,39 @@
+{
+  "name": "citation_verify",
+  "description": "Fetch public HTTP(S) sources to verify availability and whether specified quoted terms remain present. Network access; source content is untrusted.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "citations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "terms": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "url"
+          ]
+        }
+      }
+    },
+    "required": [
+      "citations"
+    ]
+  },
+  "annotations": {
+    "title": "Citation Verify",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+  }
+}
