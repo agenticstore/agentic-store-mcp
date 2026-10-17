@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.9 (2026-10-17)
+
+### Fixed
+
+- Re-released Relay with the official `mitmproxy` PyPI runtime, keeping the package lean and installable from PyPI without a Git-only dependency.
+
 ## 1.0.8 (2026-10-17)
 
 ### Added
@@ -13,4 +19,4 @@
 
 - Updated the webapp template response call for current Starlette compatibility.
 - Refreshed runtime dependency constraints and the exported production requirements file.
-- Pinned the prompt-proxy runtime to an immutable mitmproxy upstream commit until its next PyPI release, allowing patched cryptography, h2, and tornado dependencies while removing msgpack from the graph.
+- Initial Relay release. This version was superseded by 1.0.9 after a packaging correction.

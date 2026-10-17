@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-store-mcp"
-version = "1.0.8"
+version = "1.0.9"
 description = "Model Context Protocol (MCP) Server for AI Data Privacy: LLM prompt firewall, audit logs, and 74 MCP tools for Claude, Codex, Cursor, and Windsurf."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -34,12 +34,7 @@ dependencies = [
     "uvicorn[standard]>=0.54.0",
     "jinja2>=3.1.6",
     "httpx>=0.28.1",
-    # Pin an immutable upstream commit until mitmproxy publishes the pending
-    # dependency-bound relaxations required for current security fixes.
-    "mitmproxy @ git+https://github.com/mitmproxy/mitmproxy.git@77355977e5ea540b51ed029a40ed1dc2f1c2ba7b",
-    "cryptography>=50.0.2",
-    "h2>=4.4.1",
-    "tornado>=6.5.10",
+    "mitmproxy>=12.2.3",
 ]
 
 [project.scripts]
@@ -75,9 +70,6 @@ exclude = [
   "skills",
   ".env",
 ]
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["agentic_store_mcp"]
