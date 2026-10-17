@@ -38,7 +38,10 @@ document.querySelectorAll(".nav-btn").forEach((btn) => {
     const sec = btn.dataset.section;
     activateSection(sec);
     location.hash = sec;
-    if (sec === "firewall") {
+    if (sec === "relay") {
+      loadControlPlane();
+      _stopLogAutoRefresh();
+    } else if (sec === "firewall") {
       loadFirewallStatus();
       loadFirewallConfig();
       loadSystemProxyStatus();
@@ -55,10 +58,15 @@ document.querySelectorAll(".mcp-tab").forEach((tab) => {
 
 // Restore section from URL hash on page load
 (function () {
-  const hash = location.hash.replace("#", "");
+  let hash = location.hash.replace("#", "");
+  if (hash === "control-plane") {
+    history.replaceState(null, "", "#relay");
+    hash = "relay";
+  }
   // Top-level sections
-  if (hash === "firewall" || hash === "mcp-hub") {
+  if (hash === "firewall" || hash === "mcp-hub" || hash === "relay") {
     activateSection(hash);
+    if (hash === "relay") window.setTimeout(loadControlPlane, 0);
     return;
   }
   // Legacy hash values — route to mcp-hub and activate correct panel
@@ -1480,3 +1488,787 @@ document.getElementById("btn-fw-clear-recs")?.addEventListener("click", async ()
 });
 
 // System proxy status is loaded in the main nav-btn click handler above
+
+// ── Relay project delivery system ────────────────────────────────────────────────
+const controlPlane = { data: null, selectedId: null, filter: "all", editingWorkspaceId: null, editingBoardId: null, workspaceRules: [], perspective: "admin", boardId: null, view: "delivery" };
+const CP_COLUMNS = [
+  ["backlog", "Backlog"], ["todo", "Ready"], ["in_progress", "In progress"],
+  ["blocked", "Blocked"], ["in_review", "Review"], ["done", "Done"],
+];
+
+function escapeControl(value) {
+  return String(value ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
+}
+
+function controlError(error) {
+  const el = document.getElementById("cp-error");
+  if (!el) return;
+  el.textContent = error.message || String(error);
+  el.style.display = "block";
+}
+function controlNotice(message) {
+  const el = document.getElementById("cp-notice");
+  if (!el) return;
+  el.textContent = message;
+  el.style.display = "block";
+}
+
+async function loadControlPlane() {
+  try {
+    const query = controlPlane.boardId ? `?board_id=${encodeURIComponent(controlPlane.boardId)}` : "";
+    const data = await api("GET", `/api/control/board${query}`);
+    controlPlane.data = data;
+    controlPlane.boardId = data.active_board?.id || controlPlane.boardId;
+    if (!data.tasks.some((task) => task.id === controlPlane.selectedId)) controlPlane.selectedId = null;
+    document.getElementById("cp-error").style.display = "none";
+    renderControlPlane();
+  } catch (error) { controlError(error); }
+}
+
+function taskAgent(task) {
+  return String(task.claimed_by || task.assignee || "").toLowerCase();
+}
+
+function filteredControlTasks() {
+  const tasks = controlPlane.data?.tasks || [];
+  if (controlPlane.filter === "ready") return tasks.filter((task) => task.ready);
+  if (controlPlane.filter === "blocked") return tasks.filter((task) => task.status === "blocked" || task.blockers?.length);
+  if (controlPlane.filter === "mine") return tasks.filter((task) => !taskAgent(task) || taskAgent(task).includes("local") || taskAgent(task).includes("me"));
+  if (controlPlane.filter === "codex" || controlPlane.filter === "claude") return tasks.filter((task) => taskAgent(task).includes(controlPlane.filter));
+  return tasks;
+}
+
+function renderAgentConsole() {
+  const panel = document.getElementById("cp-agent-console");
+  const tasks = controlPlane.data?.tasks || [];
+  const clients = controlPlane.data?.agent_clients || {};
+  const triage = tasks.filter((task) => ["backlog", "todo"].includes(task.status) && !task.claimed_by);
+  const planningSessions = controlPlane.data?.summary?.recent_planning_sessions || [];
+  const latestPlan = planningSessions.at(-1);
+  const agentCard = (client) => {
+    const assigned = tasks.filter((task) => taskAgent(task).includes(client));
+    const active = assigned.filter((task) => !["done", "cancelled"].includes(task.status));
+    const available = clients[client]?.available;
+    return `<article class="cp-agent-card"><div class="cp-agent-card-top"><span class="cp-agent-avatar cp-agent-${client}">${client === "codex" ? "⌘" : "C"}</span><div><strong>${client === "codex" ? "Codex" : "Claude"}</strong><small>${available ? "CLI ready" : "CLI unavailable"}</small></div><span class="cp-agent-count">${active.length}</span></div><p>${active.length ? `${active.length} active ticket${active.length === 1 ? "" : "s"} assigned` : "No active tickets assigned"}</p><button class="btn btn-ghost" data-cp-launch-triage="${client}" ${available && triage.length ? "" : "disabled"}>Launch triage</button></article>`;
+  };
+  const planningRecord = latestPlan ? `<div class="cp-planning-record"><span>✦</span><div><small>Latest planning session · ${escapeControl(latestPlan.agent_client || "agent")}</small><strong>${escapeControl(latestPlan.brief?.split("\n")[0]?.replace(/^Goal:\s*/, "") || "Planning brief recorded")}</strong></div><code>${escapeControl(latestPlan.id)}</code></div>` : "";
+  panel.innerHTML = `<div class="cp-agent-console-head"><div><p class="cp-eyebrow">RELAY TRIAGE</p><h3>Plan work before you fan it out</h3><p>Give an AI planner the outcome, constraints, and quality bar. It proposes an Epic and testable tickets in Terminal, then waits for your approval before it writes to this board.</p></div><div class="cp-triage-summary"><strong>✦</strong><span>new initiative</span><button class="btn btn-primary" data-cp-open-planner="true">Plan with AI</button></div></div><div class="cp-agent-grid">${agentCard("codex")}${agentCard("claude")}</div>${planningRecord}`;
+  panel.style.display = controlPlane.perspective === "agent" ? "block" : "none";
+}
+
+function renderControlTicketParents() {
+  const select = document.getElementById("cp-ticket-parent");
+  if (!select) return;
+  const epics = (controlPlane.data?.tasks || []).filter((task) => task.type === "epic");
+  select.innerHTML = '<option value="">No epic</option>' + epics.map((epic) => `<option value="${escapeControl(epic.id)}">${escapeControl(epic.title)}</option>`).join("");
+}
+
+function updateControlTicketType() {
+  const type = document.getElementById("cp-ticket-type")?.value;
+  const parentField = document.getElementById("cp-ticket-parent-field");
+  const submit = document.getElementById("cp-ticket-submit");
+  const heading = document.getElementById("cp-ticket-modal-heading");
+  const isEpic = type === "epic";
+  if (parentField) parentField.style.display = isEpic ? "none" : "grid";
+  if (isEpic) document.getElementById("cp-ticket-parent").value = "";
+  if (submit) submit.textContent = isEpic ? "Create epic" : "Create ticket";
+  if (heading) heading.textContent = isEpic ? "Create epic" : "Add work";
+}
+
+function renderControlEpics(tasks) {
+  const epics = tasks.filter((task) => task.type === "epic");
+  if (!epics.length) {
+    return `<section class="cp-epic-empty"><span class="cp-eyebrow">EPIC PORTFOLIO</span><h3>Shape a meaningful outcome before splitting the work.</h3><p>Create an Epic to group related tickets, see delivery progress, and keep the intent next to the execution.</p><button class="btn btn-primary" data-cp-create-epic="true">Create first Epic</button></section>`;
+  }
+  return `<section class="cp-epic-grid">${epics.map((epic) => {
+    const children = tasks.filter((task) => task.parent_id === epic.id);
+    const done = children.filter((task) => task.status === "done").length;
+    const active = children.filter((task) => ["in_progress", "in_review"].includes(task.status)).length;
+    const blocked = children.filter((task) => task.status === "blocked" || task.blockers?.length).length;
+    const progress = children.length ? Math.round((done / children.length) * 100) : (epic.status === "done" ? 100 : 0);
+    const preview = children.slice(0, 3).map((task) => `<li><span class="cp-epic-task-state cp-state-${escapeControl(task.status)}"></span>${escapeControl(task.title)}</li>`).join("") || "<li class=\"cp-epic-no-tasks\">No tickets connected yet</li>";
+    return `<button type="button" class="cp-epic-card${epic.id === controlPlane.selectedId ? " selected" : ""}" data-cp-ticket="${escapeControl(epic.id)}"><div class="cp-epic-card-head"><span class="cp-epic-label">EPIC</span><span class="cp-priority cp-priority-${escapeControl(epic.priority)}">${escapeControl(epic.priority)}</span></div><div class="cp-epic-card-title"><div><h3>${escapeControl(epic.title)}</h3><p>${escapeControl(epic.description || "A delivery outcome with no description yet.")}</p></div><div class="cp-epic-progress" style="--cp-progress:${progress}%"><span>${progress}<small>%</small></span></div></div><div class="cp-epic-metrics"><span><b>${children.length}</b> tickets</span><span><b>${active}</b> active</span><span class="${blocked ? "is-blocked" : ""}"><b>${blocked}</b> blocked</span></div><ul class="cp-epic-preview">${preview}</ul><div class="cp-epic-footer"><span>${done} of ${children.length} complete</span><span>Open Epic <b>→</b></span></div></button>`;
+  }).join("")}</section>`;
+}
+
+function renderControlPlane() {
+  const data = controlPlane.data;
+  if (!data) return;
+  const summary = data.summary;
+  const isAgentView = controlPlane.perspective === "agent";
+  document.getElementById("cp-board-path").textContent = data.path;
+  document.getElementById("cp-perspective-label").textContent = isAgentView ? "Agent" : "Admin";
+  document.getElementById("cp-perspective-note").textContent = isAgentView ? "Operate a focused queue, capture evidence, and hand off work cleanly." : "Configure workspaces, direct capacity, and manage delivery.";
+  document.querySelectorAll(".cp-perspective-button").forEach((button) => button.classList.toggle("active", button.dataset.cpPerspective === controlPlane.perspective));
+  document.querySelectorAll(".cp-view-button").forEach((button) => {
+    const active = button.dataset.cpView === controlPlane.view;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  document.querySelector(".cp-project-bar").style.display = isAgentView ? "none" : "flex";
+  document.getElementById("cp-create").style.display = isAgentView ? "none" : "inline-flex";
+  renderAgentConsole();
+
+  const boards = data.boards || [];
+  const boardSelect = document.getElementById("cp-board-select");
+  boardSelect.innerHTML = boards.map((item) => `<option value="${escapeControl(item.id)}">${escapeControl(item.name)}</option>`).join("");
+  boardSelect.value = controlPlane.boardId || "";
+  document.querySelector(".cp-board-select-label").textContent = data.active_board?.description || "Delivery board";
+  renderControlTicketParents();
+
+  const workspaces = data.workspaces || [];
+  const workspaceLabel = workspaces.length ? `${workspaces.length} workspace${workspaces.length === 1 ? "" : "s"} ready` : "No workspaces configured";
+  document.getElementById("cp-project-name").textContent = workspaceLabel;
+  document.getElementById("cp-project-summary").textContent = workspaces.length ? workspaces.map((item) => item.name).join(" · ") : "Add a workspace before assigning work to agents.";
+  document.getElementById("cp-ticket-workspace").innerHTML = '<option value="">Choose workspace</option>' + workspaces.map((item) => `<option value="${escapeControl(item.id)}">${escapeControl(item.name)} · ${escapeControl(item.source)}</option>`).join("");
+  document.getElementById("cp-planner-workspace").innerHTML = '<option value="">Plan before choosing a workspace</option>' + workspaces.map((item) => `<option value="${escapeControl(item.id)}">${escapeControl(item.name)} · ${escapeControl(item.source)}</option>`).join("");
+  document.getElementById("cp-workspace-list").innerHTML = workspaces.map((item) => {
+    const sourceLabel = item.local_directory ? "Local checkout" : "Remote clone";
+    const location = item.local_directory || item.repository_url || "No repository location saved";
+    const ruleCount = splitControlWorkspaceRules(item.branch_rules).length;
+    return `<article class="cp-workspace-row"><div class="cp-workspace-row-icon">${item.local_directory ? "⌘" : "↗"}</div><div class="cp-workspace-row-copy"><b>${escapeControl(item.name)}</b><small>${escapeControl(sourceLabel)} · ${escapeControl(location)}</small><em>${ruleCount} delivery rule${ruleCount === 1 ? "" : "s"}</em></div><button class="cp-workspace-settings" type="button" data-cp-edit-workspace="${escapeControl(item.id)}" aria-label="Configure ${escapeControl(item.name)}" title="Workspace settings">⚙</button></article>`;
+  }).join("") || '<div class="cp-workspace-empty"><span>⌘</span><strong>No workspaces yet</strong><p>Add a local checkout or a remote repository for agents to use.</p></div>';
+  document.getElementById("cp-metrics").innerHTML = [
+    [summary.total, "work items"], [summary.active, "active"], [summary.ready.length, "ready"],
+    [summary.blocked.length, "blocked"], [`${summary.completion_percent}%`, "complete"], [summary.claimed, "claimed"],
+  ].map(([value, label]) => `<div class="cp-metric"><strong>${escapeControl(value)}</strong><span>${label}</span></div>`).join("");
+  const tasks = filteredControlTasks();
+  if (controlPlane.view === "epics") {
+    document.getElementById("cp-board").classList.add("cp-board-epics");
+    document.getElementById("cp-board").innerHTML = renderControlEpics(tasks);
+  } else {
+    document.getElementById("cp-board").classList.remove("cp-board-epics");
+    const deliveryTasks = tasks.filter((task) => task.type !== "epic");
+    document.getElementById("cp-board").innerHTML = CP_COLUMNS.map(([status, title]) => {
+      const cards = deliveryTasks.filter((task) => task.status === status).map(renderControlCard).join("") || '<p class="cp-column-empty">No tickets</p>';
+      return `<section class="cp-column cp-${status}" data-cp-drop-status="${status}"><h3>${title}<span>${deliveryTasks.filter((task) => task.status === status).length}</span></h3>${cards}</section>`;
+    }).join("");
+  }
+  renderControlDetail();
+}
+
+function renderControlCard(task) {
+  const selected = task.id === controlPlane.selectedId ? " selected" : "";
+  const priority = `<span class="cp-priority cp-priority-${escapeControl(task.priority)}">${escapeControl(task.priority)}</span>`;
+  const signal = task.blockers?.length ? " ⛔" : task.ready ? " ✓" : "";
+  return `<button class="cp-ticket${selected}" draggable="true" data-cp-ticket="${escapeControl(task.id)}"><span class="cp-ticket-top">${priority}<code>${escapeControl(task.id)}</code></span><strong>${escapeControl(task.title)}</strong><span class="cp-ticket-meta">${escapeControl(task.type)} · ${escapeControl(task.claimed_by || task.assignee || "unassigned")}${signal}</span></button>`;
+}
+
+function controlDetailStatus(status) {
+  return String(status || "todo").replaceAll("_", " ");
+}
+
+function renderControlDetail() {
+  const el = document.getElementById("cp-detail");
+  const task = controlPlane.data?.tasks.find((item) => item.id === controlPlane.selectedId);
+  if (!task) {
+    el.className = "cp-detail cp-detail-empty";
+    el.innerHTML = '<p class="cp-empty">Select a ticket to inspect its brief, delivery evidence, decisions, and activity.</p>';
+    return;
+  }
+  el.className = "cp-detail cp-ticket-dialog";
+  const tasks = controlPlane.data?.tasks || [];
+  const workspace = controlPlane.data?.workspaces?.find((item) => item.id === task.workspace_id);
+  const parentEpic = task.parent_id ? tasks.find((item) => item.id === task.parent_id) : null;
+  const children = task.type === "epic" ? tasks.filter((item) => item.parent_id === task.id) : [];
+  const completeChildren = children.filter((item) => item.status === "done").length;
+  const activity = [
+    ...(task.comments || []).map((item) => ({ kind: "update", at: item.at, title: "Progress update", body: item.body })),
+    ...(task.validations || []).map((item) => ({ kind: item.status || "validation", at: item.at, title: `${item.kind || "Validation"} · ${item.status || "recorded"}`, body: item.summary, output: item.output })),
+    ...(task.git_evidence || []).map((item) => ({ kind: "evidence", at: item.at || item.recorded_at, title: `Git snapshot · ${item.branch || "detached"}`, body: item.commit_subject || item.commit || "Repository evidence attached" })),
+    ...(task.handoffs || []).map((item) => ({ kind: "handoff", at: item.at, title: `Handed to ${item.to || "agent"}`, body: item.note })),
+  ].filter((item) => item.at).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const activityMarkup = activity.length ? activity.map((item) => `<article class="cp-activity-item cp-activity-${escapeControl(item.kind)}"><span class="cp-activity-dot"></span><div><div class="cp-activity-title"><strong>${escapeControl(item.title)}</strong><time>${escapeControl(item.at)}</time></div><p>${escapeControl(item.body || "No summary recorded.")}</p>${item.output ? `<pre>${escapeControl(item.output)}</pre>` : ""}</div></article>`).join("") : '<div class="cp-activity-empty"><strong>No activity yet</strong><p>Capture the first decision, validation result, or agent handoff here.</p></div>';
+  const criteria = (task.acceptance_criteria || []).length ? task.acceptance_criteria.map((item) => `<li><span class="cp-check"></span>${escapeControl(item)}</li>`).join("") : '<li class="cp-muted-row">No acceptance criteria recorded.</li>';
+  const childMarkup = task.type === "epic" ? `<section class="cp-epic-delivery"><div class="cp-section-title"><div><span class="cp-section-kicker">EPIC DELIVERY</span><h4>${completeChildren}/${children.length} child tickets complete</h4></div><button class="cp-text-button" data-cp-action="edit">Edit Epic</button></div><div class="cp-epic-child-list">${children.length ? children.map((item) => `<button type="button" data-cp-ticket="${escapeControl(item.id)}"><span class="cp-state-dot cp-state-${escapeControl(item.status)}"></span><span>${escapeControl(item.title)}</span><small>${escapeControl(controlDetailStatus(item.status))}</small></button>`).join("") : '<p class="cp-muted-row">No child tickets yet. Create work and assign it to this Epic.</p>'}</div></section>` : "";
+  const owner = task.claimed_by || task.assignee || "Unassigned";
+  el.innerHTML = `<div class="cp-workdrawer-head"><div class="cp-workdrawer-ident"><code>${escapeControl(task.id)}</code><span class="cp-status-pill cp-status-${escapeControl(task.status)}">${escapeControl(controlDetailStatus(task.status))}</span></div><button class="cp-close" id="cp-close-detail" aria-label="Close ticket">×</button></div>
+    <div class="cp-workdrawer-title"><div><h3>${escapeControl(task.title)}</h3><p>${escapeControl(task.description || "Add context so an agent or reviewer can pick this up without a separate briefing.")}</p></div><button class="btn btn-ghost cp-edit-ticket" data-cp-action="edit">Edit details</button></div>
+    <div class="cp-workdrawer-actions"><button class="btn btn-primary" data-cp-action="start_ticket">Start work</button><button class="btn btn-ghost" data-cp-action="review_ticket">Request review</button><button class="btn btn-ghost" data-cp-action="complete_ticket">Mark complete</button><span></span><button class="cp-quick-action" data-cp-action="comment">+ Update</button><button class="cp-quick-action" data-cp-action="record_validation">+ Evidence</button><button class="cp-quick-action" data-cp-action="attach_git_evidence">+ Git</button><button class="cp-quick-action" data-cp-action="handoff_ticket">Handoff</button></div>
+    <div class="cp-workdrawer-grid"><main class="cp-workdrawer-main"><section class="cp-detail-card cp-criteria-card"><div class="cp-section-title"><div><span class="cp-section-kicker">DEFINITION OF DONE</span><h4>Acceptance criteria</h4></div><button class="cp-text-button" data-cp-action="edit">Edit</button></div><ul class="cp-criteria-list">${criteria}</ul></section>${childMarkup}<section class="cp-detail-card cp-activity-card"><div class="cp-section-title"><div><span class="cp-section-kicker">PROJECT RECORD</span><h4>Activity &amp; evidence</h4></div><button class="cp-text-button" data-cp-action="comment">Add update</button></div><div class="cp-activity-feed">${activityMarkup}</div></section></main>
+    <aside class="cp-workdrawer-sidebar"><section class="cp-detail-card cp-details-card"><div class="cp-section-title"><div><span class="cp-section-kicker">AT A GLANCE</span><h4>Details</h4></div><button class="cp-icon-text" data-cp-action="edit" aria-label="Edit details">Edit</button></div><dl class="cp-detail-list"><div><dt>Owner</dt><dd>${escapeControl(owner)}</dd></div><div><dt>Priority</dt><dd><span class="cp-detail-priority cp-priority-${escapeControl(task.priority)}">${escapeControl(task.priority)}</span></dd></div><div><dt>Risk</dt><dd>${escapeControl(task.risk_level || "medium")}</dd></div><div><dt>Complexity</dt><dd>${escapeControl(task.complexity || "medium")}</dd></div><div><dt>Type</dt><dd>${escapeControl(task.type)}</dd></div><div><dt>Workspace</dt><dd>${escapeControl(workspace?.name || "Not assigned")}</dd></div>${parentEpic ? `<div><dt>Epic</dt><dd><button type="button" data-cp-ticket="${escapeControl(parentEpic.id)}">${escapeControl(parentEpic.title)}</button></dd></div>` : ""}</dl></section>
+    <section class="cp-detail-card cp-proof-card"><div class="cp-section-title"><div><span class="cp-section-kicker">ADD TO THE RECORD</span><h4>Proof of work</h4></div></div><button class="cp-proof-action" data-cp-action="record_validation"><span>✓</span><div><strong>Validation</strong><small>Test, lint, review, or build result</small></div><b>+</b></button><button class="cp-proof-action" data-cp-action="attach_git_evidence"><span>⌘</span><div><strong>Git snapshot</strong><small>Branch, commit, and changed files</small></div><b>+</b></button><button class="cp-proof-action" data-cp-action="handoff_ticket"><span>↗</span><div><strong>Agent handoff</strong><small>Launch Codex or Claude with context</small></div><b>+</b></button></section></aside></div>`;
+}
+
+async function controlWrite(action, payload = {}) {
+  try {
+    const result = await api("POST", "/api/control/board", { action, board_id: controlPlane.boardId, payload: { ...payload, confirm_write: true } });
+    await loadControlPlane();
+    return result;
+  } catch (error) { controlError(error); return null; }
+}
+
+function selectedControlTask() { return controlPlane.data?.tasks.find((task) => task.id === controlPlane.selectedId); }
+
+const controlDrag = { taskId: null, sourceStatus: null, didMove: false };
+
+function openControlTransitionModal(task, status) {
+  if (task.status === status) return;
+  controlDrag.taskId = task.id;
+  controlDrag.sourceStatus = task.status;
+  document.getElementById("cp-transition-ticket").textContent = `${task.id} · ${task.title}`;
+  document.getElementById("cp-transition-from").textContent = task.status.replaceAll("_", " ");
+  document.getElementById("cp-transition-to").textContent = status.replaceAll("_", " ");
+  document.getElementById("cp-transition-comment").value = "";
+  const defaultMode = document.querySelector('input[name="cp-transition-next"][value="move"]');
+  if (defaultMode) defaultMode.checked = true;
+  document.querySelectorAll(".cp-transition-option").forEach((option) => option.classList.toggle("active", option.querySelector("input")?.value === "move"));
+  document.getElementById("cp-transition-submit-label").textContent = "Move ticket";
+  document.getElementById("cp-transition-modal").style.display = "flex";
+  document.getElementById("cp-transition-comment").focus();
+}
+
+function closeControlTransitionModal() {
+  document.getElementById("cp-transition-modal").style.display = "none";
+  controlDrag.taskId = null;
+  controlDrag.sourceStatus = null;
+}
+
+function closeControlTicketEditor() { document.getElementById("cp-ticket-edit-modal").style.display = "none"; }
+function closeControlValidationModal() { document.getElementById("cp-validation-modal").style.display = "none"; }
+function closeControlEvidenceModal() { document.getElementById("cp-evidence-modal").style.display = "none"; }
+
+function openControlTicketEditor(task) {
+  const workspaces = controlPlane.data?.workspaces || [];
+  document.getElementById("cp-ticket-edit-context").textContent = `${task.id} · Changes are saved to the selected Relay board.`;
+  document.getElementById("cp-ticket-edit-title").value = task.title || "";
+  document.getElementById("cp-ticket-edit-description").value = task.description || "";
+  document.getElementById("cp-ticket-edit-type").value = task.type || "task";
+  document.getElementById("cp-ticket-edit-priority").value = task.priority || "medium";
+  document.getElementById("cp-ticket-edit-risk").value = task.risk_level || "medium";
+  document.getElementById("cp-ticket-edit-complexity").value = task.complexity || "medium";
+  document.getElementById("cp-ticket-edit-assignee").value = task.assignee || task.claimed_by || "";
+  document.getElementById("cp-ticket-edit-workspace").innerHTML = '<option value="">No workspace</option>' + workspaces.map((item) => `<option value="${escapeControl(item.id)}">${escapeControl(item.name)} · ${escapeControl(item.source)}</option>`).join("");
+  document.getElementById("cp-ticket-edit-workspace").value = task.workspace_id || "";
+  document.getElementById("cp-ticket-edit-criteria").value = (task.acceptance_criteria || []).join("\n");
+  document.getElementById("cp-ticket-edit-modal").style.display = "flex";
+  window.setTimeout(() => document.getElementById("cp-ticket-edit-title").focus(), 0);
+}
+
+function openControlValidationModal(task) {
+  document.getElementById("cp-validation-ticket").textContent = `${task.id} · ${task.title}`;
+  document.getElementById("cp-validation-form").reset();
+  document.getElementById("cp-validation-modal").style.display = "flex";
+  window.setTimeout(() => document.getElementById("cp-validation-summary").focus(), 0);
+}
+
+function openControlEvidenceModal(task) {
+  const workspace = controlPlane.data?.workspaces?.find((item) => item.id === task.workspace_id);
+  document.getElementById("cp-evidence-ticket").textContent = `${task.id} · ${task.title}`;
+  document.getElementById("cp-evidence-form").reset();
+  document.getElementById("cp-evidence-repo-path").value = workspace?.local_directory || "";
+  document.getElementById("cp-evidence-modal").style.display = "flex";
+  window.setTimeout(() => document.getElementById("cp-evidence-repo-path").focus(), 0);
+}
+
+async function handleControlAction(action) {
+  const task = selectedControlTask();
+  if (!task) return;
+  if (action === "edit") { openControlTicketEditor(task); return; }
+  if (action === "review_ticket") {
+    try {
+      const result = await api("POST", "/api/control/board", { action, board_id: controlPlane.boardId, payload: { id: task.id, confirm_write: true } });
+      await loadControlPlane();
+      controlNotice(result.review.ready_for_review ? "Review readiness recorded. This ticket is ready for review." : `Review needs: ${result.review.missing.join(", ")}.`);
+    } catch (error) { controlError(error); }
+    return;
+  }
+  if (action === "start_ticket") {
+    const agent = task.claimed_by || task.assignee || "local-agent";
+    const started = await controlWrite("start_ticket", { id: task.id, agent });
+    if (started) controlNotice(`Work started with ${agent}.`);
+    return;
+  }
+  if (action === "complete_ticket") {
+    const completed = await controlWrite("complete_ticket", { id: task.id });
+    if (completed) controlNotice("Ticket marked complete.");
+    return;
+  }
+  if (action === "comment") {
+    document.getElementById("cp-comment-ticket").textContent = `${task.id} · ${task.title}`;
+    document.getElementById("cp-comment-body").value = "";
+    document.getElementById("cp-comment-modal").style.display = "flex";
+    document.getElementById("cp-comment-body").focus();
+    return;
+  }
+  if (action === "handoff_ticket") {
+    document.getElementById("cp-handoff-ticket").textContent = `${task.id} · ${task.title}`;
+    document.getElementById("cp-handoff-recipient").value = task.claimed_by || task.assignee || "codex-agent";
+    document.getElementById("cp-handoff-note").value = "";
+    document.getElementById("cp-handoff-modal").style.display = "flex";
+    return;
+  }
+  if (action === "record_validation") { openControlValidationModal(task); return; }
+  if (action === "attach_git_evidence") { openControlEvidenceModal(task); }
+}
+
+function closeControlCommentModal() { document.getElementById("cp-comment-modal").style.display = "none"; }
+document.getElementById("cp-comment-close")?.addEventListener("click", closeControlCommentModal);
+document.getElementById("cp-comment-cancel")?.addEventListener("click", closeControlCommentModal);
+document.getElementById("cp-comment-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const task = selectedControlTask();
+  const comment = document.getElementById("cp-comment-body").value.trim();
+  if (!task || !comment) return;
+  const saved = await controlWrite("comment", { id: task.id, comment });
+  if (saved) closeControlCommentModal();
+});
+
+document.getElementById("cp-ticket-edit-close")?.addEventListener("click", closeControlTicketEditor);
+document.getElementById("cp-ticket-edit-cancel")?.addEventListener("click", closeControlTicketEditor);
+document.getElementById("cp-ticket-edit-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const task = selectedControlTask();
+  if (!task) return;
+  const changes = {
+    title: document.getElementById("cp-ticket-edit-title").value.trim(),
+    description: document.getElementById("cp-ticket-edit-description").value.trim(),
+    type: document.getElementById("cp-ticket-edit-type").value,
+    priority: document.getElementById("cp-ticket-edit-priority").value,
+    risk_level: document.getElementById("cp-ticket-edit-risk").value,
+    complexity: document.getElementById("cp-ticket-edit-complexity").value,
+    assignee: document.getElementById("cp-ticket-edit-assignee").value.trim() || null,
+    workspace_id: document.getElementById("cp-ticket-edit-workspace").value || null,
+    acceptance_criteria: document.getElementById("cp-ticket-edit-criteria").value.split("\n").map((item) => item.trim()).filter(Boolean),
+  };
+  const saved = await controlWrite("update", { id: task.id, changes });
+  if (saved) { closeControlTicketEditor(); controlNotice("Ticket details updated."); }
+});
+document.getElementById("cp-validation-close")?.addEventListener("click", closeControlValidationModal);
+document.getElementById("cp-validation-cancel")?.addEventListener("click", closeControlValidationModal);
+document.getElementById("cp-validation-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const task = selectedControlTask();
+  if (!task) return;
+  const saved = await controlWrite("record_validation", {
+    id: task.id,
+    validation_kind: document.getElementById("cp-validation-kind").value,
+    validation_status: document.getElementById("cp-validation-status").value,
+    validation_summary: document.getElementById("cp-validation-summary").value.trim(),
+    validation_output: document.getElementById("cp-validation-output").value.trim(),
+  });
+  if (saved) { closeControlValidationModal(); controlNotice("Validation evidence saved to the project record."); }
+});
+document.getElementById("cp-evidence-close")?.addEventListener("click", closeControlEvidenceModal);
+document.getElementById("cp-evidence-cancel")?.addEventListener("click", closeControlEvidenceModal);
+document.getElementById("cp-evidence-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const task = selectedControlTask();
+  const repoPath = document.getElementById("cp-evidence-repo-path").value.trim();
+  if (!task || !repoPath) return;
+  const saved = await controlWrite("attach_git_evidence", { id: task.id, repo_path: repoPath, base_ref: document.getElementById("cp-evidence-base-ref").value.trim() || null });
+  if (saved) { closeControlEvidenceModal(); controlNotice("Git snapshot attached to the ticket."); }
+});
+
+document.getElementById("cp-transition-close")?.addEventListener("click", closeControlTransitionModal);
+document.getElementById("cp-transition-cancel")?.addEventListener("click", closeControlTransitionModal);
+document.querySelectorAll('input[name="cp-transition-next"]').forEach((input) => input.addEventListener("change", () => {
+  document.querySelectorAll(".cp-transition-option").forEach((option) => option.classList.toggle("active", option.querySelector("input")?.checked));
+  const submitLabel = document.getElementById("cp-transition-submit-label");
+  if (submitLabel) submitLabel.textContent = input.value === "handoff" ? "Move & hand off" : "Move ticket";
+}));
+document.getElementById("cp-transition-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const task = controlPlane.data?.tasks.find((item) => item.id === controlDrag.taskId);
+  const status = document.getElementById("cp-transition-to").textContent.replaceAll(" ", "_");
+  const comment = document.getElementById("cp-transition-comment").value.trim();
+  const nextStep = document.querySelector('input[name="cp-transition-next"]:checked')?.value || "move";
+  if (!task || !status) return;
+  const moved = await controlWrite("transition", { id: task.id, status, reason: comment });
+  if (!moved) return;
+  if (comment) await controlWrite("comment", { id: task.id, comment });
+  closeControlTransitionModal();
+  controlNotice(`Moved ${task.id} to ${status.replaceAll("_", " ")}.`);
+  if (nextStep === "handoff") {
+    controlPlane.selectedId = task.id;
+    await handleControlAction("handoff_ticket");
+  }
+});
+
+document.getElementById("cp-refresh")?.addEventListener("click", loadControlPlane);
+function closeControlTicketModal() {
+  document.getElementById("cp-ticket-modal").style.display = "none";
+}
+
+
+const CONTROL_WORKSPACE_RULE_PRESETS = [
+  "Use feature/<ticket-id>-<short-slug> branch names",
+  "Run lint before every commit",
+  "Run relevant tests before review",
+  "Run type checks before review",
+  "Run a security scan before merge",
+  "Open a pull request with validation evidence",
+];
+
+function splitControlWorkspaceRules(value) {
+  return String(value || "").split(/[\n;]/).map((item) => item.trim()).filter(Boolean);
+}
+
+function renderControlWorkspaceRules() {
+  const rules = controlPlane.workspaceRules || [];
+  const list = document.getElementById("cp-rule-list");
+  if (!list) return;
+  list.innerHTML = rules.length
+    ? rules.map((rule, index) => `<span class="cp-rule-chip">${escapeControl(rule)}<button type="button" data-cp-rule-remove="${index}" aria-label="Remove rule">×</button></span>`).join("")
+    : '<p class="cp-rule-empty">No rules selected. Add a template or write one below.</p>';
+  document.querySelectorAll("[data-cp-rule-preset]").forEach((button) => {
+    const selected = rules.includes(button.dataset.cpRulePreset);
+    button.classList.toggle("selected", selected);
+    button.querySelector("span").textContent = selected ? "✓" : "+";
+  });
+  document.getElementById("cp-project-rules").value = rules.join("; ");
+}
+
+function addControlWorkspaceRule(rule) {
+  const normalised = String(rule || "").trim();
+  if (!normalised || controlPlane.workspaceRules.includes(normalised)) return;
+  controlPlane.workspaceRules.push(normalised);
+  renderControlWorkspaceRules();
+}
+
+function resetControlWorkspaceForm() {
+  controlPlane.editingWorkspaceId = null;
+  controlPlane.workspaceRules = [];
+  document.getElementById("cp-workspace-name").value = "";
+  document.getElementById("cp-project-source").value = "local";
+  document.getElementById("cp-local-directory").value = "";
+  document.getElementById("cp-remote-repository").value = "";
+  document.getElementById("cp-custom-rule").value = "";
+  document.getElementById("cp-workspace-form-heading").textContent = "New workspace";
+  document.getElementById("cp-save-project").textContent = "Add workspace";
+  document.getElementById("cp-delete-current-workspace").style.display = "none";
+  renderControlWorkspaceRules();
+  updateControlProjectWarning();
+}
+
+function openControlWorkspaceEditor() {
+  document.getElementById("cp-workspace-editor-modal").style.display = "flex";
+  window.setTimeout(() => document.getElementById("cp-workspace-name").focus(), 0);
+}
+
+function closeControlWorkspaceEditor() {
+  document.getElementById("cp-workspace-editor-modal").style.display = "none";
+  resetControlWorkspaceForm();
+}
+
+function editControlWorkspace(workspaceId) {
+  const workspace = controlPlane.data?.workspaces?.find((item) => item.id === workspaceId);
+  if (!workspace) return;
+  controlPlane.editingWorkspaceId = workspace.id;
+  controlPlane.workspaceRules = splitControlWorkspaceRules(workspace.branch_rules);
+  document.getElementById("cp-workspace-name").value = workspace.name || "";
+  document.getElementById("cp-project-source").value = workspace.source || "local";
+  document.getElementById("cp-local-directory").value = workspace.local_directory || "";
+  document.getElementById("cp-remote-repository").value = workspace.repository_url || "";
+  document.getElementById("cp-custom-rule").value = "";
+  document.getElementById("cp-workspace-form-heading").textContent = `Workspace settings · ${workspace.name}`;
+  document.getElementById("cp-save-project").textContent = "Save changes";
+  document.getElementById("cp-delete-current-workspace").style.display = "inline-flex";
+  renderControlWorkspaceRules();
+  updateControlProjectWarning();
+  openControlWorkspaceEditor();
+}
+
+function updateControlProjectWarning() {
+  const source = document.getElementById("cp-project-source")?.value;
+  const localDirectory = document.getElementById("cp-local-directory")?.value.trim();
+  const warning = document.getElementById("cp-project-warning");
+  if (!warning) return;
+  warning.style.display = source === "remote" || !localDirectory ? "block" : "none";
+}
+function closeControlHandoffModal() { document.getElementById("cp-handoff-modal").style.display = "none"; }
+function closeControlPlannerModal() { document.getElementById("cp-planner-modal").style.display = "none"; }
+function openControlPlannerModal() {
+  const form = document.getElementById("cp-planner-form");
+  form.reset();
+  document.querySelectorAll(".cp-planner-choice").forEach((item) => item.classList.toggle("selected", item.querySelector("input").checked));
+  document.getElementById("cp-planner-modal").style.display = "flex";
+  document.getElementById("cp-planner-goal").focus();
+}
+function closeControlProjectModal() { document.getElementById("cp-project-modal").style.display = "none"; }
+document.getElementById("cp-open-project")?.addEventListener("click", () => { document.getElementById("cp-project-modal").style.display = "flex"; });
+document.getElementById("cp-project-cancel")?.addEventListener("click", closeControlProjectModal);
+document.getElementById("cp-project-cancel-secondary")?.addEventListener("click", closeControlProjectModal);
+document.getElementById("cp-new-workspace")?.addEventListener("click", () => { resetControlWorkspaceForm(); openControlWorkspaceEditor(); });
+document.getElementById("cp-workspace-editor-close")?.addEventListener("click", closeControlWorkspaceEditor);
+document.getElementById("cp-workspace-editor-cancel")?.addEventListener("click", closeControlWorkspaceEditor);
+document.getElementById("cp-project-source")?.addEventListener("change", updateControlProjectWarning);
+document.getElementById("cp-local-directory")?.addEventListener("input", updateControlProjectWarning);
+document.getElementById("cp-add-custom-rule")?.addEventListener("click", () => {
+  const input = document.getElementById("cp-custom-rule");
+  addControlWorkspaceRule(input.value);
+  input.value = "";
+  input.focus();
+});
+document.getElementById("cp-custom-rule")?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  document.getElementById("cp-add-custom-rule").click();
+});
+document.getElementById("cp-delete-current-workspace")?.addEventListener("click", async () => {
+  const workspaceId = controlPlane.editingWorkspaceId;
+  if (!workspaceId) return;
+  if (!confirm("Delete this workspace? Any open ticket assigned to it will prevent deletion.")) return;
+  const deleted = await controlWrite("delete_workspace", { workspace_id: workspaceId });
+  if (deleted) { closeControlWorkspaceEditor(); closeControlProjectModal(); }
+});
+document.getElementById("cp-handoff-cancel")?.addEventListener("click", closeControlHandoffModal);
+document.getElementById("cp-handoff-cancel-secondary")?.addEventListener("click", closeControlHandoffModal);
+document.getElementById("cp-open-planner")?.addEventListener("click", openControlPlannerModal);
+document.getElementById("cp-planner-close")?.addEventListener("click", closeControlPlannerModal);
+document.getElementById("cp-planner-cancel")?.addEventListener("click", closeControlPlannerModal);
+document.querySelectorAll('input[name="cp-planner-stage"]').forEach((input) => input.addEventListener("change", () => {
+  document.querySelectorAll(".cp-planner-choice").forEach((item) => item.classList.toggle("selected", item.querySelector("input").checked));
+}));
+document.getElementById("cp-planner-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const goal = document.getElementById("cp-planner-goal").value.trim();
+  if (goal.length < 8) return controlError(new Error("Describe the outcome in at least eight characters."));
+  try {
+    const valuesFor = (name) => [...document.querySelectorAll(`input[name="${name}"]:checked`)].map((item) => item.value);
+    const stage = document.querySelector('input[name="cp-planner-stage"]:checked')?.value || "feature";
+    const result = await api("POST", "/api/control/board/launch-planner", {
+      board_id: controlPlane.boardId,
+      goal,
+      success_criteria: document.getElementById("cp-planner-success").value.trim(),
+      context: document.getElementById("cp-planner-context").value.trim(),
+      stage,
+      product_surfaces: valuesFor("cp-planner-surface"),
+      quality_gates: valuesFor("cp-planner-quality"),
+      workspace_id: document.getElementById("cp-planner-workspace").value || null,
+      client: document.getElementById("cp-planner-client").value,
+    });
+    closeControlPlannerModal();
+    await loadControlPlane();
+    controlNotice(`${result.client === "codex" ? "Codex" : "Claude"} planner launched · session ${result.session_id}. Review the plan in Terminal before approving ticket creation.`);
+  } catch (error) { controlError(error); }
+});
+document.getElementById("cp-handoff-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const task = selectedControlTask();
+  if (!task) return;
+  try {
+    const result = await api("POST", "/api/control/board/launch-handoff", { board_id: controlPlane.boardId,
+      ticket_id: task.id,
+      recipient: document.getElementById("cp-handoff-recipient").value.trim(),
+      note: document.getElementById("cp-handoff-note").value.trim(),
+      client: document.getElementById("cp-handoff-client").value,
+    });
+    closeControlHandoffModal();
+    await loadControlPlane();
+    controlNotice(`${result.client === "codex" ? "Codex" : "Claude"} launched · session ${result.session_id}`);
+  } catch (error) { controlError(error); }
+});
+
+document.getElementById("cp-create")?.addEventListener("click", () => {
+  document.getElementById("cp-ticket-form").reset();
+  renderControlTicketParents();
+  updateControlTicketType();
+  document.getElementById("cp-ticket-modal").style.display = "flex";
+  document.getElementById("cp-ticket-title").focus();
+});
+document.getElementById("cp-ticket-type")?.addEventListener("change", updateControlTicketType);
+
+function resetControlBoardForm() {
+  controlPlane.editingBoardId = null;
+  document.getElementById("cp-board-name").value = "";
+  document.getElementById("cp-board-description").value = "";
+  document.getElementById("cp-board-color").value = "violet";
+  document.getElementById("cp-board-modal-heading").textContent = "New board";
+  document.getElementById("cp-board-submit").textContent = "Create board";
+  document.getElementById("cp-delete-board").style.display = "none";
+}
+function openControlBoardModal(board = null) {
+  resetControlBoardForm();
+  if (board) {
+    controlPlane.editingBoardId = board.id;
+    document.getElementById("cp-board-name").value = board.name || "";
+    document.getElementById("cp-board-description").value = board.description || "";
+    document.getElementById("cp-board-color").value = board.color || "violet";
+    document.getElementById("cp-board-modal-heading").textContent = "Board settings";
+    document.getElementById("cp-board-submit").textContent = "Save board";
+    document.getElementById("cp-delete-board").style.display = "inline-flex";
+  }
+  document.getElementById("cp-board-modal").style.display = "flex";
+  window.setTimeout(() => document.getElementById("cp-board-name").focus(), 0);
+}
+function closeControlBoardModal() {
+  document.getElementById("cp-board-modal").style.display = "none";
+  resetControlBoardForm();
+}
+document.getElementById("cp-new-board")?.addEventListener("click", () => openControlBoardModal());
+document.getElementById("cp-board-settings")?.addEventListener("click", () => openControlBoardModal(controlPlane.data?.active_board));
+document.getElementById("cp-board-cancel")?.addEventListener("click", closeControlBoardModal);
+document.getElementById("cp-board-cancel-secondary")?.addEventListener("click", closeControlBoardModal);
+document.getElementById("cp-board-select")?.addEventListener("change", async (event) => {
+  controlPlane.boardId = event.target.value;
+  controlPlane.selectedId = null;
+  await loadControlPlane();
+});
+document.querySelectorAll(".cp-view-button").forEach((button) => button.addEventListener("click", () => {
+  controlPlane.view = button.dataset.cpView;
+  controlPlane.selectedId = null;
+  renderControlPlane();
+}));
+document.getElementById("cp-board-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const name = document.getElementById("cp-board-name").value.trim();
+  if (!name) return controlError(new Error("Give the board a name."));
+  const board = { name, description: document.getElementById("cp-board-description").value.trim(), color: document.getElementById("cp-board-color").value };
+  const action = controlPlane.editingBoardId ? "update_board" : "add_board";
+  const boardId = controlPlane.editingBoardId || controlPlane.boardId;
+  try {
+    const result = await api("POST", "/api/control/board", { action, board_id: boardId, payload: { board, confirm_write: true } });
+    if (action === "add_board") controlPlane.boardId = result.board.id;
+    closeControlBoardModal();
+    await loadControlPlane();
+    controlNotice(action === "add_board" ? `Created ${result.board.name}.` : `Updated ${result.board.name}.`);
+  } catch (error) { controlError(error); }
+});
+document.getElementById("cp-delete-board")?.addEventListener("click", async () => {
+  const board = controlPlane.data?.active_board;
+  if (!board || !confirm(`Delete ${board.name}? Boards with tickets or Epics cannot be deleted.`)) return;
+  try {
+    const result = await api("POST", "/api/control/board", { action: "delete_board", board_id: board.id, payload: { confirm_write: true } });
+    controlPlane.boardId = result.boards[0]?.id || null;
+    closeControlBoardModal();
+    await loadControlPlane();
+    controlNotice(`Deleted ${board.name}.`);
+  } catch (error) { controlError(error); }
+});
+document.getElementById("cp-ticket-cancel")?.addEventListener("click", closeControlTicketModal);
+document.getElementById("cp-ticket-cancel-secondary")?.addEventListener("click", closeControlTicketModal);
+document.getElementById("cp-ticket-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const title = document.getElementById("cp-ticket-title").value.trim();
+  if (!title) return;
+  const criteria = document.getElementById("cp-ticket-criteria").value.split("\n").map((item) => item.trim()).filter(Boolean);
+  const result = await controlWrite("add", { task: {
+    title,
+    description: document.getElementById("cp-ticket-description").value.trim(),
+    type: document.getElementById("cp-ticket-type").value,
+    priority: document.getElementById("cp-ticket-priority").value,
+    workspace_id: document.getElementById("cp-ticket-workspace").value || null,
+    parent_id: document.getElementById("cp-ticket-parent").value || null,
+    acceptance_criteria: criteria,
+  }});
+  if (result?.task?.id) { controlPlane.selectedId = result.task.id; closeControlTicketModal(); renderControlPlane(); }
+});
+document.getElementById("cp-save-project")?.addEventListener("click", async () => {
+  const source = document.getElementById("cp-project-source").value;
+  const local_directory = document.getElementById("cp-local-directory").value.trim() || null;
+  const repository_url = document.getElementById("cp-remote-repository").value.trim() || null;
+  const name = document.getElementById("cp-workspace-name").value.trim();
+  if (!name) return controlError(new Error("Give the workspace a name."));
+  if ((source === "remote" || !local_directory) && !repository_url) return controlError(new Error("Provide a remote repository URL when no local directory is selected."));
+  const workspace = { name, source, local_directory, repository_url, branch_rules: controlPlane.workspaceRules.join("; ") || null };
+  const action = controlPlane.editingWorkspaceId ? "update_workspace" : "add_workspace";
+  const saved = await controlWrite(action, { workspace_id: controlPlane.editingWorkspaceId, workspace });
+  if (saved) { closeControlWorkspaceEditor(); closeControlProjectModal(); }
+});
+document.getElementById("cp-sync-git")?.addEventListener("click", async () => {
+  const task = selectedControlTask(); const repo_path = document.getElementById("cp-local-directory").value.trim();
+  if (!task) return controlError(new Error("Select a ticket before adding Git evidence."));
+  if (!repo_path) return controlError(new Error("Git evidence requires a saved local directory."));
+  await controlWrite("attach_git_evidence", { id: task.id, repo_path });
+});
+document.querySelectorAll(".cp-filter").forEach((button) => button.addEventListener("click", () => {
+  controlPlane.filter = button.dataset.cpFilter;
+  document.querySelectorAll(".cp-filter").forEach((item) => item.classList.toggle("active", item === button)); renderControlPlane();
+}));
+document.querySelectorAll(".cp-perspective-button").forEach((button) => button.addEventListener("click", () => {
+  controlPlane.perspective = button.dataset.cpPerspective;
+  renderControlPlane();
+}));
+document.addEventListener("dragstart", (event) => {
+  const ticket = event.target.closest("[data-cp-ticket]");
+  if (!ticket) return;
+  const task = controlPlane.data?.tasks.find((item) => item.id === ticket.dataset.cpTicket);
+  if (!task) return;
+  controlDrag.taskId = task.id;
+  controlDrag.sourceStatus = task.status;
+  controlDrag.didMove = true;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", task.id);
+  ticket.classList.add("dragging");
+});
+document.addEventListener("dragend", (event) => {
+  event.target.closest("[data-cp-ticket]")?.classList.remove("dragging");
+  document.querySelectorAll("[data-cp-drop-status]").forEach((column) => column.classList.remove("cp-drop-target"));
+});
+document.addEventListener("dragover", (event) => {
+  const column = event.target.closest("[data-cp-drop-status]");
+  if (!column || !controlDrag.taskId) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  column.classList.add("cp-drop-target");
+});
+document.addEventListener("dragleave", (event) => {
+  const column = event.target.closest("[data-cp-drop-status]");
+  if (column && !column.contains(event.relatedTarget)) column.classList.remove("cp-drop-target");
+});
+document.addEventListener("drop", (event) => {
+  const column = event.target.closest("[data-cp-drop-status]");
+  if (!column || !controlDrag.taskId) return;
+  event.preventDefault();
+  column.classList.remove("cp-drop-target");
+  const task = controlPlane.data?.tasks.find((item) => item.id === controlDrag.taskId);
+  if (task) openControlTransitionModal(task, column.dataset.cpDropStatus);
+});
+document.addEventListener("click", (event) => {
+  const ticket = event.target.closest("[data-cp-ticket]");
+  if (ticket && !controlDrag.didMove) { controlPlane.selectedId = ticket.dataset.cpTicket; renderControlPlane(); }
+  controlDrag.didMove = false;
+  const createEpic = event.target.closest("[data-cp-create-epic]");
+  if (createEpic) {
+    document.getElementById("cp-create").click();
+    document.getElementById("cp-ticket-type").value = "epic";
+    updateControlTicketType();
+    return;
+  }
+  const action = event.target.closest("[data-cp-action]")?.dataset.cpAction;
+  if (action) handleControlAction(action);
+  if (event.target.id === "cp-close-detail") { controlPlane.selectedId = null; renderControlPlane(); }
+  const triageClient = event.target.closest("[data-cp-launch-triage]")?.dataset.cpLaunchTriage;
+  if (triageClient) {
+    const clients = triageClient === "all" ? ["codex", "claude"] : [triageClient];
+    api("POST", "/api/control/board/launch-triage", { board_id: controlPlane.boardId, clients }).then(async (result) => {
+      await loadControlPlane();
+      controlNotice(`Launched ${result.launches.length} parallel triage session${result.launches.length === 1 ? "" : "s"} for ${result.ticket_count} ticket${result.ticket_count === 1 ? "" : "s"}.`);
+    }).catch(controlError);
+    return;
+  }
+  if (event.target.closest("[data-cp-open-planner]")) {
+    openControlPlannerModal();
+    return;
+  }
+  const rulePreset = event.target.closest("[data-cp-rule-preset]")?.dataset.cpRulePreset;
+  if (rulePreset) { addControlWorkspaceRule(rulePreset); return; }
+  const ruleRemoveIndex = event.target.closest("[data-cp-rule-remove]")?.dataset.cpRuleRemove;
+  if (ruleRemoveIndex !== undefined) {
+    controlPlane.workspaceRules.splice(Number(ruleRemoveIndex), 1);
+    renderControlWorkspaceRules();
+    return;
+  }
+  const editWorkspaceId = event.target.closest("[data-cp-edit-workspace]")?.dataset.cpEditWorkspace;
+  if (editWorkspaceId) editControlWorkspace(editWorkspaceId);
+});
+
+// ── Local workspace picker ──────────────────────────────────────────────────
+const folderPicker = { path: null, parent: null };
+async function loadControlDirectories(path) {
+  try {
+    const query = path ? `?path=${encodeURIComponent(path)}` : "";
+    const data = await api("GET", `/api/control/directories${query}`);
+    folderPicker.path = data.path; folderPicker.parent = data.parent;
+    document.getElementById("cp-folder-current").textContent = data.path;
+    document.getElementById("cp-folder-up").disabled = !data.parent;
+    document.getElementById("cp-folder-list").innerHTML = data.directories.map((item) => `<button class="cp-folder-row" data-cp-folder="${escapeControl(item.path)}"><span>⌁</span>${escapeControl(item.name)}</button>`).join("") || '<p class="cp-empty">No visible subdirectories.</p>';
+  } catch (error) { controlError(error); }
+}
+function closeControlFolderPicker() { document.getElementById("cp-folder-modal").style.display = "none"; }
+document.getElementById("cp-browse-directory")?.addEventListener("click", () => { document.getElementById("cp-folder-modal").style.display = "flex"; loadControlDirectories(document.getElementById("cp-local-directory").value.trim() || undefined); });
+document.getElementById("cp-folder-close")?.addEventListener("click", closeControlFolderPicker);
+document.getElementById("cp-folder-up")?.addEventListener("click", () => { if (folderPicker.parent) loadControlDirectories(folderPicker.parent); });
+document.getElementById("cp-folder-select")?.addEventListener("click", () => { if (folderPicker.path) document.getElementById("cp-local-directory").value = folderPicker.path; updateControlProjectWarning(); closeControlFolderPicker(); });
+document.addEventListener("click", (event) => { const target = event.target.closest("[data-cp-folder]"); if (target) loadControlDirectories(target.dataset.cpFolder); });

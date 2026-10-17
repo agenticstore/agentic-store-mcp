@@ -1,6 +1,6 @@
 # Agentic Store development spinup
 
-Prepared 2026-09-27 in `/Users/pavan/Documents/agentic-store-mcp`.
+Prepared 2026-09-27 for the AgenticStore MCP repository.
 
 ## Readiness
 

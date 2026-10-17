@@ -1,14 +1,14 @@
 <div align="center">
 
 # ⚡ AgenticStore MCP Server: LLM Prompt Firewall, Token Optimization & AI Security Toolkit 
-**Open-Source Model Context Protocol (MCP) Server for Data Privacy, Prompt Recording, Audit Logs, and 74 Agent Tools for Claude Code, Cursor, and Windsurf.**
+**Open-source Model Context Protocol (MCP) server for data privacy, prompt recording, audit logs, Relay project delivery, and 74 tools for Claude Code, Codex, Cursor, and Windsurf.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg?style=for-the-badge)](https://www.python.org/downloads/)
 [![MCP Compatible](https://img.shields.io/badge/MCP-compatible-green.svg?style=for-the-badge)](https://modelcontextprotocol.io)
 [![PyPI](https://img.shields.io/pypi/v/agentic-store-mcp?color=blue&style=for-the-badge)](https://pypi.org/project/agentic-store-mcp/)
 
-[� Official Documentation](https://agenticstore.dev/docs) • [�🚀 Quick Start](#-quick-start-guide-fastest-way-to-install) • [🛡️ Prompt Firewall](#%EF%B8%8F-llm-prompt-firewall--sanitization) • [🗂️ Full Tool Directory](#-tool-directory--all-74-tools) • [🌐 Web Search](#-enabling-web-search) • [🔌 Client Setup](#-connect-to-your-ai-client) • [💻 Claude Code](#-claude-code-cli-integration) • [🖥️ GUI Webapp](https://agenticstore.dev/docs/gui)
+[Documentation](https://agenticstore.dev/docs) • [Quick start](#-quick-start-guide-fastest-way-to-install) • [Prompt Firewall](#%EF%B8%8F-llm-prompt-firewall--sanitization) • [Relay](#-relay-jira-for-ai-agents) • [Tool directory](#-tool-directory--all-74-tools) • [Client setup](#-connect-to-your-ai-client) • [GUI webapp](https://agenticstore.dev/docs/gui)
 
 </div>
 
@@ -24,6 +24,7 @@ Giving AI assistants like **Claude, Cursor, and Windsurf** access to your codeba
 
 * 🛡️ **The LLM Prompt Firewall:** A secure local proxy that intercepts, scans, and sanitizes your prompts *before* they leave your machine. It flags leaked secrets, PII, and API keys, using local models (like Ollama) to sanitize data and generate strict audit traces for all AI usage.
 * 🧰 **The MCP Toolkit (74 Tools):** A production-ready arsenal. Instantly arm your AI with code analyzers and CVE vulnerability scanners, project health checks, safe local data inspection, context pruners, token optimizers, persistent semantic memory, and self-hosted SearXNG web search.
+* ✦ **Relay:** A local project delivery system for humans and AI agents. Plan a project, create Epics and tickets, route work through Codex or Claude, and keep decisions, Git evidence, validation, and handoffs on the board.
 
 Zero subscriptions. Zero vendor lock-in. Configure your MCP tools manually or effortlessly through a beautiful local GUI.
 
@@ -71,7 +72,7 @@ Zero subscriptions. Zero vendor lock-in. Configure your MCP tools manually or ef
 | **Persistent Agent Memory** | 🧠 Yes (survives restarts & sessions) | ❌ No |
 | **Token Optimization & Pruning** | ✂️ Yes (LLM token compression) | ❌ No |
 | **Agentic Web Search** | 🌐 Self-hosted SearXNG | ❌ Usually No |
-| **Capabilities** | 🛠️ 47 specialized tools | ⛏️ 1 to 5 basic tools |
+| **Capabilities** | 🛠️ 74 specialized tools | ⛏️ 1 to 5 basic tools |
 | **Configuration** | 🖥️ Web GUI Dashboard OR ⚙️ Manual | ⚙️ Manual JSON setup |
 | **Privacy** | 🔒 100% Local Execution | 🔒 Varies |
 
@@ -92,6 +93,7 @@ Zero subscriptions. Zero vendor lock-in. Configure your MCP tools manually or ef
   - [V0: Python/uvx (Recommended)](#v0--python--uvx-fastest-start-no-docker-needed)
   - [V1: From GitHub Source](#v1--from-github-source-latest-features)
   - [V2: MCP Hub Webapp (UI)](#v2--mcp-hub-webapp-gui-to-manage-everything)
+- [✦ Relay: JIRA for AI Agents](#-relay-jira-for-ai-agents)
 - [🔌 Connect to Your AI Client](#-connect-to-your-ai-client)
 - [🗂 Tool Directory — All 74 Tools](#-tool-directory--all-74-tools)
 - [💻 Claude Code CLI Integration](#-claude-code-cli-integration)
@@ -199,8 +201,9 @@ Forget manual JSON editing! Use our local web UI to:
 - 🛡️ **Firewall:** Setup certificates and monitor all intercepted LLM prompts and audit logs for comprehensive **prompt recording**.
 - 🔑 **Connectors:** Enter remote API keys securely (stored in OS keyring).
 - 🛠️ **Tools:** Toggle which of the 74 tools to expose to the AI.
-- 💻 **Clients:** Auto-generate configuration for Claude, Cursor, and Windsurf.
+- 💻 **Clients:** Auto-generate configuration for Claude, Codex, Cursor, and Windsurf.
 - 🧠 **Memory:** Manage persistent agent states, checkpoints, token optimization, and logs.
+- ✦ **Relay:** Plan and triage work with an AI agent, create Epics and tickets, manage workspaces, and retain handoff, validation, and Git evidence.
 
 **Start the Hub via Python:**
 ```bash
@@ -214,6 +217,29 @@ agentic-store-webapp
 **Access it at:** [http://localhost:8765](http://localhost:8765)
 
 </details>
+
+---
+
+## ✦ Relay: JIRA for AI Agents
+
+Relay is AgenticStore's local delivery system for projects shared by people and AI agents. It lives in the webapp and stores its board on your machine, so project context stays available across agent sessions.
+
+Use Relay to create multiple boards, group work into Epics, assign each ticket to an isolated workspace, and run Codex or Claude handoffs in parallel. Each ticket can retain progress comments, validation results, Git evidence, decision context, blockers, and the session that worked on it.
+
+### Triage with the AI Task Planner
+
+Open **Relay → AI task planner** and describe the outcome, success criteria, constraints, product surfaces, and quality requirements. Relay opens a local Codex or Claude planning session with a reusable planning harness. The planner inspects the selected board, asks follow-up questions, proposes an Epic with bounded child tickets, and waits for your explicit approval before it creates work in bulk.
+
+The harness makes automated tests and documentation part of the plan whenever code or user-facing behavior changes. It also prompts for security, accessibility, migration, rollout, and rollback work when relevant. Planning sessions are recorded in Relay so the rationale remains with the project.
+
+### A practical workflow
+
+1. Create a board for a product, release, or client initiative.
+2. Use **AI task planner** to turn a goal into an approved Epic and testable tickets.
+3. Assign tickets to local checkouts or fresh remote clones, then hand them to Codex or Claude.
+4. Review work through recorded comments, validations, and Git evidence; drag tickets through delivery states as work progresses.
+
+Relay does not send project data to a hosted planning service. It launches the local agent client you select, which uses its own configured model and privacy settings.
 
 ---
 
@@ -393,7 +419,7 @@ Because AgenticStore MCP supports both manual configuration and management via t
 | `tool_profile_manage` | Save and apply named MCP tool profiles after a client restart. |
 | `tool_profile_audit` | Explain profile capabilities, risk annotations, and connector needs. |
 | `decision_log` | Track key development decisions, rationale, alternatives, and risks. |
-| `task_board` (Agent Board) | JIRA for AI Agents: local tickets, sprints, tags, dependencies, blockers, comments, issue links, and acceptance criteria. |
+| `task_board` (Relay) | JIRA for AI Agents: local boards, Epics, tickets, dependencies, workspaces, agent handoffs, Git evidence, validations, decisions, and planning-session records. |
 | `risk_register` | Track release and architectural risks with mitigation and status. |
 | `handoff_bundle` | Assemble a portable development handoff from lifecycle artifacts. |
 

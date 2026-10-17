@@ -7,6 +7,7 @@
   <!-- ── Top Nav: two sections only ── -->
   <nav class="section-nav">
     <button class="nav-btn active" data-section="firewall">Firewall</button>
+    <button class="nav-btn" data-section="relay">Relay</button>
     <button class="nav-btn" data-section="mcp-hub">MCP Hub</button>
   </nav>
 
@@ -638,6 +639,157 @@ uv sync</pre></div></div>
       </div>
     </div>
 
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SECTION: Relay
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <section id="section-relay" class="setup-section">
+    <div class="cp-header">
+      <div><p class="cp-eyebrow">PROJECT DELIVERY SYSTEM</p><h2>Relay: JIRA for AI Agents</h2><p>Turn plans into tracked work, coordinate agents, retain decisions and validation evidence, and see the full state of delivery.</p></div>
+      <div class="cp-actions"><button id="cp-refresh" class="btn btn-ghost">Refresh</button><button id="cp-open-planner" class="btn cp-planner-launch"><span>✦</span> AI task planner</button><button id="cp-create" class="btn btn-primary">Add work</button></div>
+    </div>
+    <div id="cp-error" class="cp-error" style="display:none"></div>
+    <div id="cp-notice" class="cp-notice" style="display:none"></div>
+    <div class="cp-perspective" aria-label="Relay perspective"><div class="cp-perspective-copy"><span>WORKING AS</span><strong id="cp-perspective-label">Admin</strong><small id="cp-perspective-note">Configure workspaces, direct capacity, and manage delivery.</small></div><div class="cp-segmented"><button class="cp-perspective-button active" data-cp-perspective="admin">Admin</button><button class="cp-perspective-button" data-cp-perspective="agent">Agent</button></div></div>
+    <section id="cp-agent-console" class="cp-agent-console" style="display:none"></section>
+    <section class="cp-board-command" aria-label="Relay board controls">
+      <div class="cp-board-select-wrap"><span class="cp-board-kicker">CURRENT BOARD</span><label class="cp-board-select-label" for="cp-board-select">Delivery board</label><select id="cp-board-select" aria-label="Choose Relay board"></select><button id="cp-board-settings" class="cp-icon-button" type="button" aria-label="Board settings" title="Board settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.4a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2Z"/><path d="m19.4 13.6 1.1.9-2 3.4-1.4-.5a8.2 8.2 0 0 1-1.7 1l-.2 1.5h-4l-.2-1.5a8.2 8.2 0 0 1-1.7-1l-1.4.5-2-3.4 1.1-.9a8 8 0 0 1 0-2.1l-1.1-.9 2-3.4 1.4.5a8.2 8.2 0 0 1 1.7-1l.2-1.5h4l.2 1.5a8.2 8.2 0 0 1 1.7 1l1.4-.5 2 3.4-1.1.9a8 8 0 0 1 0 2.1Z"/></svg></button></div>
+      <div class="cp-board-command-actions"><div class="cp-view-switcher" role="tablist" aria-label="Relay view"><button type="button" role="tab" class="cp-view-button active" data-cp-view="delivery">Work</button><button type="button" role="tab" class="cp-view-button" data-cp-view="epics">Epics</button></div><button id="cp-new-board" class="btn btn-ghost" type="button">New board</button></div>
+    </section>
+    <div id="cp-board-modal" class="modal-overlay" style="display:none">
+      <form id="cp-board-form" class="modal-box cp-ticket-modal cp-board-modal">
+        <div class="cp-modal-heading"><div><p class="cp-eyebrow">RELAY BOARDS</p><h3 id="cp-board-modal-heading">New board</h3></div><button type="button" id="cp-board-cancel" class="cp-close" aria-label="Close board editor">×</button></div>
+        <p class="cp-modal-note">Use boards to separate initiatives, releases, or client work. Epics and tickets stay inside their selected board.</p>
+        <label>Board name<input id="cp-board-name" required maxlength="80" placeholder="Q4 platform release" autocomplete="off"></label>
+        <label>Description <small>Optional</small><textarea id="cp-board-description" rows="4" placeholder="What outcome does this board own?"></textarea></label>
+        <label>Accent<select id="cp-board-color"><option value="violet">Violet</option><option value="cyan">Cyan</option><option value="amber">Amber</option><option value="rose">Rose</option></select></label>
+        <div class="cp-modal-actions"><button type="button" id="cp-delete-board" class="btn cp-danger-button" style="display:none">Delete board</button><span class="cp-action-spacer"></span><button type="button" id="cp-board-cancel-secondary" class="btn btn-ghost">Cancel</button><button id="cp-board-submit" class="btn btn-primary" type="submit">Create board</button></div>
+      </form>
+    </div>
+    <div id="cp-handoff-modal" class="modal-overlay" style="display:none">
+      <form id="cp-handoff-form" class="modal-box cp-ticket-modal">
+        <div class="cp-modal-heading"><h3>Launch agent handoff</h3><button type="button" id="cp-handoff-cancel" class="cp-close">×</button></div>
+        <p id="cp-handoff-ticket" class="cp-modal-note"></p>
+        <div class="cp-form-grid"><label>Agent client<select id="cp-handoff-client"><option value="codex">Codex</option><option value="claude">Claude</option></select></label><label>Agent name<input id="cp-handoff-recipient" required value="codex-agent"></label></div>
+        <p class="cp-modal-note">This ticket inherits the saved project workspace and branch rules. Change those once in Project setup, not per ticket.</p>
+        <label>Ticket instructions <small>Optional</small><textarea id="cp-handoff-note" rows="6" placeholder="What should this agent accomplish? Add constraints, context, or the next concrete step."></textarea></label>
+        <p class="cp-modal-note">A local Terminal session opens with the Relay harness. Its session ID is stored on this ticket, and the agent is instructed to add comments and evidence throughout the task.</p>
+        <div class="cp-modal-actions"><button type="button" id="cp-handoff-cancel-secondary" class="btn btn-ghost">Cancel</button><button class="btn btn-primary" type="submit">Launch handoff</button></div>
+      </form>
+    </div>
+    <div id="cp-planner-modal" class="modal-overlay" style="display:none">
+      <form id="cp-planner-form" class="modal-box cp-planner-modal">
+        <div class="cp-modal-heading"><div><p class="cp-eyebrow">RELAY TRIAGE</p><h3>AI task planner</h3></div><button type="button" id="cp-planner-close" class="cp-close" aria-label="Close AI task planner">×</button></div>
+        <div class="cp-planner-intro"><span class="cp-planner-orbit">✦</span><div><strong>Start with the outcome.</strong><p>Relay opens a planning agent in Terminal. It inspects this board, asks what matters, and waits for your approval before it creates an Epic and tickets in bulk.</p></div></div>
+        <label class="cp-planner-primary">What do you want to accomplish?<textarea id="cp-planner-goal" rows="3" required minlength="8" maxlength="6000" placeholder="Build a customer-facing release dashboard that makes deployment risk visible before a release."></textarea><small>Describe the outcome in your own words. The planner will turn it into bounded, reviewable work.</small></label>
+        <div class="cp-planner-section"><div class="cp-planner-section-heading"><strong>Where are you in the work?</strong><small>Choose the closest starting point.</small></div><div class="cp-planner-choice-grid" role="radiogroup" aria-label="Delivery stage"><label class="cp-planner-choice selected"><input type="radio" name="cp-planner-stage" value="feature" checked><span>◆</span><b>New feature</b><small>Design and build a capability</small></label><label class="cp-planner-choice"><input type="radio" name="cp-planner-stage" value="new_project"><span>◌</span><b>New project</b><small>Shape a product from zero</small></label><label class="cp-planner-choice"><input type="radio" name="cp-planner-stage" value="improvement"><span>↗</span><b>Improve</b><small>Upgrade an existing flow</small></label><label class="cp-planner-choice"><input type="radio" name="cp-planner-stage" value="bug_fix"><span>!</span><b>Fix</b><small>Investigate and resolve a defect</small></label><label class="cp-planner-choice"><input type="radio" name="cp-planner-stage" value="release"><span>✓</span><b>Release</b><small>Prepare and validate a launch</small></label></div></div>
+        <div class="cp-planner-two-column"><label>How will you know it worked?<textarea id="cp-planner-success" rows="4" maxlength="4000" placeholder="What a user can do, what must be true, or which metrics and checks matter."></textarea></label><label>Context, constraints, or decisions<textarea id="cp-planner-context" rows="4" maxlength="10000" placeholder="Existing architecture, deadline, dependencies, non-negotiables, or useful links."></textarea></label></div>
+        <div class="cp-planner-section"><div class="cp-planner-section-heading"><strong>What should the plan protect?</strong><small>Relay gives these concerns explicit planning attention.</small></div><div class="cp-planner-toggle-row"><label><input type="checkbox" name="cp-planner-quality" value="automated unit tests" checked><span>Unit tests</span></label><label><input type="checkbox" name="cp-planner-quality" value="integration or end-to-end validation" checked><span>Integration checks</span></label><label><input type="checkbox" name="cp-planner-quality" value="documentation and release notes" checked><span>Documentation</span></label><label><input type="checkbox" name="cp-planner-quality" value="security and privacy review"><span>Security</span></label><label><input type="checkbox" name="cp-planner-quality" value="accessibility review"><span>Accessibility</span></label><label><input type="checkbox" name="cp-planner-quality" value="migration and rollback planning"><span>Migration safety</span></label></div></div>
+        <div class="cp-planner-section"><div class="cp-planner-section-heading"><strong>What areas are involved?</strong><small>Optional signal for better task boundaries.</small></div><div class="cp-planner-toggle-row cp-planner-surface-row"><label><input type="checkbox" name="cp-planner-surface" value="web application"><span>Web</span></label><label><input type="checkbox" name="cp-planner-surface" value="API"><span>API</span></label><label><input type="checkbox" name="cp-planner-surface" value="MCP tools"><span>MCP</span></label><label><input type="checkbox" name="cp-planner-surface" value="CLI"><span>CLI</span></label><label><input type="checkbox" name="cp-planner-surface" value="data"><span>Data</span></label><label><input type="checkbox" name="cp-planner-surface" value="infrastructure"><span>Infrastructure</span></label></div></div>
+        <div class="cp-planner-two-column"><label>Workspace <small>Optional</small><select id="cp-planner-workspace"><option value="">Plan before choosing a workspace</option></select></label><label>Planning agent<select id="cp-planner-client"><option value="codex">Codex</option><option value="claude">Claude</option></select></label></div>
+        <p class="cp-planner-footnote">A local Terminal opens next. Continue the conversation there, review the proposed Epic and tickets, then type an explicit approval to create them on this board.</p>
+        <div class="cp-modal-actions"><button type="button" id="cp-planner-cancel" class="btn btn-ghost">Cancel</button><button class="btn btn-primary cp-planner-submit" type="submit"><span>✦</span> Start guided planning</button></div>
+      </form>
+    </div>
+    <div id="cp-comment-modal" class="modal-overlay" style="display:none"><form id="cp-comment-form" class="modal-box cp-comment-modal"><div class="cp-modal-heading"><div><p class="cp-eyebrow">TICKET ACTIVITY</p><h3>Add progress update</h3></div><button type="button" id="cp-comment-close" class="cp-close">×</button></div><p id="cp-comment-ticket" class="cp-modal-note"></p><label>Update<textarea id="cp-comment-body" rows="7" required placeholder="What changed, what did you verify, and what happens next?"></textarea></label><p class="cp-modal-note">This is saved as a timestamped ticket comment.</p><div class="cp-modal-actions"><button type="button" id="cp-comment-cancel" class="btn btn-ghost">Cancel</button><button class="btn btn-primary" type="submit">Post update</button></div></form></div>
+    <div id="cp-ticket-edit-modal" class="modal-overlay" style="display:none">
+      <form id="cp-ticket-edit-form" class="modal-box cp-ticket-modal cp-ticket-editor">
+        <div class="cp-modal-heading"><div><p class="cp-eyebrow">WORK DETAILS</p><h3>Edit ticket</h3></div><button type="button" id="cp-ticket-edit-close" class="cp-close" aria-label="Close ticket editor">×</button></div>
+        <p id="cp-ticket-edit-context" class="cp-modal-note"></p>
+        <label>Title<input id="cp-ticket-edit-title" required maxlength="180"></label>
+        <label>Description<textarea id="cp-ticket-edit-description" rows="5" placeholder="Outcome, context, and constraints"></textarea></label>
+        <div class="cp-form-grid cp-form-grid-three"><label>Type<select id="cp-ticket-edit-type"><option value="task">Task</option><option value="epic">Epic</option><option value="feature">Feature</option><option value="bug">Bug</option><option value="research">Research</option><option value="chore">Chore</option></select></label><label>Priority<select id="cp-ticket-edit-priority"><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label><label>Risk<select id="cp-ticket-edit-risk"><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label><label>Complexity<select id="cp-ticket-edit-complexity"><option value="xl">XL</option><option value="large">Large</option><option value="medium">Medium</option><option value="small">Small</option></select></label><label>Owner<input id="cp-ticket-edit-assignee" placeholder="your-name, codex-agent, claude-agent"></label><label>Workspace<select id="cp-ticket-edit-workspace"><option value="">No workspace</option></select></label></div>
+        <label>Acceptance criteria <small>One criterion per line</small><textarea id="cp-ticket-edit-criteria" rows="4" placeholder="A clear, testable result"></textarea></label>
+        <div class="cp-modal-actions"><button type="button" id="cp-ticket-edit-cancel" class="btn btn-ghost">Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div>
+      </form>
+    </div>
+    <div id="cp-validation-modal" class="modal-overlay" style="display:none">
+      <form id="cp-validation-form" class="modal-box cp-comment-modal cp-proof-modal">
+        <div class="cp-modal-heading"><div><p class="cp-eyebrow">DELIVERY EVIDENCE</p><h3>Record validation</h3></div><button type="button" id="cp-validation-close" class="cp-close" aria-label="Close validation">×</button></div>
+        <p id="cp-validation-ticket" class="cp-modal-note"></p>
+        <div class="cp-form-grid"><label>Check<select id="cp-validation-kind"><option value="test">Test suite</option><option value="lint">Lint</option><option value="type-check">Type check</option><option value="build">Build</option><option value="manual-review">Manual review</option><option value="security-scan">Security scan</option></select></label><label>Result<select id="cp-validation-status"><option value="passed">Passed</option><option value="failed">Failed</option><option value="skipped">Skipped</option></select></label></div>
+        <label>Summary<textarea id="cp-validation-summary" rows="3" required placeholder="pytest: 42 passed"></textarea></label>
+        <label>Output <small>Optional. The useful excerpt, failure, or link.</small><textarea id="cp-validation-output" rows="5" placeholder="Keep this concise so the next reviewer can act on it."></textarea></label>
+        <div class="cp-modal-actions"><button type="button" id="cp-validation-cancel" class="btn btn-ghost">Cancel</button><button class="btn btn-primary" type="submit">Save evidence</button></div>
+      </form>
+    </div>
+    <div id="cp-evidence-modal" class="modal-overlay" style="display:none">
+      <form id="cp-evidence-form" class="modal-box cp-comment-modal cp-proof-modal">
+        <div class="cp-modal-heading"><div><p class="cp-eyebrow">GIT SNAPSHOT</p><h3>Attach Git evidence</h3></div><button type="button" id="cp-evidence-close" class="cp-close" aria-label="Close Git evidence">×</button></div>
+        <p id="cp-evidence-ticket" class="cp-modal-note"></p>
+        <label>Repository directory<input id="cp-evidence-repo-path" required placeholder="/Users/you/work/project"></label>
+        <label>Compare against <small>Optional Git ref</small><input id="cp-evidence-base-ref" placeholder="main"></label>
+        <p class="cp-modal-note">Relay records the branch, commit, and bounded change summary from this local checkout.</p>
+        <div class="cp-modal-actions"><button type="button" id="cp-evidence-cancel" class="btn btn-ghost">Cancel</button><button class="btn btn-primary" type="submit">Attach snapshot</button></div>
+      </form>
+    </div>
+    <div id="cp-transition-modal" class="modal-overlay" style="display:none">
+      <form id="cp-transition-form" class="modal-box cp-transition-sheet">
+        <div class="cp-modal-heading cp-transition-heading"><div><p class="cp-eyebrow">UPDATE DELIVERY</p><h3>Move this work forward</h3><p id="cp-transition-ticket" class="cp-transition-ticket"></p></div><button type="button" id="cp-transition-close" class="cp-close" aria-label="Close move ticket">×</button></div>
+        <div class="cp-transition-path" aria-label="Ticket state change"><article class="cp-transition-state cp-transition-from"><span>NOW</span><strong id="cp-transition-from"></strong><small>This is the current lane.</small></article><div class="cp-transition-arrow" aria-hidden="true"><i></i><b>→</b><i></i></div><article class="cp-transition-state cp-transition-target"><span>NEXT</span><strong id="cp-transition-to"></strong><small>Relay will update the board and project record.</small></article></div>
+        <section class="cp-transition-note"><div class="cp-transition-note-head"><div><label for="cp-transition-comment">Leave a delivery note</label><p>Capture the reason for the move, blocker, result, or the next decision.</p></div><span>Optional</span></div><textarea id="cp-transition-comment" rows="5" placeholder="Example: The security review found a P1 dependency issue. This is blocked until the upgrade plan is approved."></textarea></section>
+        <fieldset class="cp-transition-mode"><legend>What should Relay do next?</legend><label class="cp-transition-option active"><input type="radio" name="cp-transition-next" value="move" checked><span class="cp-transition-option-mark">✓</span><span><strong>Move only</strong><small>Update the board and save your note.</small></span></label><label class="cp-transition-option"><input type="radio" name="cp-transition-next" value="handoff"><span class="cp-transition-option-mark">↗</span><span><strong>Move and hand off</strong><small>Open the agent launch step with this ticket’s context.</small></span></label></fieldset>
+        <div class="cp-modal-actions cp-transition-actions"><button type="button" id="cp-transition-cancel" class="btn btn-ghost">Cancel</button><button class="btn btn-primary" type="submit"><span id="cp-transition-submit-label">Move ticket</span><span aria-hidden="true">→</span></button></div>
+      </form>
+    </div>
+    <div id="cp-folder-modal" class="modal-overlay" style="display:none"><div class="modal-box cp-folder-modal"><div class="cp-modal-heading"><div><p class="cp-eyebrow">LOCAL WORKSPACE</p><h3>Choose folder</h3></div><button type="button" id="cp-folder-close" class="cp-close">×</button></div><div class="cp-folder-path"><button id="cp-folder-up" class="btn btn-ghost">↑</button><code id="cp-folder-current"></code><button id="cp-folder-select" class="btn btn-primary">Use this folder</button></div><div id="cp-folder-list" class="cp-folder-list"></div></div></div>
+    <div id="cp-ticket-modal" class="modal-overlay" style="display:none">
+      <form id="cp-ticket-form" class="modal-box cp-ticket-modal">
+        <div class="cp-modal-heading"><div><p class="cp-eyebrow">RELAY WORK</p><h3 id="cp-ticket-modal-heading">Add work</h3></div><button type="button" id="cp-ticket-cancel" class="cp-close">×</button></div>
+        <label>Title<input id="cp-ticket-title" required maxlength="180" placeholder="Describe the work to do"></label>
+        <label>Description<textarea id="cp-ticket-description" rows="4" placeholder="Context, desired outcome, and constraints"></textarea></label>
+        <div class="cp-form-grid"><label>Workspace<select id="cp-ticket-workspace"><option value="">Choose workspace</option></select></label><label>Type<select id="cp-ticket-type"><option value="task">Task</option><option value="epic">Epic</option><option value="feature">Feature</option><option value="bug">Bug</option><option value="research">Research</option><option value="chore">Chore</option></select></label><label>Priority<select id="cp-ticket-priority"><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option><option value="low">Low</option></select></label></div><label id="cp-ticket-parent-field">Epic <small>Optional</small><select id="cp-ticket-parent"><option value="">No epic</option></select></label>
+        <label>Acceptance criteria <small>One criterion per line</small><textarea id="cp-ticket-criteria" rows="3" placeholder="Tests pass&#10;Documentation updated"></textarea></label>
+        <div class="cp-modal-actions"><button type="button" id="cp-ticket-cancel-secondary" class="btn btn-ghost">Cancel</button><button id="cp-ticket-submit" class="btn btn-primary" type="submit">Create ticket</button></div>
+      </form>
+    </div>
+    <div class="cp-project-bar">
+      <div class="cp-project-mark">⌘</div><div><strong id="cp-project-name">Project setup not saved</strong><p id="cp-project-summary">Set a local workspace or remote repository once for every handoff.</p></div>
+      <div class="cp-project-actions"><button id="cp-sync-git" class="btn btn-ghost">Attach Git evidence</button><button id="cp-open-project" class="btn btn-ghost">Manage workspaces</button></div>
+    </div>
+    <div id="cp-project-modal" class="modal-overlay" style="display:none">
+      <section class="modal-box cp-ticket-modal cp-workspace-overview" aria-labelledby="cp-workspace-overview-heading">
+        <div class="cp-modal-heading"><div><p class="cp-eyebrow">PROJECT DEFAULTS</p><h3 id="cp-workspace-overview-heading">Workspaces</h3></div><button type="button" id="cp-project-cancel" class="cp-close" aria-label="Close workspaces">×</button></div>
+        <p class="cp-modal-note">Each workspace is an independent checkout and rule set. Assign tickets to the right workspace so agents can work in parallel.</p>
+        <div id="cp-workspace-list" class="cp-workspace-list"></div>
+        <div class="cp-modal-actions"><button type="button" id="cp-project-cancel-secondary" class="btn btn-ghost">Close</button><button type="button" id="cp-new-workspace" class="btn btn-primary">New workspace</button></div>
+      </section>
+    </div>
+    <div id="cp-workspace-editor-modal" class="modal-overlay" style="display:none">
+      <section class="modal-box cp-ticket-modal cp-workspace-editor" aria-labelledby="cp-workspace-form-heading">
+        <div class="cp-modal-heading"><div><p class="cp-eyebrow">WORKSPACE SETTINGS</p><h3 id="cp-workspace-form-heading">New workspace</h3></div><button type="button" id="cp-workspace-editor-close" class="cp-close" aria-label="Close workspace editor">×</button></div>
+        <p class="cp-modal-note">Connect a repository once. These delivery rules are included whenever work is handed to an agent.</p>
+        <div class="cp-editor-section">
+          <label class="cp-field-label">Workspace name<input id="cp-workspace-name" placeholder="Payments API" autocomplete="off"></label>
+          <div class="cp-form-grid"><label class="cp-field-label">Workspace source<select id="cp-project-source"><option value="local">Local directory</option><option value="remote">Fresh remote clone</option></select></label></div>
+          <label class="cp-field-label cp-repository-field">Local repository <span>Optional</span><small>Choose an existing checkout on this Mac. Leave it blank to clone the remote repository into a fresh workspace.</small><div class="cp-path-input"><input id="cp-local-directory" placeholder="/Users/you/work/project" autocomplete="off"><button type="button" id="cp-browse-directory" class="btn btn-ghost">Browse</button></div></label>
+          <label class="cp-field-label">Remote repository URL <span>Required when no local checkout is selected</span><input id="cp-remote-repository" placeholder="https://github.com/org/repository.git" autocomplete="off"></label>
+          <p id="cp-project-warning" class="cp-workspace-warning">No local repository is selected. AgenticStore will clone the remote repository into a fresh local workspace.</p>
+        </div>
+        <div class="cp-editor-section cp-rules-section">
+          <div class="cp-section-heading"><div><strong>Delivery rules</strong><p>Pick common guardrails, then add anything specific to this repository.</p></div></div>
+          <div id="cp-rule-presets" class="cp-rule-presets" aria-label="Rule templates">
+            <button type="button" class="cp-rule-preset" data-cp-rule-preset="Use feature/&lt;ticket-id&gt;-&lt;short-slug&gt; branch names"><span>+</span> Feature branch</button>
+            <button type="button" class="cp-rule-preset" data-cp-rule-preset="Run lint before every commit"><span>+</span> Lint before commit</button>
+            <button type="button" class="cp-rule-preset" data-cp-rule-preset="Run relevant tests before review"><span>+</span> Test before review</button>
+            <button type="button" class="cp-rule-preset" data-cp-rule-preset="Run type checks before review"><span>+</span> Type-check</button>
+            <button type="button" class="cp-rule-preset" data-cp-rule-preset="Run a security scan before merge"><span>+</span> Security scan</button>
+            <button type="button" class="cp-rule-preset" data-cp-rule-preset="Open a pull request with validation evidence"><span>+</span> PR evidence</button>
+          </div>
+          <div id="cp-rule-list" class="cp-rule-list" aria-live="polite"></div>
+          <div class="cp-custom-rule"><input id="cp-custom-rule" placeholder="Add a custom delivery rule" autocomplete="off"><button type="button" id="cp-add-custom-rule" class="btn btn-ghost"><span>+</span> Add rule</button></div>
+          <textarea id="cp-project-rules" class="cp-visually-hidden" aria-hidden="true" tabindex="-1"></textarea>
+        </div>
+        <div class="cp-modal-actions"><button type="button" id="cp-delete-current-workspace" class="btn cp-danger-button" style="display:none">Delete workspace</button><span class="cp-action-spacer"></span><button type="button" id="cp-workspace-editor-cancel" class="btn btn-ghost">Cancel</button><button type="button" id="cp-save-project" class="btn btn-primary">Save workspace</button></div>
+      </section>
+    </div>
+    <div class="cp-metrics" id="cp-metrics"></div>
+    <div class="cp-toolbar"><button class="cp-filter active" data-cp-filter="all">All work</button><button class="cp-filter" data-cp-filter="mine">Assigned to me</button><button class="cp-filter" data-cp-filter="codex">Codex</button><button class="cp-filter" data-cp-filter="claude">Claude</button><button class="cp-filter" data-cp-filter="ready">Ready</button><button class="cp-filter" data-cp-filter="blocked">Blocked</button><span id="cp-board-path"></span></div>
+    <div class="cp-layout">
+      <div id="cp-board" class="cp-board" aria-label="Relay task board"></div>
+      <aside id="cp-detail" class="cp-detail"><p class="cp-empty">Select a ticket to inspect context, ownership, Git evidence, and validation.</p></aside>
+    </div>
   </section>
 
 </div>

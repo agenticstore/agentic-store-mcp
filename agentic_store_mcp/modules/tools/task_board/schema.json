@@ -1,35 +1,283 @@
 {
   "name": "task_board",
-  "description": "Agent Board — JIRA for AI Agents. Create a local, structured development board with tasks, priorities, dependencies, blockers, acceptance criteria, comments, activity history, and ready-work summaries. Writes require confirm_write=true.",
+  "description": "Relay: JIRA for AI Agents. Create a local, structured development board with tasks, priorities, dependencies, blockers, acceptance criteria, comments, activity history, and ready-work summaries. Writes require confirm_write=true.",
   "inputSchema": {
     "type": "object",
     "properties": {
       "action": {
         "type": "string",
-        "enum": ["list", "get", "summary", "add", "update", "transition", "comment", "assign_sprint", "link_issue", "log_issue", "archive", "set_project"],
+        "enum": [
+          "list",
+          "get",
+          "summary",
+          "add",
+          "update",
+          "transition",
+          "comment",
+          "assign_sprint",
+          "link_issue",
+          "log_issue",
+          "archive",
+          "set_project",
+          "claim_ticket",
+          "release_ticket",
+          "start_ticket",
+          "complete_ticket",
+          "review_ticket",
+          "handoff_ticket",
+          "attach_git_evidence",
+          "record_validation",
+          "attach_artifact",
+          "create_from_finding",
+          "plan_epic",
+          "resume_ticket",
+          "add_workspace",
+          "update_workspace",
+          "delete_workspace",
+          "add_board",
+          "update_board",
+          "delete_board",
+          "log_planning_session"
+        ],
         "default": "list",
-        "description": "list, get, and summary are read-only. add creates a ticket; log_issue creates a bug ticket. All other actions write the board."
+        "description": "Read-only: list, get, summary, review_ticket, resume_ticket. Writes require confirm_write=true. Organize tickets and Epics into Relay boards, then record execution, handoffs, Git evidence, validations, artifacts, and project decisions."
       },
-      "path": {"type": "string", "description": "Absolute or relative path to the local Agent Board JSON file."},
-      "filters": {"type": "object", "description": "Optional list filters: status, priority, assignee, label, parent_id, or ready."},
-      "task": {"type": "object", "description": "Ticket for add. Supports title, description, priority, type, assignee, labels, sprint, parent_id, depends_on, acceptance_criteria, blockers, and artifacts."},
-      "issue": {"type": "object", "description": "Bug-ticket payload for log_issue. Uses the same fields as task and defaults type to bug."},
-      "id": {"type": "string", "description": "Task id for get, update, transition, comment, or archive."},
-      "changes": {"type": "object", "description": "Non-status task fields to change with update. Use transition for status changes."},
-      "status": {"type": "string", "enum": ["backlog", "todo", "in_progress", "blocked", "in_review", "done", "cancelled"], "description": "Target status for transition."},
-      "reason": {"type": "string", "description": "Optional transition or archive rationale stored in task history."},
-      "comment": {"type": "string", "description": "Comment body for action=comment. Agent Board records its UTC timestamp."},
-      "sprint": {"type": "string", "description": "Sprint name for assign_sprint, or include it on a ticket payload."},
-      "related_id": {"type": "string", "description": "Existing ticket id to link with action=link_issue."},
-      "relationship": {"type": "string", "enum": ["blocks", "blocked_by", "relates_to", "duplicates", "caused_by"], "default": "relates_to", "description": "Relationship for a linked ticket."},
-      "project": {"type": "object", "description": "Project metadata for set_project: name, description, repository, or updated_by."},
-      "allow_incomplete_dependencies": {"type": "boolean", "default": false, "description": "Allow a task to transition to done while dependencies are incomplete."},
-      "confirm_write": {"type": "boolean", "default": false, "description": "Must be true for add, update, transition, comment, archive, and set_project."}
+      "path": {
+        "type": "string",
+        "description": "Absolute or relative path to the local Relay JSON file."
+      },
+      "filters": {
+        "type": "object",
+        "description": "Optional list filters: status, priority, assignee, label, parent_id, or ready."
+      },
+      "task": {
+        "type": "object",
+        "description": "Ticket for add on the selected Relay board. Supports title, description, priority, type (including epic), assignee, labels, sprint, parent_id, dependencies, acceptance criteria, blockers, artifacts, and workspace_id. Set parent_id to attach a ticket to an Epic in the same board."
+      },
+      "issue": {
+        "type": "object",
+        "description": "Bug-ticket payload for log_issue. Uses the same fields as task and defaults type to bug."
+      },
+      "id": {
+        "type": "string",
+        "description": "Task id for get, update, transition, comment, or archive."
+      },
+      "changes": {
+        "type": "object",
+        "description": "Non-status task fields to change with update. Use transition for status changes."
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "backlog",
+          "todo",
+          "in_progress",
+          "blocked",
+          "in_review",
+          "done",
+          "cancelled"
+        ],
+        "description": "Target status for transition."
+      },
+      "reason": {
+        "type": "string",
+        "description": "Optional transition or archive rationale stored in task history."
+      },
+      "comment": {
+        "type": "string",
+        "description": "Comment body for action=comment. Relay records its UTC timestamp."
+      },
+      "sprint": {
+        "type": "string",
+        "description": "Sprint name for assign_sprint, or include it on a ticket payload."
+      },
+      "related_id": {
+        "type": "string",
+        "description": "Existing ticket id to link with action=link_issue."
+      },
+      "relationship": {
+        "type": "string",
+        "enum": [
+          "blocks",
+          "blocked_by",
+          "relates_to",
+          "duplicates",
+          "caused_by"
+        ],
+        "default": "relates_to",
+        "description": "Relationship for a linked ticket."
+      },
+      "project": {
+        "type": "object",
+        "description": "Project metadata for set_project: name, description, repository, or updated_by."
+      },
+      "allow_incomplete_dependencies": {
+        "type": "boolean",
+        "default": false,
+        "description": "Allow a task to transition to done while dependencies are incomplete."
+      },
+      "confirm_write": {
+        "type": "boolean",
+        "default": false,
+        "description": "Must be true for add, update, transition, comment, archive, and set_project."
+      },
+      "agent": {
+        "type": "string",
+        "description": "Agent identity for claiming or starting a ticket."
+      },
+      "checkpoint": {
+        "type": "string",
+        "description": "Optional local checkpoint reference attached to an agent run."
+      },
+      "recipient": {
+        "type": "string",
+        "description": "Recipient agent for handoff_ticket."
+      },
+      "note": {
+        "type": "string",
+        "description": "Required handoff note describing work, evidence, and next step."
+      },
+      "handoff_blockers": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Optional blockers documented during handoff."
+      },
+      "repo_path": {
+        "type": "string",
+        "description": "Local Git repository path for attach_git_evidence."
+      },
+      "base_ref": {
+        "type": "string",
+        "description": "Optional Git ref used to calculate changed files and diff stat."
+      },
+      "validation_kind": {
+        "type": "string",
+        "description": "Validation category, such as test, lint, build, or review."
+      },
+      "validation_status": {
+        "type": "string",
+        "enum": [
+          "passed",
+          "failed",
+          "skipped"
+        ],
+        "description": "Validation outcome."
+      },
+      "validation_summary": {
+        "type": "string",
+        "description": "Concise validation result."
+      },
+      "validation_output": {
+        "type": "string",
+        "description": "Bounded validation output or evidence."
+      },
+      "artifact_label": {
+        "type": "string",
+        "description": "Human-readable label for a linked local artifact."
+      },
+      "artifact_reference": {
+        "type": "string",
+        "description": "Artifact path, URL, commit, or other local reference."
+      },
+      "source": {
+        "type": "string",
+        "description": "Finding source for create_from_finding, such as test_runner or dependency_audit."
+      },
+      "title": {
+        "type": "string",
+        "description": "Ticket title for create_from_finding."
+      },
+      "description": {
+        "type": "string",
+        "description": "Ticket description for create_from_finding."
+      },
+      "priority": {
+        "type": "string",
+        "enum": [
+          "critical",
+          "high",
+          "medium",
+          "low"
+        ],
+        "description": "Priority for create_from_finding."
+      },
+      "epic": {
+        "type": "object",
+        "description": "Epic payload for plan_epic; supports the same fields as task except type is always epic."
+      },
+      "children": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        },
+        "description": "Child ticket payloads for plan_epic."
+      },
+      "allow_unverified": {
+        "type": "boolean",
+        "default": false,
+        "description": "Permit complete_ticket without validation evidence."
+      },
+      "session_id": {
+        "type": "string",
+        "description": "Control-plane session identifier linked to a handoff and agent run."
+      },
+      "agent_client": {
+        "type": "string",
+        "enum": [
+          "codex",
+          "claude"
+        ],
+        "description": "Optional local CLI used for a handoff."
+      },
+      "working_directory": {
+        "type": "string",
+        "description": "Optional local working directory provided to a launched agent."
+      },
+      "workspace_source": {
+        "type": "string",
+        "enum": [
+          "local",
+          "remote"
+        ],
+        "description": "Workspace source for a terminal handoff."
+      },
+      "repository_url": {
+        "type": "string",
+        "description": "Remote Git URL cloned into a fresh workspace when no local directory is supplied."
+      },
+      "branch_rules": {
+        "type": "string",
+        "description": "Optional branch naming, commit, lint, test, and review rules passed to the agent harness."
+      },
+      "workspace_id": {
+        "type": "string",
+        "description": "Workspace assigned to a ticket, targeted for deletion, or updated."
+      },
+      "workspace": {
+        "type": "object",
+        "description": "Workspace for add_workspace or update_workspace: name, source (local or remote), local_directory, repository_url, and branch_rules."
+      },
+      "board_id": {
+        "type": "string",
+        "description": "Relay board id. Omit for the default board. Tickets, Epics, summaries, and board actions are scoped to this board."
+      },
+      "board": {
+        "type": "object",
+        "description": "Board payload for add_board or update_board: name (required for add), optional description, and accent color."
+      },
+      "planning_brief": {
+        "type": "string",
+        "description": "Initial project brief captured when a gated Relay AI Task Planner session is launched."
+      }
     },
-    "required": ["path"]
+    "required": [
+      "path"
+    ]
   },
   "annotations": {
-    "title": "Agent Board — JIRA for AI Agents",
+    "title": "Relay: JIRA for AI Agents",
     "readOnlyHint": false,
     "destructiveHint": false,
     "idempotentHint": false,

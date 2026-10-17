@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-store-mcp"
-version = "1.0.7"
+version = "1.0.8"
 description = "Model Context Protocol (MCP) Server for AI Data Privacy: LLM prompt firewall, audit logs, and 74 MCP tools for Claude, Codex, Cursor, and Windsurf."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -27,14 +27,14 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 dependencies = [
-    "mcp>=1.0",
-    "keyring>=25.0",
-    "PyGithub>=2.0",
-    "fastapi>=0.110",
-    "uvicorn[standard]>=0.27",
-    "jinja2>=3.1",
-    "httpx>=0.27",
-    "mitmproxy>=12.2.1",
+    "mcp>=1.30.0,<2.0",
+    "keyring>=25.7.0",
+    "PyGithub>=2.10.0",
+    "fastapi>=0.143.3",
+    "uvicorn[standard]>=0.54.0",
+    "jinja2>=3.1.6",
+    "httpx>=0.28.1",
+    "mitmproxy>=12.2.3",
 ]
 
 [project.scripts]

@@ -19,6 +19,10 @@ from __future__ import annotations
 
 import asyncio as _asyncio
 import os
+import shlex
+import shutil
+import subprocess
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncIterator, Literal
@@ -197,7 +201,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 @app.get("/api/env")
@@ -215,6 +219,388 @@ async def api_tools():
 
     tools = build_catalog()
     return {"tools": tools, "total": len(tools)}
+
+
+# ─── Relay project delivery system ───────────────────────────────────────────────
+
+CONTROL_PLANE_DIR = Path.home() / ".config" / "agentic-store"
+CONTROL_BOARD_PATH = CONTROL_PLANE_DIR / "agent-board.json"
+
+
+def _control_board_path(path: str | None) -> str:
+    if path is None or not path.strip():
+        return str(CONTROL_BOARD_PATH)
+    return str(Path(path).expanduser())
+
+
+class ControlBoardRequest(BaseModel):
+    action: str
+    path: str | None = None
+    board_id: str | None = None
+    payload: dict = Field(default_factory=dict)
+
+
+@app.get("/api/control/board")
+async def api_control_board(path: str | None = None, board_id: str | None = None):
+    """Return the local Relay project record and its delivery summary."""
+    from agentic_store_mcp.modules.tools.task_board.handler import run
+
+    board_path = _control_board_path(path)
+    try:
+        summary = await _asyncio.to_thread(run, {"action": "summary", "path": board_path, "board_id": board_id})
+        listing = await _asyncio.to_thread(run, {"action": "list", "path": board_path, "board_id": board_id})
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "path": board_path,
+        "summary": summary,
+        "workspaces": listing.get("workspaces", []),
+        "boards": listing.get("boards", []),
+        "active_board": listing.get("active_board"),
+        "tasks": listing["tasks"],
+        "agent_clients": {
+            "codex": {"available": bool(shutil.which("codex"))},
+            "claude": {"available": bool(shutil.which("claude"))},
+        },
+    }
+
+
+class LaunchHandoffRequest(BaseModel):
+    path: str | None = None
+    board_id: str | None = None
+    ticket_id: str
+    recipient: str
+    note: str = ""
+    client: Literal["codex", "claude"]
+    workspace_source: Literal["local", "remote"] | None = None
+    local_directory: str | None = None
+    repository_url: str | None = None
+    branch_rules: str | None = None
+
+
+@app.post("/api/control/board/launch-handoff")
+async def api_control_launch_handoff(request: LaunchHandoffRequest):
+    """Record and launch an interactive local CLI handoff from a ticket."""
+    from agentic_store_mcp.modules.tools.task_board.handler import run
+
+    executable = shutil.which(request.client)
+    if not executable:
+        raise HTTPException(status_code=400, detail=f"{request.client} CLI is not installed or not on PATH")
+    board_path = _control_board_path(request.path)
+    try:
+        board_data = await _asyncio.to_thread(run, {"action": "list", "path": board_path, "board_id": request.board_id})
+        ticket = next((item for item in board_data["tasks"] if item["id"] == request.ticket_id), None)
+        if not ticket:
+            raise ValueError(f"Unknown task id: {request.ticket_id}")
+        workspace = ticket.get("workspace_snapshot") or next((item for item in board_data.get("workspaces", []) if item["id"] == ticket.get("workspace_id")), None)
+        if not workspace:
+            raise ValueError("Assign a workspace to this ticket before launching a handoff")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    workspace_source = request.workspace_source or workspace.get("source", "local")
+    local_directory = request.local_directory if request.local_directory is not None else workspace.get("local_directory")
+    repository_url = (request.repository_url if request.repository_url is not None else workspace.get("repository_url") or "").strip()
+    use_remote = workspace_source == "remote" or not (local_directory or "").strip()
+    if use_remote and not repository_url:
+        raise HTTPException(status_code=400, detail="Configure a remote repository URL in Project setup before launching this handoff")
+    session_id = f"{request.client}-{uuid.uuid4().hex[:12]}"
+    handoff_note = request.note.strip() or f"Continue ticket {request.ticket_id}; inspect its context, acceptance criteria, and latest evidence."
+    if use_remote:
+        repo_slug = repository_url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
+        safe_slug = "".join(char for char in repo_slug if char.isalnum() or char in "-_") or "workspace"
+        workspace_root = CONTROL_PLANE_DIR / "workspaces"
+        workspace_root.mkdir(parents=True, exist_ok=True)
+        working_directory = workspace_root / f"{safe_slug}-{session_id[-6:]}"
+        clone = await _asyncio.to_thread(
+            subprocess.run, ["git", "clone", "--", repository_url, str(working_directory)],
+            capture_output=True, text=True, timeout=120, check=False,
+        )
+        if clone.returncode:
+            raise HTTPException(status_code=400, detail=f"Remote clone failed: {clone.stderr.strip()[-500:]}")
+    else:
+        working_directory = Path(local_directory or "").expanduser().resolve()
+        if not working_directory.is_dir():
+            raise HTTPException(status_code=400, detail="local_directory must be an existing directory")
+    harness_source = HERE / "static" / "agent-board-harness.md"
+    harness_path = CONTROL_PLANE_DIR / "skills" / "agent-board" / "SKILL.md"
+    harness_path.parent.mkdir(parents=True, exist_ok=True)
+    harness_path.write_text(harness_source.read_text(encoding="utf-8"), encoding="utf-8")
+    branch_rules = (request.branch_rules if request.branch_rules is not None else workspace.get("branch_rules") or "").strip() or "Use feature/<ticket-id>-<short-slug>; lint before every commit; run relevant tests before completion."
+    agent_prompt = (
+        f"Read and follow the reusable Relay harness at {harness_path}.\n\n"
+        f"You are taking over ticket {request.ticket_id}. Handoff: {handoff_note}\n"
+        f"Workspace: {working_directory} ({'fresh clone from ' + repository_url if use_remote else 'local directory'}).\n"
+        f"Branch rules: {branch_rules}\n"
+        f"Board path: {board_path}; ticket ID: {request.ticket_id}; session ID: {session_id}.\n"
+        "Use task_board comments and validation/evidence actions as described by the harness."
+    )
+    try:
+        handoff = await _asyncio.to_thread(run, {
+            "action": "handoff_ticket", "path": board_path, "board_id": request.board_id, "id": request.ticket_id,
+            "recipient": request.recipient, "note": handoff_note, "agent_client": request.client,
+            "session_id": session_id, "working_directory": str(working_directory), "workspace_source": "remote" if use_remote else "local", "repository_url": repository_url or None, "branch_rules": branch_rules, "confirm_write": True,
+        })
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    handoff_dir = CONTROL_PLANE_DIR / "handoffs"
+    handoff_dir.mkdir(parents=True, exist_ok=True)
+    script_path = handoff_dir / f"{session_id}.command"
+    # A handoff is an isolated terminal session. Codex otherwise attempts to join
+    # the shared background server, whose feature flags can differ from the user's
+    # active desktop session and block startup with an interactive prompt.
+    client_args = [executable]
+    if request.client == "codex":
+        client_args.append("--no-daemon")
+    client_args.append(agent_prompt)
+    launch_command = " ".join(shlex.quote(argument) for argument in client_args)
+    script_path.write_text(
+        "#!/bin/zsh\n"
+        f"cd {shlex.quote(str(working_directory))}\n"
+        f"exec {launch_command}\n",
+        encoding="utf-8",
+    )
+    script_path.chmod(0o700)
+    try:
+        subprocess.Popen(["open", "-a", "Terminal", str(script_path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Handoff was recorded but Terminal could not open: {exc}") from exc
+    return {"launched": True, "session_id": session_id, "client": request.client, "workspace_source": "remote" if use_remote else "local", "working_directory": str(working_directory), "harness_path": str(harness_path), "script_path": str(script_path), "handoff": handoff}
+
+
+class LaunchTriageRequest(BaseModel):
+    path: str | None = None
+    board_id: str | None = None
+    clients: list[Literal["codex", "claude"]] = ["codex", "claude"]
+
+
+class LaunchPlannerRequest(BaseModel):
+    """Initial context for a gated Relay AI Task Planner session."""
+
+    path: str | None = None
+    board_id: str | None = None
+    goal: str = Field(min_length=8, max_length=6000)
+    success_criteria: str = Field(default="", max_length=4000)
+    context: str = Field(default="", max_length=10000)
+    stage: Literal["new_project", "feature", "improvement", "bug_fix", "release"] = "feature"
+    product_surfaces: list[str] = Field(default_factory=list, max_length=8)
+    quality_gates: list[str] = Field(default_factory=list, max_length=8)
+    workspace_id: str | None = None
+    client: Literal["codex", "claude"] = "codex"
+
+
+@app.post("/api/control/board/launch-planner")
+async def api_control_launch_planner(request: LaunchPlannerRequest):
+    """Open a gated planning terminal that can create a Relay Epic and child tickets."""
+    from agentic_store_mcp.modules.tools.task_board.handler import run
+
+    executable = shutil.which(request.client)
+    if not executable:
+        raise HTTPException(status_code=400, detail=f"{request.client} CLI is not installed or not on PATH")
+
+    board_path = _control_board_path(request.path)
+    try:
+        listing = await _asyncio.to_thread(
+            run, {"action": "list", "path": board_path, "board_id": request.board_id}
+        )
+        board_id = listing["active_board"]["id"]
+        workspace = None
+        if request.workspace_id:
+            workspace = next(
+                (item for item in listing.get("workspaces", []) if item["id"] == request.workspace_id),
+                None,
+            )
+            if workspace is None:
+                raise ValueError("Choose a workspace that belongs to this Relay project")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    session_id = f"planner-{request.client}-{uuid.uuid4().hex[:10]}"
+    surfaces = ", ".join(item.strip() for item in request.product_surfaces if item.strip()) or "not specified"
+    gates = ", ".join(item.strip() for item in request.quality_gates if item.strip()) or "use the planning harness"
+    brief = (
+        f"Goal: {request.goal.strip()}\n"
+        f"Delivery stage: {request.stage.replace('_', ' ')}\n"
+        f"Success criteria: {request.success_criteria.strip() or 'not specified'}\n"
+        f"Product surfaces: {surfaces}\n"
+        f"Quality focus: {gates}\n"
+        f"Additional context: {request.context.strip() or 'not specified'}"
+    )
+    harness_source = HERE / "static" / "relay-planner-harness.md"
+    harness_path = CONTROL_PLANE_DIR / "skills" / "relay-ai-task-planner" / "SKILL.md"
+    harness_path.parent.mkdir(parents=True, exist_ok=True)
+    harness_path.write_text(harness_source.read_text(encoding="utf-8"), encoding="utf-8")
+
+    await _asyncio.to_thread(
+        run,
+        {
+            "action": "log_planning_session",
+            "path": board_path,
+            "board_id": board_id,
+            "planning_brief": brief,
+            "agent_client": request.client,
+            "session_id": session_id,
+            "confirm_write": True,
+        },
+    )
+
+    workspace_note = (
+        f"Workspace selected for created tickets: {workspace['name']} ({workspace['id']})."
+        if workspace
+        else "No workspace is selected. Create planning tickets without a workspace unless the user chooses one."
+    )
+    agent_prompt = (
+        f"Read and follow the Relay AI Task Planner harness at {harness_path}.\n\n"
+        f"Planning session ID: {session_id}.\n"
+        f"Board path: {board_path}; board ID: {board_id}.\n"
+        f"{workspace_note}\n\n"
+        "Initial user brief:\n"
+        f"{brief}\n\n"
+        "Start by inspecting the board and asking any high-leverage questions. Present a plan in this terminal, "
+        "then wait for explicit user approval before using task_board plan_epic to create the Epic and tickets in bulk."
+    )
+    planner_dir = CONTROL_PLANE_DIR / "handoffs"
+    planner_dir.mkdir(parents=True, exist_ok=True)
+    script_path = planner_dir / f"{session_id}.command"
+    client_args = [executable]
+    if request.client == "codex":
+        client_args.append("--no-daemon")
+    client_args.append(agent_prompt)
+    script_path.write_text(
+        "#!/bin/zsh\n"
+        f"cd {shlex.quote(str(CONTROL_PLANE_DIR))}\n"
+        f"exec {' '.join(shlex.quote(argument) for argument in client_args)}\n",
+        encoding="utf-8",
+    )
+    script_path.chmod(0o700)
+    try:
+        subprocess.Popen(
+            ["open", "-a", "Terminal", str(script_path)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Planner session was recorded but Terminal could not open: {exc}",
+        ) from exc
+    return {
+        "launched": True,
+        "session_id": session_id,
+        "client": request.client,
+        "board_id": board_id,
+        "workspace_id": request.workspace_id,
+        "harness_path": str(harness_path),
+        "script_path": str(script_path),
+    }
+
+
+@app.post("/api/control/board/launch-triage")
+async def api_control_launch_triage(request: LaunchTriageRequest):
+    """Launch read-only triage sessions for unclaimed ready and backlog tickets."""
+    from agentic_store_mcp.modules.tools.task_board.handler import run
+
+    clients = list(dict.fromkeys(request.clients))
+    if not clients:
+        raise HTTPException(status_code=400, detail="Choose at least one agent client")
+    unavailable = [client for client in clients if not shutil.which(client)]
+    if unavailable:
+        raise HTTPException(status_code=400, detail=f"CLI is not installed or not on PATH: {', '.join(unavailable)}")
+    board_path = _control_board_path(request.path)
+    board_data = await _asyncio.to_thread(run, {"action": "list", "path": board_path, "board_id": request.board_id})
+    candidates = [
+        task for task in board_data["tasks"]
+        if task["status"] in {"backlog", "todo"} and not task.get("claimed_by")
+    ]
+    if not candidates:
+        raise HTTPException(status_code=400, detail="No unassigned backlog or ready tickets need triage")
+
+    harness_source = HERE / "static" / "agent-board-harness.md"
+    harness_path = CONTROL_PLANE_DIR / "skills" / "agent-board" / "SKILL.md"
+    harness_path.parent.mkdir(parents=True, exist_ok=True)
+    harness_path.write_text(harness_source.read_text(encoding="utf-8"), encoding="utf-8")
+    grouped = {client: [] for client in clients}
+    for index, task in enumerate(candidates):
+        grouped[clients[index % len(clients)]].append(task)
+
+    handoff_dir = CONTROL_PLANE_DIR / "handoffs"
+    handoff_dir.mkdir(parents=True, exist_ok=True)
+    launches = []
+    for client, tasks in grouped.items():
+        if not tasks:
+            continue
+        session_id = f"triage-{client}-{uuid.uuid4().hex[:10]}"
+        recipient = f"{client}-triage"
+        ticket_brief = "\n".join(
+            f"- {task['id']}: {task['title']} — {task.get('description') or 'No description'}"
+            for task in tasks
+        )
+        prompt = (
+            f"Read and follow {harness_path}. You are the {client.title()} triage agent.\n\n"
+            "Triage only: do not edit source files, create branches, or run destructive commands. "
+            "For each ticket below, inspect its board context, add a concise timestamped comment "
+            "with scope, risk, and the next action, then move it only when the evidence supports it.\n\n"
+            f"Board path: {board_path}; shared triage session: {session_id}.\n"
+            f"Tickets assigned to you:\n{ticket_brief}"
+        )
+        executable = shutil.which(client)
+        args = [executable] + (["--no-daemon"] if client == "codex" else []) + [prompt]
+        script_path = handoff_dir / f"{session_id}.command"
+        script_path.write_text(
+            "#!/bin/zsh\n"
+            f"cd {shlex.quote(str(CONTROL_PLANE_DIR))}\n"
+            f"exec {' '.join(shlex.quote(argument) for argument in args)}\n",
+            encoding="utf-8",
+        )
+        script_path.chmod(0o700)
+        for task in tasks:
+            await _asyncio.to_thread(run, {
+                "action": "handoff_ticket", "path": board_path, "board_id": request.board_id, "id": task["id"],
+                "recipient": recipient, "note": "Parallel triage session launched.",
+                "agent_client": client, "session_id": session_id,
+                "working_directory": str(CONTROL_PLANE_DIR), "workspace_source": "triage",
+                "confirm_write": True,
+            })
+        launches.append({"client": client, "session_id": session_id, "ticket_ids": [task["id"] for task in tasks], "script_path": str(script_path)})
+
+    try:
+        await _asyncio.gather(*[
+            _asyncio.to_thread(
+                subprocess.Popen, ["open", "-a", "Terminal", launch["script_path"]],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            for launch in launches
+        ])
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Triage was recorded but Terminal could not open: {exc}") from exc
+    return {"launched": True, "launches": launches, "ticket_count": len(candidates)}
+
+
+@app.get("/api/control/directories")
+async def api_control_directories(path: str | None = None):
+    """List one local directory level for the workspace picker."""
+    target = Path(path).expanduser().resolve() if path else Path.home()
+    if not target.is_dir():
+        raise HTTPException(status_code=400, detail="Choose an existing directory")
+    try:
+        directories = [entry for entry in target.iterdir() if entry.is_dir() and not entry.name.startswith(".")]
+    except OSError as exc:
+        raise HTTPException(status_code=400, detail=f"Cannot read directory: {exc}") from exc
+    return {"path": str(target), "parent": str(target.parent) if target.parent != target else None, "directories": [{"name": entry.name, "path": str(entry)} for entry in sorted(directories, key=lambda item: item.name.lower())[:300]]}
+
+
+@app.post("/api/control/board")
+async def api_control_board_action(request: ControlBoardRequest):
+    """Run an explicit Relay action. Mutations retain confirmation in the board API."""
+    from agentic_store_mcp.modules.tools.task_board.handler import run
+
+    args = {"action": request.action, "path": _control_board_path(request.path), **request.payload}
+    if request.board_id is not None:
+        args["board_id"] = request.board_id
+    try:
+        return await _asyncio.to_thread(run, args)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 # ─── Connectors ───────────────────────────────────────────────────────────────

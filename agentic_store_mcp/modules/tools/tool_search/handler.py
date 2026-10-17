@@ -44,11 +44,15 @@ def _infer_tags(schema: dict[str, Any]) -> list[str]:
         tags.append("network_access")
     else:
         tags.append("local_only")
-    if "confirmed" in properties or "confirm_write" in properties or "confirm_execute" in properties:
+    confirmation_required = any(name in properties for name in ("confirmed", "confirm_write", "confirm_execute"))
+    if confirmation_required:
         tags.append("requires_confirmation")
+    # An explicit read-only annotation is authoritative. Otherwise treat confirmation
+    # inputs and mutating descriptions as writes so a safety filter never exposes a
+    # tool that can change state as read-only.
     if annotations.get("readOnlyHint") is True:
         tags.append("read_only")
-    elif annotations.get("readOnlyHint") is False or WRITE_KEYWORDS.search(description):
+    elif annotations.get("readOnlyHint") is False or confirmation_required or WRITE_KEYWORDS.search(description):
         tags.append("write_tool")
     else:
         tags.append("read_only")
@@ -131,7 +135,10 @@ def run(params: dict[str, Any]) -> dict[str, Any]:
     module_filter = str(params.get("module") or "").strip().lower()
     submodule_filter = str(params.get("submodule") or "").strip().lower()
     connector_filter = str(params.get("connector") or "").strip().lower()
-    max_results = max(1, min(int(params.get("max_results", 20)), 100))
+    # A catalog browse should be complete. Keep search results bounded unless the
+    # caller explicitly requests a smaller result set.
+    default_limit = 100 if not query and not tags_param and not module_filter and not submodule_filter and not connector_filter else 20
+    max_results = max(1, min(int(params.get("max_results", default_limit)), 100))
     include_inputs = bool(params.get("include_inputs", False))
     requested_tags = {tag.strip() for tag in tags_param.split(",") if tag.strip()}
     unknown = requested_tags - VALID_TAGS
