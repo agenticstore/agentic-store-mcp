@@ -12,5 +12,4 @@
 ### Fixed
 
 - Updated the webapp template response call for current Starlette compatibility.
-- Refreshed runtime dependency constraints and the exported production requirements file.
-- Pinned the prompt-proxy runtime to an immutable mitmproxy upstream commit until its next PyPI release, allowing patched cryptography, h2, and tornado dependencies while removing msgpack from the graph.
+- Bundled the MIT-licensed mitmproxy runtime from its audited upstream commit, avoiding an unpublished upstream dependency while keeping the Prompt Firewall on current security fixes.
