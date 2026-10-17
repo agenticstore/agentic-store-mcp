@@ -34,34 +34,12 @@ dependencies = [
     "uvicorn[standard]>=0.54.0",
     "jinja2>=3.1.6",
     "httpx>=0.28.1",
-    # Bundled from mitmproxy commit 77355977e5ea540b51ed029a40ed1dc2f1c2ba7b.
-    # Keep these aligned with the upstream runtime bounds and security fixes.
-    "aioquic==1.2.0",
-    "argon2-cffi==25.1.0",
-    "asgiref<=3.12.1,>=3.2.10",
-    "backports.zstd==1.7.0; python_version < '3.14'",
-    "bcrypt==5.0.0",
-    "Brotli<=1.2.0,>=1.0",
-    "certifi>=2019.9.11",
-    "cryptography==50.0.2",
-    "flask<=3.1.3,>=3.0",
-    "h11==0.16.0",
-    "h2==4.4.1",
-    "hyperframe==6.1.0",
-    "kaitaistruct==0.11",
-    "ldap3==2.9.1",
-    "mitmproxy_rs>=0.12.6,<0.13",
-    "pydivert<=3.1.3,>=2.0.3; sys_platform == 'win32'",
-    "pyOpenSSL<=27.0.0,>=24.3",
-    "pyparsing==3.3.3",
-    "pyperclip<=1.11.0,>=1.9.0",
-    "ruamel.yaml<=0.19.1,>=0.18.10",
-    "sortedcontainers==2.4.0",
-    "tornado==6.5.10",
-    "typing-extensions<=4.16.0,>=4.13.2; python_version < '3.13'",
-    "urwid<=4.0.13,>=2.6.14",
-    "wsproto<=1.3.2,>=1.0",
-    "publicsuffix2==2.20191221",
+    # Pin an immutable upstream commit until mitmproxy publishes the pending
+    # dependency-bound relaxations required for current security fixes.
+    "mitmproxy @ git+https://github.com/mitmproxy/mitmproxy.git@77355977e5ea540b51ed029a40ed1dc2f1c2ba7b",
+    "cryptography>=50.0.2",
+    "h2>=4.4.1",
+    "tornado>=6.5.10",
 ]
 
 [project.scripts]
@@ -98,16 +76,15 @@ exclude = [
   ".env",
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["agentic_store_mcp", "mitmproxy"]
+[tool.hatch.metadata]
+allow-direct-references = true
 
-[tool.hatch.build.targets.wheel.force-include]
-"THIRD_PARTY_NOTICES.md" = "THIRD_PARTY_NOTICES.md"
+[tool.hatch.build.targets.wheel]
+packages = ["agentic_store_mcp"]
 
 [tool.hatch.build.targets.sdist]
 include = [
   "agentic_store_mcp/",
-  "mitmproxy/",
   "docs/setup/",
   "docs/Agentic Store Architecture.png",
   "tests/",
@@ -115,7 +92,6 @@ include = [
   "webapp.py",
   "setup_local.py",
   "README.md",
-  "THIRD_PARTY_NOTICES.md",
   "pyproject.toml",
   ".env.example",
 ]
