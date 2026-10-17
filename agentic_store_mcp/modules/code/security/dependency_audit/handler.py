@@ -77,6 +77,9 @@ def _http(url: str, method: str = "GET", body: bytes | None = None) -> dict | No
 def _py_name_version(spec: str) -> tuple[str, str | None]:
     """Parse a PEP 508 dep spec → (normalised-name, pinned-version-or-None)."""
     spec = re.sub(r"\[.*?\]", "", spec).split(";")[0].strip()
+    direct_reference = re.match(r"^([A-Za-z0-9_\-\.]+)\s*@\s*\S+", spec)
+    if direct_reference:
+        return re.sub(r"[-_.]+", "-", direct_reference.group(1)).lower(), None
     m = re.match(r"^([A-Za-z0-9_\-\.]+)\s*([=<>!~^]+)\s*([\w\.\*]+)?", spec)
     if not m:
         return spec.strip(), None

@@ -57,6 +57,16 @@ def test_parse_requirements_strips_extras(tmp_path):
     assert pkgs[0]["name"] == "requests"
 
 
+def test_parse_direct_reference_keeps_package_name(tmp_path):
+    write(
+        tmp_path,
+        "requirements.txt",
+        "mitmproxy @ git+https://github.com/mitmproxy/mitmproxy.git@a1b2c3d4\n",
+    )
+    pkgs = h.parse_requirements_txt(tmp_path / "requirements.txt")
+    assert pkgs == [{"name": "mitmproxy", "current_version": None, "ecosystem": "PyPI"}]
+
+
 def test_parse_pyproject_pep621(tmp_path):
     write(tmp_path, "pyproject.toml", '[project]\ndependencies = ["requests==2.28.0"]\n')
     pkgs = h.parse_pyproject_toml(tmp_path / "pyproject.toml")

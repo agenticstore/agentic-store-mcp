@@ -13,3 +13,4 @@
 
 - Updated the webapp template response call for current Starlette compatibility.
 - Refreshed runtime dependency constraints and the exported production requirements file.
+- Pinned the prompt-proxy runtime to an immutable mitmproxy upstream commit until its next PyPI release, allowing patched cryptography, h2, and tornado dependencies while removing msgpack from the graph.

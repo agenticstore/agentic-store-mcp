@@ -32,6 +32,8 @@ attrs==26.1.0
     #   jsonschema
     #   referencing
     #   service-identity
+backports-zstd==1.7.0 ; python_full_version < '3.14'
+    # via mitmproxy
 bcrypt==5.0.0
     # via mitmproxy
 blinker==1.9.0
@@ -56,8 +58,9 @@ click==8.5.0
     # via
     #   flask
     #   uvicorn
-cryptography==48.0.1
+cryptography==50.0.2
     # via
+    #   agentic-store-mcp
     #   aioquic
     #   mitmproxy
     #   pyjwt
@@ -74,8 +77,10 @@ h11==0.16.0
     #   mitmproxy
     #   uvicorn
     #   wsproto
-h2==4.3.0
-    # via mitmproxy
+h2==4.4.1
+    # via
+    #   agentic-store-mcp
+    #   mitmproxy
 hpack==4.2.0
     # via h2
 httpcore==1.0.9
@@ -130,7 +135,7 @@ markupsafe==3.0.4
     #   werkzeug
 mcp==1.30.0
     # via agentic-store-mcp
-mitmproxy==12.2.3
+mitmproxy @ git+https://github.com/mitmproxy/mitmproxy.git@77355977e5ea540b51ed029a40ed1dc2f1c2ba7b
     # via agentic-store-mcp
 mitmproxy-linux==0.12.11 ; sys_platform == 'linux'
     # via mitmproxy-rs
@@ -144,8 +149,6 @@ more-itertools==11.2.1
     # via
     #   jaraco-classes
     #   jaraco-functools
-msgpack==1.1.2
-    # via mitmproxy
 opentelemetry-api==1.45.1
     # via fastapi
 publicsuffix2==2.20191221
@@ -182,7 +185,7 @@ pylsqpack==0.3.24
     # via aioquic
 pynacl==1.6.2
     # via pygithub
-pyopenssl==26.2.0
+pyopenssl==26.4.0
     # via
     #   aioquic
     #   mitmproxy
@@ -227,8 +230,10 @@ starlette==1.8.0
     #   fastapi
     #   mcp
     #   sse-starlette
-tornado==6.5.5
-    # via mitmproxy
+tornado==6.5.10
+    # via
+    #   agentic-store-mcp
+    #   mitmproxy
 typing-extensions==4.14.0 ; python_full_version < '3.14'
     # via
     #   anyio
@@ -288,6 +293,4 @@ websockets==17.2
 werkzeug==3.1.9
     # via flask
 wsproto==1.3.2
-    # via mitmproxy
-zstandard==0.25.0
     # via mitmproxy
