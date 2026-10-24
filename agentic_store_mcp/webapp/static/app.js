@@ -1627,7 +1627,7 @@ function renderControlPlane() {
     const location = item.local_directory || item.repository_url || "No repository location saved";
     const ruleCount = splitControlWorkspaceRules(item.branch_rules).length;
     return `<article class="cp-workspace-row"><div class="cp-workspace-row-icon">${item.local_directory ? "⌘" : "↗"}</div><div class="cp-workspace-row-copy"><b>${escapeControl(item.name)}</b><small>${escapeControl(sourceLabel)} · ${escapeControl(location)}</small><em>${ruleCount} delivery rule${ruleCount === 1 ? "" : "s"}</em></div><button class="cp-workspace-settings" type="button" data-cp-edit-workspace="${escapeControl(item.id)}" aria-label="Configure ${escapeControl(item.name)}" title="Workspace settings">⚙</button></article>`;
-  }).join("") || '<div class="cp-workspace-empty"><span>⌘</span><strong>No workspaces yet</strong><p>Add a local checkout or a remote repository for agents to use.</p></div>';
+  }).join("") || '<div class="cp-workspace-empty"><span aria-hidden="true">⌘</span><strong>No workspaces yet</strong><p>Start by adding a workspace so Relay knows where agents should work and which delivery rules to include in every handoff.</p><button type="button" class="btn btn-primary" data-cp-create-workspace="true">Create your first workspace</button></div>';
   document.getElementById("cp-metrics").innerHTML = [
     [summary.total, "work items"], [summary.active, "active"], [summary.ready.length, "ready"],
     [summary.blocked.length, "blocked"], [`${summary.completion_percent}%`, "complete"], [summary.claimed, "claimed"],
@@ -1986,10 +1986,18 @@ function openControlPlannerModal() {
   document.getElementById("cp-planner-goal").focus();
 }
 function closeControlProjectModal() { document.getElementById("cp-project-modal").style.display = "none"; }
+function beginControlWorkspaceSetup() {
+  resetControlWorkspaceForm();
+  openControlWorkspaceEditor();
+}
 document.getElementById("cp-open-project")?.addEventListener("click", () => { document.getElementById("cp-project-modal").style.display = "flex"; });
 document.getElementById("cp-project-cancel")?.addEventListener("click", closeControlProjectModal);
 document.getElementById("cp-project-cancel-secondary")?.addEventListener("click", closeControlProjectModal);
-document.getElementById("cp-new-workspace")?.addEventListener("click", () => { resetControlWorkspaceForm(); openControlWorkspaceEditor(); });
+document.getElementById("cp-new-workspace")?.addEventListener("click", beginControlWorkspaceSetup);
+document.getElementById("cp-workspace-list")?.addEventListener("click", (event) => {
+  if (!event.target.closest("[data-cp-create-workspace]")) return;
+  beginControlWorkspaceSetup();
+});
 document.getElementById("cp-workspace-editor-close")?.addEventListener("click", closeControlWorkspaceEditor);
 document.getElementById("cp-workspace-editor-cancel")?.addEventListener("click", closeControlWorkspaceEditor);
 document.getElementById("cp-project-source")?.addEventListener("change", updateControlProjectWarning);
