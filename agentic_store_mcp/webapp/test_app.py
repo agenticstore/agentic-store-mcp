@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 APP_FILE = Path(__file__).parent / "app.py"
+TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
 def load_app():
@@ -16,6 +17,16 @@ def load_app():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def test_relay_window_title_matches_the_relay_brand() -> None:
+    expected_title = "Relay- Agentic store"
+    base_template = (TEMPLATES_DIR / "base.html").read_text(encoding="utf-8")
+    index_template = (TEMPLATES_DIR / "index.html").read_text(encoding="utf-8")
+
+    base_title = f"<title>{{% block title %}}{expected_title}{{% endblock %}}</title>"
+    assert base_title in base_template
+    assert f"{{% block title %}}{expected_title}{{% endblock %}}" in index_template
 
 
 def test_planner_launch_records_a_gated_local_session(tmp_path, monkeypatch):
