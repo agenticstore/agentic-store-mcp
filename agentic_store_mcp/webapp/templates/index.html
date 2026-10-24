@@ -671,6 +671,7 @@ uv sync</pre></div></div>
       <form id="cp-handoff-form" class="modal-box cp-ticket-modal">
         <div class="cp-modal-heading"><h3>Launch agent handoff</h3><button type="button" id="cp-handoff-cancel" class="cp-close">×</button></div>
         <p id="cp-handoff-ticket" class="cp-modal-note"></p>
+        <p id="cp-handoff-error" class="cp-form-error" role="alert" hidden></p>
         <div class="cp-form-grid"><label>Agent client<select id="cp-handoff-client"><option value="codex">Codex</option><option value="claude">Claude</option></select></label><label>Agent name<input id="cp-handoff-recipient" required value="codex-agent"></label></div>
         <p class="cp-modal-note">This ticket inherits the saved project workspace and branch rules. Change those once in Project setup, not per ticket.</p>
         <label>Ticket instructions <small>Optional</small><textarea id="cp-handoff-note" rows="6" placeholder="What should this agent accomplish? Add constraints, context, or the next concrete step."></textarea></label>
@@ -735,11 +736,12 @@ uv sync</pre></div></div>
     </div>
     <div id="cp-folder-modal" class="modal-overlay" style="display:none"><div class="modal-box cp-folder-modal"><div class="cp-modal-heading"><div><p class="cp-eyebrow">LOCAL WORKSPACE</p><h3>Choose folder</h3></div><button type="button" id="cp-folder-close" class="cp-close">×</button></div><div class="cp-folder-path"><button id="cp-folder-up" class="btn btn-ghost">↑</button><code id="cp-folder-current"></code><button id="cp-folder-select" class="btn btn-primary">Use this folder</button></div><div id="cp-folder-list" class="cp-folder-list"></div></div></div>
     <div id="cp-ticket-modal" class="modal-overlay" style="display:none">
-      <form id="cp-ticket-form" class="modal-box cp-ticket-modal">
+      <form id="cp-ticket-form" class="modal-box cp-ticket-modal" novalidate>
         <div class="cp-modal-heading"><div><p class="cp-eyebrow">RELAY WORK</p><h3 id="cp-ticket-modal-heading">Add work</h3></div><button type="button" id="cp-ticket-cancel" class="cp-close">×</button></div>
-        <label>Title<input id="cp-ticket-title" required maxlength="180" placeholder="Describe the work to do"></label>
+        <p id="cp-ticket-error" class="cp-form-error" role="alert" hidden></p>
+        <label>Title<input id="cp-ticket-title" required maxlength="180" placeholder="Describe the work to do" aria-describedby="cp-ticket-error"></label>
         <label>Description<textarea id="cp-ticket-description" rows="4" placeholder="Context, desired outcome, and constraints"></textarea></label>
-        <div class="cp-form-grid"><label>Workspace<select id="cp-ticket-workspace"><option value="">Choose workspace</option></select></label><label>Type<select id="cp-ticket-type"><option value="task">Task</option><option value="epic">Epic</option><option value="feature">Feature</option><option value="bug">Bug</option><option value="research">Research</option><option value="chore">Chore</option></select></label><label>Priority<select id="cp-ticket-priority"><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option><option value="low">Low</option></select></label></div><label id="cp-ticket-parent-field">Epic <small>Optional</small><select id="cp-ticket-parent"><option value="">No epic</option></select></label>
+        <div class="cp-form-grid"><label>Workspace <small>Required for agent handoffs</small><select id="cp-ticket-workspace" aria-required="true" aria-describedby="cp-ticket-error"><option value="">Choose workspace</option></select></label><label>Type<select id="cp-ticket-type"><option value="task">Task</option><option value="epic">Epic</option><option value="feature">Feature</option><option value="bug">Bug</option><option value="research">Research</option><option value="chore">Chore</option></select></label><label>Priority<select id="cp-ticket-priority"><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option><option value="low">Low</option></select></label></div><label id="cp-ticket-parent-field">Epic <small>Optional</small><select id="cp-ticket-parent"><option value="">No epic</option></select></label>
         <label>Acceptance criteria <small>One criterion per line</small><textarea id="cp-ticket-criteria" rows="3" placeholder="Tests pass&#10;Documentation updated"></textarea></label>
         <div class="cp-modal-actions"><button type="button" id="cp-ticket-cancel-secondary" class="btn btn-ghost">Cancel</button><button id="cp-ticket-submit" class="btn btn-primary" type="submit">Create ticket</button></div>
       </form>

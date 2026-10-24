@@ -1140,6 +1140,7 @@ footer a:hover { color: var(--accent); }
 .cp-eyebrow { color:var(--accent)!important; font-size:11px; letter-spacing:.14em; font-weight:700; }
 .cp-actions,.cp-project-card,.cp-toolbar,.cp-detail-actions,.cp-chip-row { display:flex; gap:9px; align-items:center; flex-wrap:wrap; }
 .cp-error { background:rgba(248,113,113,.12); border:1px solid rgba(248,113,113,.45); color:#fca5a5; padding:10px 12px; border-radius:8px; margin:12px 0; }
+.cp-form-error { background:rgba(248,113,113,.12); border:1px solid rgba(248,113,113,.45); color:#fecaca; padding:9px 11px; border-radius:8px; margin:0 0 12px; font-size:13px; line-height:1.4; }
 .cp-project-card { padding:12px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); margin-bottom:15px; }
 .cp-project-card label { display:flex; align-items:center; gap:8px; color:var(--text-muted); font-size:12px; flex:1; min-width:240px; }
 .cp-project-card input { flex:1; min-width:170px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:8px; }

@@ -1512,6 +1512,12 @@ function controlNotice(message) {
   el.textContent = message;
   el.style.display = "block";
 }
+function setControlFormError(id, message) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = message;
+  el.hidden = !message;
+}
 
 async function loadControlPlane() {
   try {
@@ -1888,6 +1894,7 @@ document.getElementById("cp-transition-form")?.addEventListener("submit", async 
 document.getElementById("cp-refresh")?.addEventListener("click", loadControlPlane);
 function closeControlTicketModal() {
   document.getElementById("cp-ticket-modal").style.display = "none";
+  setControlFormError("cp-ticket-error", "");
 }
 
 
@@ -1976,7 +1983,10 @@ function updateControlProjectWarning() {
   if (!warning) return;
   warning.style.display = source === "remote" || !localDirectory ? "block" : "none";
 }
-function closeControlHandoffModal() { document.getElementById("cp-handoff-modal").style.display = "none"; }
+function closeControlHandoffModal() {
+  document.getElementById("cp-handoff-modal").style.display = "none";
+  setControlFormError("cp-handoff-error", "");
+}
 function closeControlPlannerModal() { document.getElementById("cp-planner-modal").style.display = "none"; }
 function openControlPlannerModal() {
   const form = document.getElementById("cp-planner-form");
@@ -2055,6 +2065,7 @@ document.getElementById("cp-handoff-form")?.addEventListener("submit", async (ev
   event.preventDefault();
   const task = selectedControlTask();
   if (!task) return;
+  setControlFormError("cp-handoff-error", "");
   try {
     const result = await api("POST", "/api/control/board/launch-handoff", { board_id: controlPlane.boardId,
       ticket_id: task.id,
@@ -2065,11 +2076,16 @@ document.getElementById("cp-handoff-form")?.addEventListener("submit", async (ev
     closeControlHandoffModal();
     await loadControlPlane();
     controlNotice(`${result.client === "codex" ? "Codex" : "Claude"} launched · session ${result.session_id}`);
-  } catch (error) { controlError(error); }
+  } catch (error) {
+    const message = error.message || String(error);
+    setControlFormError("cp-handoff-error", `Unable to launch handoff. ${message}`);
+    controlError(error);
+  }
 });
 
 document.getElementById("cp-create")?.addEventListener("click", () => {
   document.getElementById("cp-ticket-form").reset();
+  setControlFormError("cp-ticket-error", "");
   renderControlTicketParents();
   updateControlTicketType();
   document.getElementById("cp-ticket-modal").style.display = "flex";
@@ -2149,14 +2165,25 @@ document.getElementById("cp-ticket-cancel-secondary")?.addEventListener("click",
 document.getElementById("cp-ticket-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const title = document.getElementById("cp-ticket-title").value.trim();
-  if (!title) return;
+  const workspaceId = document.getElementById("cp-ticket-workspace").value;
+  if (!title) {
+    setControlFormError("cp-ticket-error", "Enter a clear ticket title before creating it.");
+    document.getElementById("cp-ticket-title").focus();
+    return;
+  }
+  if (!workspaceId) {
+    setControlFormError("cp-ticket-error", "Choose a workspace before creating this ticket. Relay uses it to launch an agent handoff in the right repository.");
+    document.getElementById("cp-ticket-workspace").focus();
+    return;
+  }
+  setControlFormError("cp-ticket-error", "");
   const criteria = document.getElementById("cp-ticket-criteria").value.split("\n").map((item) => item.trim()).filter(Boolean);
   const result = await controlWrite("add", { task: {
     title,
     description: document.getElementById("cp-ticket-description").value.trim(),
     type: document.getElementById("cp-ticket-type").value,
     priority: document.getElementById("cp-ticket-priority").value,
-    workspace_id: document.getElementById("cp-ticket-workspace").value || null,
+    workspace_id: workspaceId,
     parent_id: document.getElementById("cp-ticket-parent").value || null,
     acceptance_criteria: criteria,
   }});
