@@ -241,6 +241,18 @@ The harness makes automated tests and documentation part of the plan whenever co
 
 Relay does not send project data to a hosted planning service. It launches the local agent client you select, which uses its own configured model and privacy settings.
 
+### Recent Relay improvements
+
+The current release adds a clearer lifecycle for work that should leave the active board without losing its history:
+
+- **Archive and restore tickets:** archive a completed or cancelled work item into a dedicated Archived state, restore it to Ready when it becomes active again, and keep the status change in the ticket history.
+- **Show archived when needed:** archived work is hidden from the default board so active delivery stays readable, with a toggle to bring archived tickets back into view.
+- **Safer ticket setup:** new tickets require a workspace, because an agent handoff needs a known checkout or remote repository. Empty workspace views now include a guided Create your first workspace action.
+- **Actionable failures:** handoff and ticket creation errors are shown inside their forms with the reason and next step, rather than disappearing into a generic notification.
+- **Clearer Relay UI:** the webapp labels the product as Relay, improves the empty states, and keeps the Archived column separate from active delivery states.
+
+These changes preserve the local project record while making it safer to triage, pause, resume, and hand work between people and agents.
+
 ---
 
 ## 🔌 Connect to Your AI Client

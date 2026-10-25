@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.10 (2026-10-25)
+
+- Relay: add an Archived ticket state with restore-to-Ready support and history entries.
+- Relay: hide archived work by default and add a Show archived board toggle.
+- Relay: require a workspace when creating tickets so agent handoffs have a known checkout.
+- Relay: add guided empty-workspace setup and inline form errors for ticket and handoff failures.
+- Relay: improve the product title and empty-state messaging in the webapp.
+
 ## 1.0.9 (2026-10-17)
 
 ### Fixed
