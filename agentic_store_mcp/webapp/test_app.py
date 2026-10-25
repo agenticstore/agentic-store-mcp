@@ -6,7 +6,10 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+from fastapi import HTTPException
+
 APP_FILE = Path(__file__).parent / "app.py"
+TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
 def load_app():
@@ -16,6 +19,16 @@ def load_app():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def test_relay_window_title_matches_the_relay_brand() -> None:
+    expected_title = "Relay- Agentic store"
+    base_template = (TEMPLATES_DIR / "base.html").read_text(encoding="utf-8")
+    index_template = (TEMPLATES_DIR / "index.html").read_text(encoding="utf-8")
+
+    base_title = f"<title>{{% block title %}}{expected_title}{{% endblock %}}</title>"
+    assert base_title in base_template
+    assert f"{{% block title %}}{expected_title}{{% endblock %}}" in index_template
 
 
 def test_planner_launch_records_a_gated_local_session(tmp_path, monkeypatch):
@@ -53,3 +66,42 @@ def test_planner_launch_records_a_gated_local_session(tmp_path, monkeypatch):
     session = summary["recent_planning_sessions"][-1]
     assert session["agent_client"] == "codex"
     assert "release dashboard" in session["brief"]
+
+
+def test_handoff_without_workspace_explains_how_to_fix_it(tmp_path, monkeypatch):
+    app = load_app()
+    control_dir = tmp_path / "relay-control"
+    board_path = control_dir / "agent-board.json"
+    monkeypatch.setattr(app, "CONTROL_PLANE_DIR", control_dir)
+    monkeypatch.setattr(app, "CONTROL_BOARD_PATH", board_path)
+    monkeypatch.setattr(app.shutil, "which", lambda client: f"/mock/bin/{client}")
+
+    handler_spec = importlib.util.spec_from_file_location(
+        "relay_board", Path(__file__).parents[1] / "modules/tools/task_board/handler.py"
+    )
+    handler = importlib.util.module_from_spec(handler_spec)
+    assert handler_spec.loader
+    handler_spec.loader.exec_module(handler)
+    ticket = handler.run(
+        {
+            "action": "add",
+            "path": str(board_path),
+            "task": {"title": "Ticket without a workspace"},
+            "confirm_write": True,
+        }
+    )["task"]
+
+    request = app.LaunchHandoffRequest(
+        ticket_id=ticket["id"], recipient="codex-agent", client="codex"
+    )
+    try:
+        asyncio.run(app.api_control_launch_handoff(request))
+    except HTTPException as exc:
+        assert exc.status_code == 400
+        assert exc.detail == (
+            "Assign a workspace to this ticket before launching a handoff"
+        )
+    else:
+        raise AssertionError(
+            "Expected a ticket without a workspace to reject the handoff"
+        )
