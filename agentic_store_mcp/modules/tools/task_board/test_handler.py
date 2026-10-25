@@ -88,3 +88,32 @@ def test_plan_epic_creates_one_epic_and_children_once(tmp_path):
         "Add unit tests",
         "Update documentation",
     }
+
+
+def test_archive_status_is_available_and_excluded_from_active_work(tmp_path):
+    handler = load_handler()
+    board_path = tmp_path / "relay.json"
+    task = handler.run(
+        {
+            "action": "add",
+            "path": str(board_path),
+            "task": {"title": "Old release notes"},
+            "confirm_write": True,
+        }
+    )["task"]
+
+    archived = handler.run(
+        {
+            "action": "archive",
+            "path": str(board_path),
+            "id": task["id"],
+            "reason": "No longer active",
+            "confirm_write": True,
+        }
+    )["task"]
+    summary = handler.run({"action": "summary", "path": str(board_path)})
+
+    assert archived["status"] == "archived"
+    assert archived["history"][-1]["to"] == "archived"
+    assert summary["by_status"]["archived"] == 1
+    assert summary["active"] == 0

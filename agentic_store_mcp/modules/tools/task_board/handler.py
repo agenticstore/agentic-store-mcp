@@ -9,7 +9,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-STATUSES = {"backlog", "todo", "in_progress", "blocked", "in_review", "done", "cancelled"}
+STATUSES = {
+    "archived", "backlog", "blocked", "cancelled", "done", "in_progress",
+    "in_review", "todo",
+}
 PRIORITIES = {"critical", "high", "medium", "low"}
 TASK_TYPES = {"task", "bug", "feature", "research", "chore", "epic"}
 LINK_TYPES = {"blocks", "blocked_by", "relates_to", "duplicates", "caused_by"}
@@ -362,7 +365,8 @@ def _summary(board: dict[str, Any], board_id: str | None = None) -> dict[str, An
     by_status = Counter(task["status"] for task in tasks)
     by_priority = Counter(task["priority"] for task in tasks)
     completed = by_status["done"]
-    active = len([task for task in tasks if task["status"] not in {"done", "cancelled"}])
+    inactive_statuses = {"archived", "cancelled", "done"}
+    active = sum(task["status"] not in inactive_statuses for task in tasks)
     blocked = [
         {"id": task["id"], "title": task["title"], "blockers": task.get("blockers", [])}
         for task in tasks if task["status"] == "blocked" or task.get("blockers")
@@ -733,9 +737,12 @@ def run(args: dict[str, Any]) -> dict[str, Any]:
     elif action == "archive":
         task = _find(board, args.get("id"), board_id)
         previous = task["status"]
-        task["status"] = "cancelled"
+        task["status"] = "archived"
         task["updated_at"] = _now()
-        task["history"].append({"at": _now(), "from": previous, "to": "cancelled", "reason": str(args.get("reason", "")).strip()})
+        task["history"].append({
+            "at": _now(), "from": previous, "to": "archived",
+            "reason": str(args.get("reason", "")).strip(),
+        })
         _activity(board, "task_archived", task["id"], task["title"])
         result = {"task": task}
     else:  # set_project
