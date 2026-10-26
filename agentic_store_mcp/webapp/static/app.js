@@ -1707,6 +1707,13 @@ function controlPrDescription(body) {
   return body.slice(CP_PR_DESCRIPTION_PREFIX.length).trim();
 }
 
+function latestControlPrDescription(comments) {
+  return [...(comments || [])]
+    .reverse()
+    .map((item) => controlPrDescription(item.body))
+    .find(Boolean) || null;
+}
+
 function renderControlDetail() {
   const el = document.getElementById("cp-detail");
   const task = controlPlane.data?.tasks.find((item) => item.id === controlPlane.selectedId);
@@ -1721,28 +1728,26 @@ function renderControlDetail() {
   const parentEpic = task.parent_id ? tasks.find((item) => item.id === task.parent_id) : null;
   const children = task.type === "epic" ? tasks.filter((item) => item.parent_id === task.id) : [];
   const completeChildren = children.filter((item) => item.status === "done").length;
+  const prDescription = latestControlPrDescription(task.comments);
   const activity = [
-    ...(task.comments || []).map((item) => {
-      const prDescription = controlPrDescription(item.body);
-      return prDescription
-        ? { kind: "pr-description", at: item.at, title: "Potential PR description", prDescription }
-        : { kind: "update", at: item.at, title: "Progress update", body: item.body };
-    }),
+    ...(task.comments || [])
+      .filter((item) => !controlPrDescription(item.body))
+      .map((item) => ({ kind: "update", at: item.at, title: "Progress update", body: item.body })),
     ...(task.validations || []).map((item) => ({ kind: item.status || "validation", at: item.at, title: `${item.kind || "Validation"} · ${item.status || "recorded"}`, body: item.summary, output: item.output })),
     ...(task.git_evidence || []).map((item) => ({ kind: "evidence", at: item.at || item.recorded_at, title: `Git snapshot · ${item.branch || "detached"}`, body: item.commit_subject || item.commit || "Repository evidence attached" })),
     ...(task.handoffs || []).map((item) => ({ kind: "handoff", at: item.at, title: `Handed to ${item.to || "agent"}`, body: item.note })),
   ].filter((item) => item.at).sort((a, b) => String(b.at).localeCompare(String(a.at)));
   const activityMarkup = activity.length ? activity.map((item) => {
-    const content = item.prDescription
-      ? `<pre class="cp-pr-description">${escapeControl(item.prDescription)}</pre><button class="btn btn-ghost cp-copy-pr-description" type="button" data-cp-copy-pr-description="true">Copy PR description</button>`
-      : `<p>${escapeControl(item.body || "No summary recorded.")}</p>${item.output ? `<pre>${escapeControl(item.output)}</pre>` : ""}`;
+    const content = `<p>${escapeControl(item.body || "No summary recorded.")}</p>${item.output ? `<pre>${escapeControl(item.output)}</pre>` : ""}`;
     return `<article class="cp-activity-item cp-activity-${escapeControl(item.kind)}"><span class="cp-activity-dot"></span><div><div class="cp-activity-title"><strong>${escapeControl(item.title)}</strong><time>${escapeControl(item.at)}</time></div>${content}</div></article>`;
   }).join("") : '<div class="cp-activity-empty"><strong>No activity yet</strong><p>Capture the first decision, validation result, or agent handoff here.</p></div>';
   const criteria = (task.acceptance_criteria || []).length ? task.acceptance_criteria.map((item) => `<li><span class="cp-check"></span>${escapeControl(item)}</li>`).join("") : '<li class="cp-muted-row">No acceptance criteria recorded.</li>';
   const childMarkup = task.type === "epic" ? `<section class="cp-epic-delivery"><div class="cp-section-title"><div><span class="cp-section-kicker">EPIC DELIVERY</span><h4>${completeChildren}/${children.length} child tickets complete</h4></div><button class="cp-text-button" data-cp-action="edit">Edit Epic</button></div><div class="cp-epic-child-list">${children.length ? children.map((item) => `<button type="button" data-cp-ticket="${escapeControl(item.id)}"><span class="cp-state-dot cp-state-${escapeControl(item.status)}"></span><span>${escapeControl(item.title)}</span><small>${escapeControl(controlDetailStatus(item.status))}</small></button>`).join("") : '<p class="cp-muted-row">No child tickets yet. Create work and assign it to this Epic.</p>'}</div></section>` : "";
+  const prDescriptionMarkup = prDescription ? `<section class="cp-pr-description-panel cp-pr-description-container"><div class="cp-pr-description-head"><div><span>PR DESCRIPTION</span><strong>Ready to copy</strong></div><button class="btn btn-primary cp-copy-pr-description" type="button" data-cp-copy-pr-description="true">Copy PR description</button></div><pre class="cp-pr-description">${escapeControl(prDescription)}</pre></section>` : "";
   const owner = task.claimed_by || task.assignee || "Unassigned";
   el.innerHTML = `<div class="cp-workdrawer-head"><div class="cp-workdrawer-ident"><code>${escapeControl(task.id)}</code><span class="cp-status-pill cp-status-${escapeControl(task.status)}">${escapeControl(controlDetailStatus(task.status))}</span></div><button class="cp-close" id="cp-close-detail" aria-label="Close ticket">×</button></div>
     <div class="cp-workdrawer-title"><div><h3>${escapeControl(task.title)}</h3><p>${escapeControl(task.description || "Add context so an agent or reviewer can pick this up without a separate briefing.")}</p></div><button class="btn btn-ghost cp-edit-ticket" data-cp-action="edit">Edit details</button></div>
+    ${prDescriptionMarkup}
     <div class="cp-workdrawer-actions"><button class="btn btn-primary" data-cp-action="start_ticket">Start work</button><button class="btn btn-ghost" data-cp-action="review_ticket">Request review</button><button class="btn btn-ghost" data-cp-action="complete_ticket">Mark complete</button><button class="btn btn-ghost" data-cp-action="archive_ticket">${task.status === "archived" ? "Restore ticket to ready" : "Archive ticket"}</button><span></span><button class="cp-quick-action" data-cp-action="comment">+ Update</button><button class="cp-quick-action" data-cp-action="record_validation">+ Evidence</button><button class="cp-quick-action" data-cp-action="attach_git_evidence">+ Git</button><button class="cp-quick-action" data-cp-action="handoff_ticket">Handoff</button></div>
     <div class="cp-workdrawer-grid"><main class="cp-workdrawer-main"><section class="cp-detail-card cp-criteria-card"><div class="cp-section-title"><div><span class="cp-section-kicker">DEFINITION OF DONE</span><h4>Acceptance criteria</h4></div><button class="cp-text-button" data-cp-action="edit">Edit</button></div><ul class="cp-criteria-list">${criteria}</ul></section>${childMarkup}<section class="cp-detail-card cp-activity-card"><div class="cp-section-title"><div><span class="cp-section-kicker">PROJECT RECORD</span><h4>Activity &amp; evidence</h4></div><button class="cp-text-button" data-cp-action="comment">Add update</button></div><div class="cp-activity-feed">${activityMarkup}</div></section></main>
     <aside class="cp-workdrawer-sidebar"><section class="cp-detail-card cp-details-card"><div class="cp-section-title"><div><span class="cp-section-kicker">AT A GLANCE</span><h4>Details</h4></div><button class="cp-icon-text" data-cp-action="edit" aria-label="Edit details">Edit</button></div><dl class="cp-detail-list"><div><dt>Owner</dt><dd>${escapeControl(owner)}</dd></div><div><dt>Priority</dt><dd><span class="cp-detail-priority cp-priority-${escapeControl(task.priority)}">${escapeControl(task.priority)}</span></dd></div><div><dt>Risk</dt><dd>${escapeControl(task.risk_level || "medium")}</dd></div><div><dt>Complexity</dt><dd>${escapeControl(task.complexity || "medium")}</dd></div><div><dt>Type</dt><dd>${escapeControl(task.type)}</dd></div><div><dt>Workspace</dt><dd>${escapeControl(workspace?.name || "Not assigned")}</dd></div>${parentEpic ? `<div><dt>Epic</dt><dd><button type="button" data-cp-ticket="${escapeControl(parentEpic.id)}">${escapeControl(parentEpic.title)}</button></dd></div>` : ""}</dl></section>
@@ -1752,7 +1757,7 @@ function renderControlDetail() {
 document.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-cp-copy-pr-description]");
   if (!button) return;
-  const description = button.closest(".cp-activity-item")?.querySelector(".cp-pr-description");
+  const description = button.closest(".cp-pr-description-container")?.querySelector(".cp-pr-description");
   if (!description) return;
   try {
     await navigator.clipboard.writeText(description.textContent);

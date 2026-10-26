@@ -53,6 +53,8 @@ def test_relay_pr_descriptions_are_copy_ready() -> None:
     assert 'CP_PR_DESCRIPTION_PREFIX = "Potential PR description\\n\\n"' in app_script
     assert 'data-cp-copy-pr-description="true"' in app_script
     assert 'navigator.clipboard.writeText(description.textContent)' in app_script
+    assert "latestControlPrDescription" in app_script
+    assert "cp-pr-description-panel" in app_script
     assert ".cp-pr-description" in stylesheet
 
 
