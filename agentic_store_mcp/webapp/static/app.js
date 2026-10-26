@@ -1669,19 +1669,22 @@ function renderControlPlane() {
     [summary.blocked.length, "blocked"], [`${summary.completion_percent}%`, "complete"], [summary.claimed, "claimed"],
   ].map(([value, label]) => `<div class="cp-metric"><strong>${escapeControl(value)}</strong><span>${label}</span></div>`).join("");
   const tasks = filteredControlTasks();
+  const board = document.getElementById("cp-board");
   if (controlPlane.view === "epics") {
-    document.getElementById("cp-board").classList.add("cp-board-epics");
-    document.getElementById("cp-board").innerHTML = renderControlEpics(tasks);
+    board.classList.add("cp-board-epics");
+    board.innerHTML = renderControlEpics(tasks);
   } else if (controlPlane.view === "archived") {
-    document.getElementById("cp-board").classList.remove("cp-board-epics");
+    board.classList.remove("cp-board-epics");
+    board.style.setProperty("--cp-column-count", "1");
     const archivedTasks = tasks.filter((task) => task.type !== "epic" && task.status === "archived");
     const cards = archivedTasks.map(renderControlCard).join("") || '<p class="cp-column-empty">No archived tickets</p>';
-    document.getElementById("cp-board").innerHTML = `<section class="cp-column cp-archived cp-archived-view" data-cp-drop-status="archived"><h3>Archived<span>${archivedTasks.length}</span></h3>${cards}</section>`;
+    board.innerHTML = `<section class="cp-column cp-archived cp-archived-view" data-cp-drop-status="archived"><h3>Archived<span>${archivedTasks.length}</span></h3>${cards}</section>`;
   } else {
-    document.getElementById("cp-board").classList.remove("cp-board-epics");
+    board.classList.remove("cp-board-epics");
     const deliveryTasks = tasks.filter((task) => task.type !== "epic");
     const columns = CP_COLUMNS.filter(([status]) => controlPlane.visibleColumns.has(status));
-    document.getElementById("cp-board").innerHTML = columns.map(([status, title]) => {
+    board.style.setProperty("--cp-column-count", String(columns.length));
+    board.innerHTML = columns.map(([status, title]) => {
       const cards = deliveryTasks.filter((task) => task.status === status).map(renderControlCard).join("") || '<p class="cp-column-empty">No tickets</p>';
       return `<section class="cp-column cp-${status}" data-cp-drop-status="${status}"><h3>${title}<span>${deliveryTasks.filter((task) => task.status === status).length}</span></h3>${cards}</section>`;
     }).join("");
@@ -1730,6 +1733,23 @@ function formatControlGitDate(value) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
+function renderControlActivityBody(value) {
+  const body = String(value || "No summary recorded.").trim();
+  const blocks = body.split(/\n\s*\n/).map((block) => {
+    const lines = block.split(/\r?\n/);
+    if (lines.every((line) => /^\s*[-*]\s+/.test(line))) {
+      return `<ul>${lines.map((line) => `<li>${escapeControl(line.replace(/^\s*[-*]\s+/, ""))}</li>`).join("")}</ul>`;
+    }
+    if (lines.every((line) => /^\s*\d+[.)]\s+/.test(line))) {
+      return `<ol>${lines.map((line) => `<li>${escapeControl(line.replace(/^\s*\d+[.)]\s+/, ""))}</li>`).join("")}</ol>`;
+    }
+    return `<p>${lines.map(escapeControl).join("<br>")}</p>`;
+  }).join("");
+  if (body.length <= 320) return `<div class="cp-activity-copy">${blocks}</div>`;
+  const preview = body.replace(/\s+/g, " ").slice(0, 220).trimEnd();
+  return `<details class="cp-activity-details"><summary><span>${escapeControl(preview)}…</span><strong>Read full update</strong></summary><div class="cp-activity-copy">${blocks}</div></details>`;
+}
+
 function renderControlDetail() {
   const el = document.getElementById("cp-detail");
   const task = controlPlane.data?.tasks.find((item) => item.id === controlPlane.selectedId);
@@ -1755,8 +1775,8 @@ function renderControlDetail() {
     ...(task.handoffs || []).map((item) => ({ kind: "handoff", at: item.at, title: `Handed to ${item.to || "agent"}`, body: item.note })),
   ].filter((item) => item.at).sort((a, b) => String(b.at).localeCompare(String(a.at)));
   const activityMarkup = activity.length ? activity.map((item) => {
-    const content = `<p>${escapeControl(item.body || "No summary recorded.")}</p>${item.output ? `<pre>${escapeControl(item.output)}</pre>` : ""}`;
-    return `<article class="cp-activity-item cp-activity-${escapeControl(item.kind)}"><span class="cp-activity-dot"></span><div><div class="cp-activity-title"><strong>${escapeControl(item.title)}</strong><time>${escapeControl(item.at)}</time></div>${content}</div></article>`;
+    const content = `${renderControlActivityBody(item.body)}${item.output ? `<pre>${escapeControl(item.output)}</pre>` : ""}`;
+    return `<article class="cp-activity-item cp-activity-${escapeControl(item.kind)}"><span class="cp-activity-dot"></span><div><div class="cp-activity-title"><strong>${escapeControl(item.title)}</strong><time datetime="${escapeControl(item.at)}">${escapeControl(formatControlGitDate(item.at))}</time></div>${content}</div></article>`;
   }).join("") : '<div class="cp-activity-empty"><strong>No activity yet</strong><p>Capture the first decision, validation result, or agent handoff here.</p></div>';
   const fileAttachments = (task.attachments || []).filter((item) => item.kind === "file");
   const attachmentMarkup = fileAttachments.length ? fileAttachments.map((item) => {
@@ -1768,17 +1788,25 @@ function renderControlDetail() {
     return `<a class="cp-attachment" href="${escapeControl(url)}" target="_blank" rel="noopener">${preview}<span><strong>${escapeControl(item.label)}</strong><small>${Math.ceil(item.size / 1024)} KB · ${escapeControl(item.media_type)}</small></span></a>`;
   }).join("") : '<p class="cp-muted-row">No files attached yet.</p>';
   const attachmentCard = `<section class="cp-detail-card cp-attachment-card"><div class="cp-section-title"><div><span class="cp-section-kicker">TICKET FILES</span><h4>Screenshots &amp; files</h4></div><button class="cp-text-button" data-cp-action="comment">Add files</button></div><div class="cp-attachment-list">${attachmentMarkup}</div></section>`;
-  const criteria = (task.acceptance_criteria || []).length ? task.acceptance_criteria.map((item) => `<li><span class="cp-check"></span>${escapeControl(item)}</li>`).join("") : '<li class="cp-muted-row">No acceptance criteria recorded.</li>';
+  const criteria = (task.acceptance_criteria || []).length ? task.acceptance_criteria.map((item, index) => {
+    const checked = /^\s*\[x\]\s*/i.test(item);
+    const label = item.replace(/^\s*\[[ x]\]\s*/i, "");
+    return `<li><label class="cp-criterion${checked ? " checked" : ""}"><input type="checkbox" data-cp-criterion="${index}" ${checked ? "checked" : ""}><span>${escapeControl(label)}</span></label></li>`;
+  }).join("") : '<li class="cp-muted-row">No acceptance criteria recorded.</li>';
   const childMarkup = task.type === "epic" ? `<section class="cp-epic-delivery"><div class="cp-section-title"><div><span class="cp-section-kicker">EPIC DELIVERY</span><h4>${completeChildren}/${children.length} child tickets complete</h4></div><button class="cp-text-button" data-cp-action="edit">Edit Epic</button></div><div class="cp-epic-child-list">${children.length ? children.map((item) => `<button type="button" data-cp-ticket="${escapeControl(item.id)}"><span class="cp-state-dot cp-state-${escapeControl(item.status)}"></span><span>${escapeControl(item.title)}</span><small>${escapeControl(controlDetailStatus(item.status))}</small></button>`).join("") : '<p class="cp-muted-row">No child tickets yet. Create work and assign it to this Epic.</p>'}</div></section>` : "";
   const prDescriptionId = `cp-pr-description-${task.id}`;
   const prDescriptionMarkup = prDescription ? `<section class="cp-pr-description-panel cp-pr-description-container"><button class="cp-pr-description-toggle" type="button" data-cp-toggle-pr-description="true" aria-expanded="false" aria-controls="${escapeControl(prDescriptionId)}"><span><span>PR DESCRIPTION</span><strong>Copy-ready description</strong></span><b>Show</b></button><div class="cp-pr-description-content" id="${escapeControl(prDescriptionId)}" hidden><div class="cp-pr-description-head"><span>Review the full Markdown, then copy it into a pull request.</span><button class="btn btn-primary cp-copy-pr-description" type="button" data-cp-copy-pr-description="true">Copy PR description</button></div><pre class="cp-pr-description">${escapeControl(prDescription)}</pre></div></section>` : "";
   const gitDetailsMarkup = latestGitEvidence ? `<section class="cp-detail-card cp-git-card"><div class="cp-section-title"><div><span class="cp-section-kicker">GIT DETAILS</span><h4>Latest snapshot</h4></div><button class="cp-icon-text" data-cp-action="attach_git_evidence">Refresh Git</button></div><dl class="cp-git-list"><div><dt>Branch</dt><dd><code>${escapeControl(latestGitEvidence.branch || "Detached HEAD")}</code></dd></div><div><dt>Last commit</dt><dd><code>${escapeControl((latestGitEvidence.commit || "Unknown").slice(0, 12))}</code></dd></div><div><dt>Committed</dt><dd><time datetime="${escapeControl(controlGitTimestamp(latestGitEvidence))}">${escapeControl(formatControlGitDate(controlGitTimestamp(latestGitEvidence)))}</time></dd></div></dl><p class="cp-git-subject">${escapeControl(latestGitEvidence.commit_subject || "No commit subject recorded.")}</p></section>` : `<section class="cp-detail-card cp-git-card"><div class="cp-section-title"><div><span class="cp-section-kicker">GIT DETAILS</span><h4>No snapshot yet</h4></div><button class="cp-icon-text" data-cp-action="attach_git_evidence">Attach Git</button></div><p class="cp-git-empty">Attach Git evidence to show this ticket's branch, latest commit, and commit date.</p></section>`;
+  const description = task.description || "Add context so an agent or reviewer can pick this up without a separate briefing.";
+  const descriptionMarkup = description.length > 280
+    ? `<details class="cp-description-details"><summary><span>${escapeControl(description.slice(0, 240).trimEnd())}…</span><strong>Read full description</strong></summary><p>${escapeControl(description)}</p></details>`
+    : `<p>${escapeControl(description)}</p>`;
   const owner = task.claimed_by || task.assignee || "Unassigned";
+  const workflowActions = `${["backlog", "todo", "blocked"].includes(task.status) ? '<button class="btn btn-primary" data-cp-action="start_ticket">Start work</button>' : ""}${task.status === "in_progress" ? '<button class="btn btn-ghost" data-cp-action="review_ticket">Request review</button>' : ""}${["in_progress", "in_review"].includes(task.status) ? '<button class="btn btn-ghost" data-cp-action="complete_ticket">Mark complete</button>' : ""}`;
   el.innerHTML = `<div class="cp-workdrawer-head"><div class="cp-workdrawer-ident"><code>${escapeControl(task.id)}</code><span class="cp-status-pill cp-status-${escapeControl(task.status)}">${escapeControl(controlDetailStatus(task.status))}</span></div><button class="cp-close" id="cp-close-detail" aria-label="Close ticket">×</button></div>
-    <div class="cp-workdrawer-title"><div><h3>${escapeControl(task.title)}</h3><p>${escapeControl(task.description || "Add context so an agent or reviewer can pick this up without a separate briefing.")}</p></div><button class="btn btn-ghost cp-edit-ticket" data-cp-action="edit">Edit details</button></div>
-    ${prDescriptionMarkup}
-    <div class="cp-workdrawer-actions"><button class="btn btn-primary" data-cp-action="start_ticket">Start work</button><button class="btn btn-ghost" data-cp-action="review_ticket">Request review</button><button class="btn btn-ghost" data-cp-action="complete_ticket">Mark complete</button><button class="btn btn-ghost" data-cp-action="archive_ticket">${task.status === "archived" ? "Restore ticket to ready" : "Archive ticket"}</button><span></span><button class="cp-quick-action" data-cp-action="comment">+ Update</button><button class="cp-quick-action" data-cp-action="record_validation">+ Evidence</button><button class="cp-quick-action" data-cp-action="attach_git_evidence">+ Git</button><button class="cp-quick-action" data-cp-action="handoff_ticket">Handoff</button></div>
-    <div class="cp-workdrawer-grid"><main class="cp-workdrawer-main"><section class="cp-detail-card cp-criteria-card"><div class="cp-section-title"><div><span class="cp-section-kicker">DEFINITION OF DONE</span><h4>Acceptance criteria</h4></div><button class="cp-text-button" data-cp-action="edit">Edit</button></div><ul class="cp-criteria-list">${criteria}</ul></section>${childMarkup}${attachmentCard}<section class="cp-detail-card cp-activity-card"><div class="cp-section-title"><div><span class="cp-section-kicker">PROJECT RECORD</span><h4>Activity &amp; evidence</h4></div><button class="cp-text-button" data-cp-action="comment">Add update</button></div><div class="cp-activity-feed">${activityMarkup}</div></section></main>
+    <div class="cp-workdrawer-title"><h3>${escapeControl(task.title)}</h3><button class="btn btn-ghost cp-edit-ticket" data-cp-action="edit">Edit details</button></div>
+    <div class="cp-workdrawer-actions">${workflowActions}<button class="btn btn-ghost" data-cp-action="archive_ticket">${task.status === "archived" ? "Restore ticket to ready" : "Archive ticket"}</button><span></span><button class="cp-quick-action" data-cp-action="comment">+ Update</button><button class="cp-quick-action" data-cp-action="record_validation">+ Evidence</button><button class="cp-quick-action" data-cp-action="attach_git_evidence">+ Git</button><button class="cp-quick-action" data-cp-action="handoff_ticket">Handoff</button></div>
+    <div class="cp-workdrawer-grid"><main class="cp-workdrawer-main"><section class="cp-detail-card cp-description-card"><div class="cp-section-title"><div><span class="cp-section-kicker">TICKET BRIEF</span><h4>Description</h4></div></div>${descriptionMarkup}</section>${prDescriptionMarkup}<section class="cp-detail-card cp-criteria-card"><div class="cp-section-title"><div><span class="cp-section-kicker">DEFINITION OF DONE</span><h4>Acceptance criteria</h4></div><button class="cp-text-button" data-cp-action="edit">Edit</button></div><ul class="cp-criteria-list">${criteria}</ul></section>${childMarkup}${attachmentCard}<section class="cp-detail-card cp-activity-card"><div class="cp-section-title"><div><span class="cp-section-kicker">PROJECT RECORD</span><h4>Activity &amp; evidence</h4></div><button class="cp-text-button" data-cp-action="comment">Add update</button></div><div class="cp-activity-feed">${activityMarkup}</div></section></main>
     <aside class="cp-workdrawer-sidebar"><section class="cp-detail-card cp-details-card"><div class="cp-section-title"><div><span class="cp-section-kicker">AT A GLANCE</span><h4>Details</h4></div><button class="cp-icon-text" data-cp-action="edit" aria-label="Edit details">Edit</button></div><dl class="cp-detail-list"><div><dt>Owner</dt><dd>${escapeControl(owner)}</dd></div><div><dt>Priority</dt><dd><span class="cp-detail-priority cp-priority-${escapeControl(task.priority)}">${escapeControl(task.priority)}</span></dd></div><div><dt>Risk</dt><dd>${escapeControl(task.risk_level || "medium")}</dd></div><div><dt>Complexity</dt><dd>${escapeControl(task.complexity || "medium")}</dd></div><div><dt>Type</dt><dd>${escapeControl(task.type)}</dd></div><div><dt>Workspace</dt><dd>${escapeControl(workspace?.name || "Not assigned")}</dd></div>${parentEpic ? `<div><dt>Epic</dt><dd><button type="button" data-cp-ticket="${escapeControl(parentEpic.id)}">${escapeControl(parentEpic.title)}</button></dd></div>` : ""}</dl></section>${gitDetailsMarkup}
     <section class="cp-detail-card cp-proof-card"><div class="cp-section-title"><div><span class="cp-section-kicker">ADD TO THE RECORD</span><h4>Proof of work</h4></div></div><button class="cp-proof-action" data-cp-action="record_validation"><span>✓</span><div><strong>Validation</strong><small>Test, lint, review, or build result</small></div><b>+</b></button><button class="cp-proof-action" data-cp-action="attach_git_evidence"><span>⌘</span><div><strong>Git snapshot</strong><small>Branch, commit, and changed files</small></div><b>+</b></button><button class="cp-proof-action" data-cp-action="handoff_ticket"><span>↗</span><div><strong>Agent handoff</strong><small>Launch Codex or Claude with context</small></div><b>+</b></button></section></aside></div>`;
 }
@@ -1814,6 +1842,27 @@ async function controlWrite(action, payload = {}) {
     return result;
   } catch (error) { controlError(error); return null; }
 }
+
+document.addEventListener("change", async (event) => {
+  const input = event.target.closest?.("[data-cp-criterion]");
+  if (!input) return;
+  const task = selectedControlTask();
+  const index = Number(input.dataset.cpCriterion);
+  if (!task || !Number.isInteger(index) || !task.acceptance_criteria?.[index]) return;
+  const criteria = [...task.acceptance_criteria];
+  const label = criteria[index].replace(/^\s*\[[ x]\]\s*/i, "");
+  criteria[index] = input.checked ? `[x] ${label}` : label;
+  const scrollTop = document.querySelector(".cp-workdrawer-grid")?.scrollTop || 0;
+  input.disabled = true;
+  if (await controlWrite("update", { id: task.id, changes: { acceptance_criteria: criteria } })) {
+    const drawer = document.querySelector(".cp-workdrawer-grid");
+    if (drawer) drawer.scrollTop = scrollTop;
+    drawer?.querySelector(`[data-cp-criterion="${index}"]`)?.focus({ preventScroll: true });
+  } else {
+    input.checked = !input.checked;
+    input.disabled = false;
+  }
+});
 
 async function uploadControlFiles(ticketId, files) {
   const failed = [];
@@ -2377,6 +2426,10 @@ document.querySelectorAll("[data-cp-filter]").forEach((button) => button.addEven
 }));
 function closeControlBoardCustomizer() {
   document.getElementById("cp-board-customizer").style.display = "none";
+  if (controlPlane.view === "delivery" && controlPlane.visibleColumns.has("archived")) {
+    const board = document.getElementById("cp-board");
+    board.scrollLeft = board.scrollWidth - board.clientWidth;
+  }
 }
 
 document.getElementById("cp-customize-board")?.addEventListener("click", () => {
