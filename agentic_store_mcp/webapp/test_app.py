@@ -55,7 +55,10 @@ def test_relay_pr_descriptions_are_copy_ready() -> None:
     assert 'navigator.clipboard.writeText(description.textContent)' in app_script
     assert "latestControlPrDescription" in app_script
     assert "cp-pr-description-panel" in app_script
+    assert 'data-cp-toggle-pr-description="true"' in app_script
+    assert 'aria-expanded="false"' in app_script
     assert ".cp-pr-description" in stylesheet
+    assert "overscroll-behavior:contain" in stylesheet
 
 
 def test_planner_launch_records_a_gated_local_session(tmp_path, monkeypatch):

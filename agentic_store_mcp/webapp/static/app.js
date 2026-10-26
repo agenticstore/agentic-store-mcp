@@ -1743,7 +1743,8 @@ function renderControlDetail() {
   }).join("") : '<div class="cp-activity-empty"><strong>No activity yet</strong><p>Capture the first decision, validation result, or agent handoff here.</p></div>';
   const criteria = (task.acceptance_criteria || []).length ? task.acceptance_criteria.map((item) => `<li><span class="cp-check"></span>${escapeControl(item)}</li>`).join("") : '<li class="cp-muted-row">No acceptance criteria recorded.</li>';
   const childMarkup = task.type === "epic" ? `<section class="cp-epic-delivery"><div class="cp-section-title"><div><span class="cp-section-kicker">EPIC DELIVERY</span><h4>${completeChildren}/${children.length} child tickets complete</h4></div><button class="cp-text-button" data-cp-action="edit">Edit Epic</button></div><div class="cp-epic-child-list">${children.length ? children.map((item) => `<button type="button" data-cp-ticket="${escapeControl(item.id)}"><span class="cp-state-dot cp-state-${escapeControl(item.status)}"></span><span>${escapeControl(item.title)}</span><small>${escapeControl(controlDetailStatus(item.status))}</small></button>`).join("") : '<p class="cp-muted-row">No child tickets yet. Create work and assign it to this Epic.</p>'}</div></section>` : "";
-  const prDescriptionMarkup = prDescription ? `<section class="cp-pr-description-panel cp-pr-description-container"><div class="cp-pr-description-head"><div><span>PR DESCRIPTION</span><strong>Ready to copy</strong></div><button class="btn btn-primary cp-copy-pr-description" type="button" data-cp-copy-pr-description="true">Copy PR description</button></div><pre class="cp-pr-description">${escapeControl(prDescription)}</pre></section>` : "";
+  const prDescriptionId = `cp-pr-description-${task.id}`;
+  const prDescriptionMarkup = prDescription ? `<section class="cp-pr-description-panel cp-pr-description-container"><button class="cp-pr-description-toggle" type="button" data-cp-toggle-pr-description="true" aria-expanded="false" aria-controls="${escapeControl(prDescriptionId)}"><span><span>PR DESCRIPTION</span><strong>Copy-ready description</strong></span><b>Show</b></button><div class="cp-pr-description-content" id="${escapeControl(prDescriptionId)}" hidden><div class="cp-pr-description-head"><span>Review the full Markdown, then copy it into a pull request.</span><button class="btn btn-primary cp-copy-pr-description" type="button" data-cp-copy-pr-description="true">Copy PR description</button></div><pre class="cp-pr-description">${escapeControl(prDescription)}</pre></div></section>` : "";
   const owner = task.claimed_by || task.assignee || "Unassigned";
   el.innerHTML = `<div class="cp-workdrawer-head"><div class="cp-workdrawer-ident"><code>${escapeControl(task.id)}</code><span class="cp-status-pill cp-status-${escapeControl(task.status)}">${escapeControl(controlDetailStatus(task.status))}</span></div><button class="cp-close" id="cp-close-detail" aria-label="Close ticket">×</button></div>
     <div class="cp-workdrawer-title"><div><h3>${escapeControl(task.title)}</h3><p>${escapeControl(task.description || "Add context so an agent or reviewer can pick this up without a separate briefing.")}</p></div><button class="btn btn-ghost cp-edit-ticket" data-cp-action="edit">Edit details</button></div>
@@ -1755,6 +1756,16 @@ function renderControlDetail() {
 }
 
 document.addEventListener("click", async (event) => {
+  const toggle = event.target.closest("[data-cp-toggle-pr-description]");
+  if (toggle) {
+    const content = document.getElementById(toggle.getAttribute("aria-controls"));
+    if (!content) return;
+    const expanded = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", String(!expanded));
+    toggle.querySelector("b").textContent = expanded ? "Show" : "Hide";
+    content.hidden = expanded;
+    return;
+  }
   const button = event.target.closest("[data-cp-copy-pr-description]");
   if (!button) return;
   const description = button.closest(".cp-pr-description-container")?.querySelector(".cp-pr-description");
