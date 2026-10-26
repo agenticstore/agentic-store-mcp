@@ -55,3 +55,4 @@ searxng/uwsgi.ini
 .ruff_cache/
 *.pem
 *.key
+*.media/

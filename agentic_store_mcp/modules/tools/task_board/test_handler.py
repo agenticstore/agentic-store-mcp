@@ -1,8 +1,11 @@
 """Tests for Relay task_board state and planner audit actions."""
 
+import base64
 import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
+
+import pytest
 
 HANDLER = Path(__file__).parent / "handler.py"
 
@@ -144,3 +147,44 @@ def test_git_evidence_records_the_last_commit_timestamp(tmp_path, monkeypatch):
 
     assert evidence["branch"] == "feature/example"
     assert evidence["commit_at"] == "2026-10-26T05:20:00+00:00"
+
+
+def test_ticket_file_round_trip_and_invalid_upload(tmp_path):
+    handler = load_handler()
+    board_path = tmp_path / "relay.json"
+    created = handler.run({
+        "action": "add",
+        "path": str(board_path),
+        "task": {"title": "Screenshot review"},
+        "confirm_write": True,
+    })
+    ticket_id = created["task"]["id"]
+    image = b"\x89PNG\r\n\x1a\nexample"
+    uploaded = handler.run({
+        "action": "attach_file", "path": str(board_path), "id": ticket_id,
+        "file_name": "../screen.png",
+        "data_base64": base64.b64encode(image).decode(),
+        "confirm_write": True,
+    })
+    attachment = uploaded["attachment"]
+    assert attachment["label"] == "screen.png"
+    assert attachment["media_type"] == "image/png"
+    assert Path(attachment["reference"]).read_bytes() == image
+    fetched = handler.run({"action": "get", "path": str(board_path), "id": ticket_id})
+    assert fetched["task"]["attachments"][-1]["id"] == attachment["id"]
+    read = handler.run({
+        "action": "read_attachment", "path": str(board_path), "id": ticket_id,
+        "attachment_id": attachment["id"],
+    })
+    assert base64.b64decode(read["data_base64"]) == image
+
+    with pytest.raises(ValueError, match="base64"):
+        handler.run({
+            "action": "attach_file", "path": str(board_path), "id": ticket_id,
+            "file_name": "bad.txt", "data_base64": "!!!", "confirm_write": True,
+        })
+    with pytest.raises(ValueError, match="Unknown file attachment"):
+        handler.run({
+            "action": "read_attachment", "path": str(board_path), "id": ticket_id,
+            "attachment_id": "not-here",
+        })

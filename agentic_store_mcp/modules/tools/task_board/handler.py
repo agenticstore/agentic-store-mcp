@@ -1,6 +1,9 @@
 """Relay — a local project system of record for AI agent development."""
 
+import base64
+import binascii
 import json
+import mimetypes
 import os
 import subprocess
 import uuid
@@ -16,6 +19,7 @@ STATUSES = {
 PRIORITIES = {"critical", "high", "medium", "low"}
 TASK_TYPES = {"task", "bug", "feature", "research", "chore", "epic"}
 LINK_TYPES = {"blocks", "blocked_by", "relates_to", "duplicates", "caused_by"}
+MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
 WRITABLE_FIELDS = {
     "title", "description", "status", "priority", "type", "assignee", "labels",
     "parent_id", "sprint", "depends_on", "acceptance_criteria", "blockers", "artifacts",
@@ -42,6 +46,29 @@ def _board_path(value: Any) -> Path:
     if path.exists() and path.is_dir():
         raise ValueError("path must be a JSON file, not a directory")
     return path
+
+
+def _attachment_path(board_path: Path, task_id: str, attachment_id: str) -> Path:
+    if (
+        not isinstance(task_id, str)
+        or not task_id.isalnum()
+        or not isinstance(attachment_id, str)
+        or len(attachment_id) != 32
+        or any(
+            character not in "0123456789abcdef" for character in attachment_id
+        )
+    ):
+        raise ValueError("Invalid attachment path")
+    return board_path.with_suffix(".media") / task_id / attachment_id
+
+
+def _file_attachment(task: dict[str, Any], attachment_id: Any) -> dict[str, Any]:
+    attachment = next(
+        (item for item in task["attachments"] if item.get("id") == attachment_id), None
+    )
+    if not attachment or attachment.get("kind") != "file":
+        raise ValueError("Unknown file attachment")
+    return attachment
 
 
 def _new_delivery_board(name: str = "Delivery", board_id: str | None = None) -> dict[str, Any]:
@@ -398,7 +425,7 @@ def _summary(board: dict[str, Any], board_id: str | None = None) -> dict[str, An
 def run(args: dict[str, Any]) -> dict[str, Any]:
     path = _board_path(args.get("path"))
     action = args.get("action", "list")
-    valid_actions = {"list", "get", "summary", "add", "update", "transition", "comment", "assign_sprint", "link_issue", "log_issue", "archive", "set_project", "claim_ticket", "release_ticket", "start_ticket", "complete_ticket", "review_ticket", "handoff_ticket", "attach_git_evidence", "record_validation", "attach_artifact", "create_from_finding", "plan_epic", "resume_ticket", "add_workspace", "update_workspace", "delete_workspace", "add_board", "update_board", "delete_board", "log_planning_session"}
+    valid_actions = {"list", "get", "summary", "add", "update", "transition", "comment", "assign_sprint", "link_issue", "log_issue", "archive", "set_project", "claim_ticket", "release_ticket", "start_ticket", "complete_ticket", "review_ticket", "handoff_ticket", "attach_git_evidence", "record_validation", "attach_artifact", "attach_file", "read_attachment", "create_from_finding", "plan_epic", "resume_ticket", "add_workspace", "update_workspace", "delete_workspace", "add_board", "update_board", "delete_board", "log_planning_session"}
     if action not in valid_actions:
         raise ValueError(f"action must be one of: {', '.join(sorted(valid_actions))}")
     board = _load(path)
@@ -467,6 +494,15 @@ def run(args: dict[str, Any]) -> dict[str, Any]:
         by_id = {task["id"]: task for task in board["tasks"]}
         task = _find(board, args.get("id"), board_id)
         return {"read_only": True, "project": board.get("project"), "boards": board["boards"], "active_board": selected_board, "task": _serialise_task(task, by_id)}
+    if action == "read_attachment":
+        task = _find(board, args.get("id"), board_id)
+        attachment = _file_attachment(task, args.get("attachment_id"))
+        file_path = _attachment_path(path, task["id"], attachment["id"])
+        if not file_path.is_file():
+            raise ValueError("Attachment file is missing")
+        if file_path.stat().st_size > MAX_ATTACHMENT_BYTES:
+            raise ValueError("Attachment exceeds 10 MB")
+        return {"read_only": True, "attachment": attachment, "data_base64": base64.b64encode(file_path.read_bytes()).decode("ascii")}
     if action == "summary":
         summary = _summary(board, board_id)
         summary.update({"boards": board["boards"], "active_board": selected_board})
@@ -654,6 +690,33 @@ def run(args: dict[str, Any]) -> dict[str, Any]:
         _touch(task)
         _activity(board, "artifact_attached", task["id"], label.strip())
         result = {"task": task, "artifact": artifact}
+    elif action == "attach_file":
+        task = _find(board, args.get("id"), board_id)
+        name = args.get("file_name")
+        encoded = args.get("data_base64")
+        if not isinstance(name, str) or not name.strip() or not isinstance(encoded, str):
+            raise ValueError("file_name and data_base64 are required")
+        name = Path(name.replace("\\", "/")).name.strip()
+        if name in {"", ".", ".."} or len(name) > 180:
+            raise ValueError("Invalid file name")
+        if len(encoded) > (MAX_ATTACHMENT_BYTES * 4 // 3) + 8:
+            raise ValueError("Attachment exceeds 10 MB")
+        try:
+            content = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError("data_base64 must be valid base64") from exc
+        if not content or len(content) > MAX_ATTACHMENT_BYTES:
+            raise ValueError("Attachment must contain 1 byte to 10 MB")
+        attachment_id = uuid.uuid4().hex
+        file_path = _attachment_path(path, task["id"], attachment_id)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_bytes(content)
+        media_type = mimetypes.guess_type(name)[0] or "application/octet-stream"
+        attachment = {"id": attachment_id, "kind": "file", "at": _now(), "label": name, "reference": str(file_path), "media_type": media_type, "size": len(content)}
+        task["attachments"].append(attachment)
+        _touch(task)
+        _activity(board, "file_attached", task["id"], name)
+        result = {"task": task, "attachment": attachment}
     elif action == "create_from_finding":
         source, title = args.get("source"), args.get("title")
         if not isinstance(source, str) or not source.strip() or not isinstance(title, str) or not title.strip():

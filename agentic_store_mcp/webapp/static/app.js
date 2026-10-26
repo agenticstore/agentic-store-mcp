@@ -1758,6 +1758,16 @@ function renderControlDetail() {
     const content = `<p>${escapeControl(item.body || "No summary recorded.")}</p>${item.output ? `<pre>${escapeControl(item.output)}</pre>` : ""}`;
     return `<article class="cp-activity-item cp-activity-${escapeControl(item.kind)}"><span class="cp-activity-dot"></span><div><div class="cp-activity-title"><strong>${escapeControl(item.title)}</strong><time>${escapeControl(item.at)}</time></div>${content}</div></article>`;
   }).join("") : '<div class="cp-activity-empty"><strong>No activity yet</strong><p>Capture the first decision, validation result, or agent handoff here.</p></div>';
+  const fileAttachments = (task.attachments || []).filter((item) => item.kind === "file");
+  const attachmentMarkup = fileAttachments.length ? fileAttachments.map((item) => {
+    const query = new URLSearchParams({ ticket_id: task.id, attachment_id: item.id, board_id: controlPlane.boardId || "", path: controlPlane.data.path });
+    const url = `/api/control/board/attachment?${query}`;
+    const preview = ["image/png", "image/jpeg", "image/webp", "image/gif"].includes(item.media_type)
+      ? `<img src="${escapeControl(url)}" alt="Preview of ${escapeControl(item.label)}" loading="lazy">`
+      : '<span class="cp-file-icon" aria-hidden="true">↧</span>';
+    return `<a class="cp-attachment" href="${escapeControl(url)}" target="_blank" rel="noopener">${preview}<span><strong>${escapeControl(item.label)}</strong><small>${Math.ceil(item.size / 1024)} KB · ${escapeControl(item.media_type)}</small></span></a>`;
+  }).join("") : '<p class="cp-muted-row">No files attached yet.</p>';
+  const attachmentCard = `<section class="cp-detail-card cp-attachment-card"><div class="cp-section-title"><div><span class="cp-section-kicker">TICKET FILES</span><h4>Screenshots &amp; files</h4></div><button class="cp-text-button" data-cp-action="comment">Add files</button></div><div class="cp-attachment-list">${attachmentMarkup}</div></section>`;
   const criteria = (task.acceptance_criteria || []).length ? task.acceptance_criteria.map((item) => `<li><span class="cp-check"></span>${escapeControl(item)}</li>`).join("") : '<li class="cp-muted-row">No acceptance criteria recorded.</li>';
   const childMarkup = task.type === "epic" ? `<section class="cp-epic-delivery"><div class="cp-section-title"><div><span class="cp-section-kicker">EPIC DELIVERY</span><h4>${completeChildren}/${children.length} child tickets complete</h4></div><button class="cp-text-button" data-cp-action="edit">Edit Epic</button></div><div class="cp-epic-child-list">${children.length ? children.map((item) => `<button type="button" data-cp-ticket="${escapeControl(item.id)}"><span class="cp-state-dot cp-state-${escapeControl(item.status)}"></span><span>${escapeControl(item.title)}</span><small>${escapeControl(controlDetailStatus(item.status))}</small></button>`).join("") : '<p class="cp-muted-row">No child tickets yet. Create work and assign it to this Epic.</p>'}</div></section>` : "";
   const prDescriptionId = `cp-pr-description-${task.id}`;
@@ -1768,7 +1778,7 @@ function renderControlDetail() {
     <div class="cp-workdrawer-title"><div><h3>${escapeControl(task.title)}</h3><p>${escapeControl(task.description || "Add context so an agent or reviewer can pick this up without a separate briefing.")}</p></div><button class="btn btn-ghost cp-edit-ticket" data-cp-action="edit">Edit details</button></div>
     ${prDescriptionMarkup}
     <div class="cp-workdrawer-actions"><button class="btn btn-primary" data-cp-action="start_ticket">Start work</button><button class="btn btn-ghost" data-cp-action="review_ticket">Request review</button><button class="btn btn-ghost" data-cp-action="complete_ticket">Mark complete</button><button class="btn btn-ghost" data-cp-action="archive_ticket">${task.status === "archived" ? "Restore ticket to ready" : "Archive ticket"}</button><span></span><button class="cp-quick-action" data-cp-action="comment">+ Update</button><button class="cp-quick-action" data-cp-action="record_validation">+ Evidence</button><button class="cp-quick-action" data-cp-action="attach_git_evidence">+ Git</button><button class="cp-quick-action" data-cp-action="handoff_ticket">Handoff</button></div>
-    <div class="cp-workdrawer-grid"><main class="cp-workdrawer-main"><section class="cp-detail-card cp-criteria-card"><div class="cp-section-title"><div><span class="cp-section-kicker">DEFINITION OF DONE</span><h4>Acceptance criteria</h4></div><button class="cp-text-button" data-cp-action="edit">Edit</button></div><ul class="cp-criteria-list">${criteria}</ul></section>${childMarkup}<section class="cp-detail-card cp-activity-card"><div class="cp-section-title"><div><span class="cp-section-kicker">PROJECT RECORD</span><h4>Activity &amp; evidence</h4></div><button class="cp-text-button" data-cp-action="comment">Add update</button></div><div class="cp-activity-feed">${activityMarkup}</div></section></main>
+    <div class="cp-workdrawer-grid"><main class="cp-workdrawer-main"><section class="cp-detail-card cp-criteria-card"><div class="cp-section-title"><div><span class="cp-section-kicker">DEFINITION OF DONE</span><h4>Acceptance criteria</h4></div><button class="cp-text-button" data-cp-action="edit">Edit</button></div><ul class="cp-criteria-list">${criteria}</ul></section>${childMarkup}${attachmentCard}<section class="cp-detail-card cp-activity-card"><div class="cp-section-title"><div><span class="cp-section-kicker">PROJECT RECORD</span><h4>Activity &amp; evidence</h4></div><button class="cp-text-button" data-cp-action="comment">Add update</button></div><div class="cp-activity-feed">${activityMarkup}</div></section></main>
     <aside class="cp-workdrawer-sidebar"><section class="cp-detail-card cp-details-card"><div class="cp-section-title"><div><span class="cp-section-kicker">AT A GLANCE</span><h4>Details</h4></div><button class="cp-icon-text" data-cp-action="edit" aria-label="Edit details">Edit</button></div><dl class="cp-detail-list"><div><dt>Owner</dt><dd>${escapeControl(owner)}</dd></div><div><dt>Priority</dt><dd><span class="cp-detail-priority cp-priority-${escapeControl(task.priority)}">${escapeControl(task.priority)}</span></dd></div><div><dt>Risk</dt><dd>${escapeControl(task.risk_level || "medium")}</dd></div><div><dt>Complexity</dt><dd>${escapeControl(task.complexity || "medium")}</dd></div><div><dt>Type</dt><dd>${escapeControl(task.type)}</dd></div><div><dt>Workspace</dt><dd>${escapeControl(workspace?.name || "Not assigned")}</dd></div>${parentEpic ? `<div><dt>Epic</dt><dd><button type="button" data-cp-ticket="${escapeControl(parentEpic.id)}">${escapeControl(parentEpic.title)}</button></dd></div>` : ""}</dl></section>${gitDetailsMarkup}
     <section class="cp-detail-card cp-proof-card"><div class="cp-section-title"><div><span class="cp-section-kicker">ADD TO THE RECORD</span><h4>Proof of work</h4></div></div><button class="cp-proof-action" data-cp-action="record_validation"><span>✓</span><div><strong>Validation</strong><small>Test, lint, review, or build result</small></div><b>+</b></button><button class="cp-proof-action" data-cp-action="attach_git_evidence"><span>⌘</span><div><strong>Git snapshot</strong><small>Branch, commit, and changed files</small></div><b>+</b></button><button class="cp-proof-action" data-cp-action="handoff_ticket"><span>↗</span><div><strong>Agent handoff</strong><small>Launch Codex or Claude with context</small></div><b>+</b></button></section></aside></div>`;
 }
@@ -1804,6 +1814,42 @@ async function controlWrite(action, payload = {}) {
     return result;
   } catch (error) { controlError(error); return null; }
 }
+
+async function uploadControlFiles(ticketId, files) {
+  const failed = [];
+  for (const file of files) {
+    if (!file.size || file.size > 10 * 1024 * 1024) {
+      failed.push(`${file.name}: files must be 1 byte to 10 MB`);
+      continue;
+    }
+    const query = new URLSearchParams({ ticket_id: ticketId, file_name: file.name, board_id: controlPlane.boardId || "", path: controlPlane.data.path });
+    try {
+      const response = await fetch(`/api/control/board/attachment?${query}`, { method: "POST", body: file });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || response.statusText);
+      }
+    } catch (error) { failed.push(`${file.name}: ${error.message}`); }
+  }
+  if (files.length) await loadControlPlane();
+  if (failed.length) controlError(new Error(`Some files could not be added: ${failed.join("; ")}`));
+  return failed.length === 0;
+}
+
+document.querySelectorAll(".cp-file-picker").forEach((picker) => {
+  const input = picker.querySelector('input[type="file"]');
+  const selection = picker.querySelector(".cp-file-selection");
+  const update = () => { selection.textContent = input.files.length ? [...input.files].map((file) => file.name).join(", ") : "No files selected"; };
+  input.addEventListener("change", update);
+  picker.addEventListener("dragover", (event) => { event.preventDefault(); picker.classList.add("dragging"); });
+  picker.addEventListener("dragleave", () => picker.classList.remove("dragging"));
+  picker.addEventListener("drop", (event) => {
+    event.preventDefault();
+    picker.classList.remove("dragging");
+    input.files = event.dataTransfer.files;
+    update();
+  });
+});
 
 function selectedControlTask() { return controlPlane.data?.tasks.find((task) => task.id === controlPlane.selectedId); }
 
@@ -1900,6 +1946,8 @@ async function handleControlAction(action) {
   if (action === "comment") {
     document.getElementById("cp-comment-ticket").textContent = `${task.id} · ${task.title}`;
     document.getElementById("cp-comment-body").value = "";
+    document.getElementById("cp-comment-files").value = "";
+    document.querySelector("#cp-comment-modal .cp-file-selection").textContent = "No files selected";
     document.getElementById("cp-comment-modal").style.display = "flex";
     document.getElementById("cp-comment-body").focus();
     return;
@@ -1922,9 +1970,11 @@ document.getElementById("cp-comment-form")?.addEventListener("submit", async (ev
   event.preventDefault();
   const task = selectedControlTask();
   const comment = document.getElementById("cp-comment-body").value.trim();
-  if (!task || !comment) return;
-  const saved = await controlWrite("comment", { id: task.id, comment });
-  if (saved) closeControlCommentModal();
+  const files = [...document.getElementById("cp-comment-files").files];
+  if (!task || (!comment && !files.length)) return;
+  if (comment && !await controlWrite("comment", { id: task.id, comment })) return;
+  if (files.length) await uploadControlFiles(task.id, files);
+  closeControlCommentModal();
 });
 
 document.getElementById("cp-ticket-edit-close")?.addEventListener("click", closeControlTicketEditor);
@@ -2192,6 +2242,7 @@ document.getElementById("cp-handoff-form")?.addEventListener("submit", async (ev
 
 document.getElementById("cp-create")?.addEventListener("click", () => {
   document.getElementById("cp-ticket-form").reset();
+  document.querySelector("#cp-ticket-modal .cp-file-selection").textContent = "No files selected";
   setControlFormError("cp-ticket-error", "");
   renderControlTicketParents();
   updateControlTicketType();
@@ -2285,6 +2336,7 @@ document.getElementById("cp-ticket-form")?.addEventListener("submit", async (eve
   }
   setControlFormError("cp-ticket-error", "");
   const criteria = document.getElementById("cp-ticket-criteria").value.split("\n").map((item) => item.trim()).filter(Boolean);
+  const files = [...document.getElementById("cp-ticket-files").files];
   const result = await controlWrite("add", { task: {
     title,
     description: document.getElementById("cp-ticket-description").value.trim(),
@@ -2294,7 +2346,12 @@ document.getElementById("cp-ticket-form")?.addEventListener("submit", async (eve
     parent_id: document.getElementById("cp-ticket-parent").value || null,
     acceptance_criteria: criteria,
   }});
-  if (result?.task?.id) { controlPlane.selectedId = result.task.id; closeControlTicketModal(); renderControlPlane(); }
+  if (result?.task?.id) {
+    controlPlane.selectedId = result.task.id;
+    if (files.length) await uploadControlFiles(result.task.id, files);
+    closeControlTicketModal();
+    renderControlPlane();
+  }
 });
 document.getElementById("cp-save-project")?.addEventListener("click", async () => {
   const source = document.getElementById("cp-project-source").value;

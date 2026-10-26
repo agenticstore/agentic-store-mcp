@@ -4,7 +4,7 @@ Use this workflow whenever you receive a Relay handoff.
 
 ## Start
 
-1. Read the assigned ticket and the latest handoff, comments, acceptance criteria, blockers, Git evidence, and validations.
+1. Read the assigned ticket and the latest handoff, comments, acceptance criteria, blockers, Git evidence, validations, and attachments. For file attachments, use the local `reference` path or `task_board` `read_attachment` with the ticket id and attachment id to retrieve base64 content. Inspect image files with an image-capable tool when available.
 2. Post a short `task_board` comment before changing files: what you understood, the working branch, and the first verification step.
 3. Work only in the supplied workspace. Do not change the board path or ticket ID.
 

@@ -18,6 +18,7 @@ Routes:
 from __future__ import annotations
 
 import asyncio as _asyncio
+import base64
 import os
 import shlex
 import shutil
@@ -179,7 +180,7 @@ async def _lifespan(app: "FastAPI") -> AsyncIterator[None]:  # noqa: F821
 
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
@@ -767,6 +768,61 @@ async def api_control_board_action(request: ControlBoardRequest):
         return await _asyncio.to_thread(run, args)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/control/board/attachment")
+async def api_control_upload_attachment(
+    request: Request, ticket_id: str, file_name: str, board_id: str | None = None,
+    path: str | None = None,
+):
+    from agentic_store_mcp.modules.tools.task_board.handler import (
+        MAX_ATTACHMENT_BYTES,
+        run,
+    )
+
+    if int(request.headers.get("content-length", "0")) > MAX_ATTACHMENT_BYTES:
+        raise HTTPException(status_code=413, detail="Attachment exceeds 10 MB")
+    content = await request.body()
+    if len(content) > MAX_ATTACHMENT_BYTES:
+        raise HTTPException(status_code=413, detail="Attachment exceeds 10 MB")
+    try:
+        return await _asyncio.to_thread(run, {
+            "action": "attach_file", "path": _control_board_path(path), "board_id": board_id,
+            "id": ticket_id, "file_name": file_name,
+            "data_base64": base64.b64encode(content).decode("ascii"), "confirm_write": True,
+        })
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/control/board/attachment")
+async def api_control_download_attachment(
+    ticket_id: str, attachment_id: str, board_id: str | None = None,
+    path: str | None = None,
+):
+    from agentic_store_mcp.modules.tools.task_board.handler import _attachment_path, run
+
+    board_path = Path(_control_board_path(path)).expanduser().resolve()
+    try:
+        task = await _asyncio.to_thread(run, {
+            "action": "get", "path": str(board_path), "board_id": board_id, "id": ticket_id,
+        })
+        attachment = next(
+            (item for item in task["task"]["attachments"] if item.get("id") == attachment_id and item.get("kind") == "file"), None
+        )
+        if attachment is None:
+            raise ValueError("Unknown file attachment")
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    file_path = _attachment_path(board_path, ticket_id, attachment_id)
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Attachment file is missing")
+    media_type = attachment["media_type"]
+    disposition = "inline" if media_type in {"image/png", "image/jpeg", "image/webp", "image/gif"} else "attachment"
+    return FileResponse(
+        file_path, media_type=media_type, filename=attachment["label"],
+        content_disposition_type=disposition, headers={"X-Content-Type-Options": "nosniff"},
+    )
 
 
 # ─── Connectors ───────────────────────────────────────────────────────────────
