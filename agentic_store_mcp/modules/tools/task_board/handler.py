@@ -331,6 +331,7 @@ def _git_evidence(repo_path: Any, base_ref: Any = None) -> dict[str, Any]:
     return {
         "captured_at": _now(), "repository": root, "branch": git("branch", "--show-current"),
         "commit": git("rev-parse", "HEAD"), "commit_subject": git("log", "-1", "--format=%s"),
+        "commit_at": git("log", "-1", "--format=%cI"),
         "base_ref": compare, "working_tree": git("status", "--short")[:8000],
         "diff_stat": git(*diff_args)[:8000], "changed_files": git(*files_args).splitlines()[:200],
     }

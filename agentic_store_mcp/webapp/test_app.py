@@ -57,8 +57,12 @@ def test_relay_pr_descriptions_are_copy_ready() -> None:
     assert "cp-pr-description-panel" in app_script
     assert 'data-cp-toggle-pr-description="true"' in app_script
     assert 'aria-expanded="false"' in app_script
+    assert "latestControlGitEvidence" in app_script
+    assert "commit_at" in app_script
+    assert "cp-git-card" in app_script
     assert ".cp-pr-description" in stylesheet
     assert "overscroll-behavior:contain" in stylesheet
+    assert ".cp-git-list" in stylesheet
 
 
 def test_planner_launch_records_a_gated_local_session(tmp_path, monkeypatch):
