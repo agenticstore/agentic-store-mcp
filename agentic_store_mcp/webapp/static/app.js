@@ -1490,11 +1490,12 @@ document.getElementById("btn-fw-clear-recs")?.addEventListener("click", async ()
 // System proxy status is loaded in the main nav-btn click handler above
 
 // ── Relay project delivery system ────────────────────────────────────────────────
-const controlPlane = { data: null, selectedId: null, filter: "all", showArchived: false, editingWorkspaceId: null, editingBoardId: null, workspaceRules: [], perspective: "admin", boardId: null, view: "delivery" };
 const CP_COLUMNS = [
   ["backlog", "Backlog"], ["todo", "Ready"], ["in_progress", "In progress"],
   ["blocked", "Blocked"], ["in_review", "Review"], ["done", "Done"], ["archived", "Archived"],
 ];
+const CP_COLUMN_VISIBILITY_STORAGE_KEY = "relay.visibleColumns";
+const controlPlane = { data: null, selectedId: null, filter: "all", visibleColumns: new Set(CP_COLUMNS.map(([status]) => status)), editingWorkspaceId: null, editingBoardId: null, workspaceRules: [], perspective: "admin", boardId: null, view: "delivery" };
 
 function escapeControl(value) {
   return String(value ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
@@ -1536,13 +1537,41 @@ function taskAgent(task) {
 }
 
 function filteredControlTasks() {
-  const tasks = (controlPlane.data?.tasks || []).filter((task) => controlPlane.showArchived || task.status !== "archived");
+  const tasks = controlPlane.data?.tasks || [];
   if (controlPlane.filter === "ready") return tasks.filter((task) => task.ready);
   if (controlPlane.filter === "blocked") return tasks.filter((task) => task.status === "blocked" || task.blockers?.length);
   if (controlPlane.filter === "mine") return tasks.filter((task) => !taskAgent(task) || taskAgent(task).includes("local") || taskAgent(task).includes("me"));
   if (controlPlane.filter === "codex" || controlPlane.filter === "claude") return tasks.filter((task) => taskAgent(task).includes(controlPlane.filter));
   return tasks;
 }
+
+function loadControlColumnVisibility() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(CP_COLUMN_VISIBILITY_STORAGE_KEY));
+    if (!Array.isArray(saved)) return;
+    const knownStatuses = new Set(CP_COLUMNS.map(([status]) => status));
+    const visible = saved.filter((status) => knownStatuses.has(status));
+    if (visible.length === saved.length) controlPlane.visibleColumns = new Set(visible);
+  } catch (_) {
+    // A malformed or unavailable local preference should not block the board.
+  }
+}
+
+function saveControlColumnVisibility() {
+  try {
+    window.localStorage.setItem(CP_COLUMN_VISIBILITY_STORAGE_KEY, JSON.stringify([...controlPlane.visibleColumns]));
+  } catch (_) {
+    // The board remains usable when browser storage is unavailable.
+  }
+}
+
+function renderControlColumnVisibilityOptions() {
+  const options = document.getElementById("cp-column-visibility-options");
+  if (!options) return;
+  options.innerHTML = CP_COLUMNS.map(([status, title]) => `<label class="cp-column-visibility-option"><input type="checkbox" value="${escapeControl(status)}" ${controlPlane.visibleColumns.has(status) ? "checked" : ""}><span class="cp-state-dot cp-state-${escapeControl(status)}"></span><span>${escapeControl(title)}</span></label>`).join("");
+}
+
+loadControlColumnVisibility();
 
 function renderAgentConsole() {
   const panel = document.getElementById("cp-agent-console");
@@ -1638,10 +1667,6 @@ function renderControlPlane() {
     [summary.total, "work items"], [summary.active, "active"], [summary.ready.length, "ready"],
     [summary.blocked.length, "blocked"], [`${summary.completion_percent}%`, "complete"], [summary.claimed, "claimed"],
   ].map(([value, label]) => `<div class="cp-metric"><strong>${escapeControl(value)}</strong><span>${label}</span></div>`).join("");
-  const archivedCount = (data.tasks || []).filter((task) => task.status === "archived").length;
-  const archivedToggle = document.getElementById("cp-toggle-archived");
-  archivedToggle.textContent = controlPlane.showArchived ? "Hide archived" : `Show archived${archivedCount ? ` (${archivedCount})` : ""}`;
-  archivedToggle.setAttribute("aria-pressed", String(controlPlane.showArchived));
   const tasks = filteredControlTasks();
   if (controlPlane.view === "epics") {
     document.getElementById("cp-board").classList.add("cp-board-epics");
@@ -1649,7 +1674,7 @@ function renderControlPlane() {
   } else {
     document.getElementById("cp-board").classList.remove("cp-board-epics");
     const deliveryTasks = tasks.filter((task) => task.type !== "epic");
-    const columns = controlPlane.showArchived ? CP_COLUMNS : CP_COLUMNS.filter(([status]) => status !== "archived");
+    const columns = CP_COLUMNS.filter(([status]) => controlPlane.visibleColumns.has(status));
     document.getElementById("cp-board").innerHTML = columns.map(([status, title]) => {
       const cards = deliveryTasks.filter((task) => task.status === status).map(renderControlCard).join("") || '<p class="cp-column-empty">No tickets</p>';
       return `<section class="cp-column cp-${status}" data-cp-drop-status="${status}"><h3>${title}<span>${deliveryTasks.filter((task) => task.status === status).length}</span></h3>${cards}</section>`;
@@ -1695,7 +1720,7 @@ function renderControlDetail() {
   const owner = task.claimed_by || task.assignee || "Unassigned";
   el.innerHTML = `<div class="cp-workdrawer-head"><div class="cp-workdrawer-ident"><code>${escapeControl(task.id)}</code><span class="cp-status-pill cp-status-${escapeControl(task.status)}">${escapeControl(controlDetailStatus(task.status))}</span></div><button class="cp-close" id="cp-close-detail" aria-label="Close ticket">×</button></div>
     <div class="cp-workdrawer-title"><div><h3>${escapeControl(task.title)}</h3><p>${escapeControl(task.description || "Add context so an agent or reviewer can pick this up without a separate briefing.")}</p></div><button class="btn btn-ghost cp-edit-ticket" data-cp-action="edit">Edit details</button></div>
-    <div class="cp-workdrawer-actions"><button class="btn btn-primary" data-cp-action="start_ticket">Start work</button><button class="btn btn-ghost" data-cp-action="review_ticket">Request review</button><button class="btn btn-ghost" data-cp-action="complete_ticket">Mark complete</button><button class="btn btn-ghost" data-cp-action="archive_ticket">${task.status === "archived" ? "Restore to ready" : "Archive"}</button><span></span><button class="cp-quick-action" data-cp-action="comment">+ Update</button><button class="cp-quick-action" data-cp-action="record_validation">+ Evidence</button><button class="cp-quick-action" data-cp-action="attach_git_evidence">+ Git</button><button class="cp-quick-action" data-cp-action="handoff_ticket">Handoff</button></div>
+    <div class="cp-workdrawer-actions"><button class="btn btn-primary" data-cp-action="start_ticket">Start work</button><button class="btn btn-ghost" data-cp-action="review_ticket">Request review</button><button class="btn btn-ghost" data-cp-action="complete_ticket">Mark complete</button><button class="btn btn-ghost" data-cp-action="archive_ticket">${task.status === "archived" ? "Restore ticket to ready" : "Archive ticket"}</button><span></span><button class="cp-quick-action" data-cp-action="comment">+ Update</button><button class="cp-quick-action" data-cp-action="record_validation">+ Evidence</button><button class="cp-quick-action" data-cp-action="attach_git_evidence">+ Git</button><button class="cp-quick-action" data-cp-action="handoff_ticket">Handoff</button></div>
     <div class="cp-workdrawer-grid"><main class="cp-workdrawer-main"><section class="cp-detail-card cp-criteria-card"><div class="cp-section-title"><div><span class="cp-section-kicker">DEFINITION OF DONE</span><h4>Acceptance criteria</h4></div><button class="cp-text-button" data-cp-action="edit">Edit</button></div><ul class="cp-criteria-list">${criteria}</ul></section>${childMarkup}<section class="cp-detail-card cp-activity-card"><div class="cp-section-title"><div><span class="cp-section-kicker">PROJECT RECORD</span><h4>Activity &amp; evidence</h4></div><button class="cp-text-button" data-cp-action="comment">Add update</button></div><div class="cp-activity-feed">${activityMarkup}</div></section></main>
     <aside class="cp-workdrawer-sidebar"><section class="cp-detail-card cp-details-card"><div class="cp-section-title"><div><span class="cp-section-kicker">AT A GLANCE</span><h4>Details</h4></div><button class="cp-icon-text" data-cp-action="edit" aria-label="Edit details">Edit</button></div><dl class="cp-detail-list"><div><dt>Owner</dt><dd>${escapeControl(owner)}</dd></div><div><dt>Priority</dt><dd><span class="cp-detail-priority cp-priority-${escapeControl(task.priority)}">${escapeControl(task.priority)}</span></dd></div><div><dt>Risk</dt><dd>${escapeControl(task.risk_level || "medium")}</dd></div><div><dt>Complexity</dt><dd>${escapeControl(task.complexity || "medium")}</dd></div><div><dt>Type</dt><dd>${escapeControl(task.type)}</dd></div><div><dt>Workspace</dt><dd>${escapeControl(workspace?.name || "Not assigned")}</dd></div>${parentEpic ? `<div><dt>Epic</dt><dd><button type="button" data-cp-ticket="${escapeControl(parentEpic.id)}">${escapeControl(parentEpic.title)}</button></dd></div>` : ""}</dl></section>
     <section class="cp-detail-card cp-proof-card"><div class="cp-section-title"><div><span class="cp-section-kicker">ADD TO THE RECORD</span><h4>Proof of work</h4></div></div><button class="cp-proof-action" data-cp-action="record_validation"><span>✓</span><div><strong>Validation</strong><small>Test, lint, review, or build result</small></div><b>+</b></button><button class="cp-proof-action" data-cp-action="attach_git_evidence"><span>⌘</span><div><strong>Git snapshot</strong><small>Branch, commit, and changed files</small></div><b>+</b></button><button class="cp-proof-action" data-cp-action="handoff_ticket"><span>↗</span><div><strong>Agent handoff</strong><small>Launch Codex or Claude with context</small></div><b>+</b></button></section></aside></div>`;
@@ -2218,12 +2243,32 @@ document.getElementById("cp-sync-git")?.addEventListener("click", async () => {
   if (!repo_path) return controlError(new Error("Git evidence requires a saved local directory."));
   await controlWrite("attach_git_evidence", { id: task.id, repo_path });
 });
-document.querySelectorAll(".cp-filter").forEach((button) => button.addEventListener("click", () => {
+document.querySelectorAll("[data-cp-filter]").forEach((button) => button.addEventListener("click", () => {
   controlPlane.filter = button.dataset.cpFilter;
-  document.querySelectorAll(".cp-filter").forEach((item) => item.classList.toggle("active", item === button)); renderControlPlane();
+  document.querySelectorAll("[data-cp-filter]").forEach((item) => item.classList.toggle("active", item === button)); renderControlPlane();
 }));
-document.getElementById("cp-toggle-archived")?.addEventListener("click", () => {
-  controlPlane.showArchived = !controlPlane.showArchived;
+function closeControlBoardCustomizer() {
+  document.getElementById("cp-board-customizer").style.display = "none";
+}
+
+document.getElementById("cp-customize-board")?.addEventListener("click", () => {
+  renderControlColumnVisibilityOptions();
+  document.getElementById("cp-board-customizer").style.display = "flex";
+});
+document.getElementById("cp-board-customizer-close")?.addEventListener("click", closeControlBoardCustomizer);
+document.getElementById("cp-board-customizer-done")?.addEventListener("click", closeControlBoardCustomizer);
+document.getElementById("cp-board-customizer-show-all")?.addEventListener("click", () => {
+  controlPlane.visibleColumns = new Set(CP_COLUMNS.map(([status]) => status));
+  saveControlColumnVisibility();
+  renderControlColumnVisibilityOptions();
+  renderControlPlane();
+});
+document.getElementById("cp-column-visibility-options")?.addEventListener("change", (event) => {
+  const input = event.target;
+  if (!(input instanceof HTMLInputElement) || input.type !== "checkbox") return;
+  if (input.checked) controlPlane.visibleColumns.add(input.value);
+  else controlPlane.visibleColumns.delete(input.value);
+  saveControlColumnVisibility();
   renderControlPlane();
 });
 document.querySelectorAll(".cp-perspective-button").forEach((button) => button.addEventListener("click", () => {
