@@ -224,7 +224,7 @@ agentic-store-webapp
 
 Relay is AgenticStore's local delivery system for projects shared by people and AI agents. It lives in the webapp and stores its board on your machine, so project context stays available across agent sessions.
 
-Use Relay to create multiple boards, group work into Epics, assign each ticket to an isolated workspace, and run Codex or Claude handoffs in parallel. Each ticket can retain progress comments, validation results, Git evidence, decision context, blockers, and the session that worked on it.
+Use Relay to create multiple boards, group work into Epics, assign each ticket to an isolated workspace, and run Codex or Claude handoffs in parallel. Each ticket can retain progress comments, validation results, Git evidence, decision context, blockers, attachments, and the session that worked on it. Add screenshots or files up to 10 MB to tickets and progress updates; agents can inspect attachment metadata and read the original bytes through the task board tools.
 
 ### Parallel handoffs and releases
 
@@ -259,13 +259,18 @@ Relay does not send project data to a hosted planning service. It launches the l
 
 ### Recent Relay improvements
 
-The current release adds a clearer lifecycle for work that should leave the active board without losing its history:
+Recent Relay releases improve ticket handling, agent collaboration, and the board experience:
 
+- **Ticket attachments:** add screenshots and files up to 10 MB to a ticket or progress update. Relay shows image previews and safe downloads, while agents can retrieve attachment metadata and original bytes through `task_board` and `read_attachment`.
+- **Readable delivery history:** use Markdown in progress comments, expand older labeled updates into readable sections, and link recorded branches and commits to the repository when a workspace URL is available.
+- **Faster ticket review:** check off acceptance criteria, scroll long descriptions and activity within the ticket drawer, and keep Git evidence and activity accessible alongside the ticket details.
+- **A clearer planning flow:** use the AI task planner's guided outcome-first flow, with optional planning details grouped separately; review the proposed work before approving ticket creation.
+- **Safer parallel work:** give each handoff its own worktree or clone and branch from the configured main/master baseline, while keeping board activity shared.
 - **Archive and restore tickets:** archive a completed or cancelled work item into a dedicated Archived state, restore it to Ready when it becomes active again, and keep the status change in the ticket history.
 - **Show archived when needed:** archived work is hidden from the default board so active delivery stays readable, with a toggle to bring archived tickets back into view.
 - **Safer ticket setup:** new tickets require a workspace, because an agent handoff needs a known checkout or remote repository. Empty workspace views now include a guided Create your first workspace action.
 - **Actionable failures:** handoff and ticket creation errors are shown inside their forms with the reason and next step, rather than disappearing into a generic notification.
-- **Clearer Relay UI:** the webapp labels the product as Relay, improves the empty states, and keeps the Archived column separate from active delivery states.
+- **Clearer Relay UI:** the webapp uses the available desktop space, restores the “Jira for AI Agents” tagline, makes the planner handoff readable, and places Archived beside Done when enabled.
 
 These changes preserve the local project record while making it safer to triage, pause, resume, and hand work between people and agents.
 
