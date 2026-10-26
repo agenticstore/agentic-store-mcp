@@ -37,9 +37,12 @@ def test_relay_board_customizer_and_archive_controls_are_available_in_the_ui() -
 
     assert 'id="cp-customize-board"' in index_template
     assert 'id="cp-column-visibility-options"' in index_template
+    assert 'data-cp-view="archived"' in index_template
     assert 'data-cp-action="archive_ticket"' in app_script
     assert 'Archive ticket' in app_script
-    assert '["archived", "Archived"]' in app_script
+    assert 'controlPlane.view === "archived"' in app_script
+    assert 'task.status === "archived"' in app_script
+    assert '["done", "Done"], ["archived", "Archived"]' in app_script
     assert 'CP_COLUMN_VISIBILITY_STORAGE_KEY' in app_script
 
 

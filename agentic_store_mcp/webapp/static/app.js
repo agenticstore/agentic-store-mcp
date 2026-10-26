@@ -1494,8 +1494,8 @@ const CP_COLUMNS = [
   ["backlog", "Backlog"], ["todo", "Ready"], ["in_progress", "In progress"],
   ["blocked", "Blocked"], ["in_review", "Review"], ["done", "Done"], ["archived", "Archived"],
 ];
-const CP_COLUMN_VISIBILITY_STORAGE_KEY = "relay.visibleColumns";
-const controlPlane = { data: null, selectedId: null, filter: "all", visibleColumns: new Set(CP_COLUMNS.map(([status]) => status)), editingWorkspaceId: null, editingBoardId: null, workspaceRules: [], perspective: "admin", boardId: null, view: "delivery" };
+const CP_COLUMN_VISIBILITY_STORAGE_KEY = "relay.visibleColumns.v2";
+const controlPlane = { data: null, selectedId: null, filter: "all", visibleColumns: new Set(CP_COLUMNS.filter(([status]) => status !== "archived").map(([status]) => status)), editingWorkspaceId: null, editingBoardId: null, workspaceRules: [], perspective: "admin", boardId: null, view: "delivery" };
 
 function escapeControl(value) {
   return String(value ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
@@ -1642,6 +1642,7 @@ function renderControlPlane() {
   });
   document.querySelector(".cp-project-bar").style.display = isAgentView ? "none" : "flex";
   document.getElementById("cp-create").style.display = isAgentView ? "none" : "inline-flex";
+  document.getElementById("cp-customize-board").style.display = controlPlane.view === "delivery" ? "inline-flex" : "none";
   renderAgentConsole();
 
   const boards = data.boards || [];
@@ -1671,6 +1672,11 @@ function renderControlPlane() {
   if (controlPlane.view === "epics") {
     document.getElementById("cp-board").classList.add("cp-board-epics");
     document.getElementById("cp-board").innerHTML = renderControlEpics(tasks);
+  } else if (controlPlane.view === "archived") {
+    document.getElementById("cp-board").classList.remove("cp-board-epics");
+    const archivedTasks = tasks.filter((task) => task.type !== "epic" && task.status === "archived");
+    const cards = archivedTasks.map(renderControlCard).join("") || '<p class="cp-column-empty">No archived tickets</p>';
+    document.getElementById("cp-board").innerHTML = `<section class="cp-column cp-archived cp-archived-view" data-cp-drop-status="archived"><h3>Archived<span>${archivedTasks.length}</span></h3>${cards}</section>`;
   } else {
     document.getElementById("cp-board").classList.remove("cp-board-epics");
     const deliveryTasks = tasks.filter((task) => task.type !== "epic");
