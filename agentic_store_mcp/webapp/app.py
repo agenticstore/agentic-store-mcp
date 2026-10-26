@@ -227,6 +227,144 @@ CONTROL_PLANE_DIR = Path.home() / ".config" / "agentic-store"
 CONTROL_BOARD_PATH = CONTROL_PLANE_DIR / "agent-board.json"
 
 
+def _git_output(directory: Path, *arguments: str) -> str:
+    """Run a bounded read-only Git command and return trimmed standard output."""
+    result = subprocess.run(
+        ["git", "-C", str(directory), *arguments],
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+    if result.returncode:
+        return ""
+    return result.stdout.strip()
+
+
+def _safe_branch_part(value: str, fallback: str) -> str:
+    """Make a conservative Git branch/path component from Relay identifiers."""
+    cleaned = "".join(character.lower() if character.isalnum() else "-" for character in value)
+    cleaned = "-".join(part for part in cleaned.split("-") if part)
+    return cleaned[:48] or fallback
+
+
+def _baseline_ref(repository: Path) -> tuple[str, str]:
+    """Resolve the configured remote/main baseline and its immutable commit."""
+    for ref in ("origin/HEAD", "origin/main", "main", "origin/master", "master"):
+        commit = _git_output(repository, "rev-parse", "--verify", ref)
+        if commit:
+            return ref, commit
+    raise ValueError("Workspace has no origin/main or master baseline to branch from")
+
+
+def _agent_branch(ticket_id: str, session_id: str) -> str:
+    """Create a unique branch that still follows Relay's feature/<ticket>-<slug> rule."""
+    return "feature/{ticket}-{session}".format(
+        ticket=_safe_branch_part(ticket_id, "ticket"),
+        session=_safe_branch_part(session_id.rsplit("-", 1)[-1], "agent"),
+    )
+
+
+def _local_worktree_directory(repository: Path, session_id: str) -> Path:
+    repository_slug = _safe_branch_part(repository.name, "workspace")
+    return CONTROL_PLANE_DIR / "workspaces" / f"{repository_slug}-{_safe_branch_part(session_id[-6:], 'agent')}"
+
+
+def _create_local_worktree(
+    local_directory: Path, ticket_id: str, session_id: str
+) -> tuple[Path, str, str]:
+    """Create an isolated local checkout on a feature branch from main/master."""
+    root_text = _git_output(local_directory, "rev-parse", "--show-toplevel")
+    if not root_text:
+        raise ValueError("local_directory must be inside a Git repository")
+    repository = Path(root_text)
+    baseline_ref, baseline_commit = _baseline_ref(repository)
+    branch = _agent_branch(ticket_id, session_id)
+    working_directory = _local_worktree_directory(repository, session_id)
+    if working_directory.exists():
+        raise ValueError(f"Relay workspace already exists: {working_directory}")
+    result = subprocess.run(
+        [
+            "git", "-C", str(repository), "worktree", "add", "-b", branch,
+            str(working_directory), baseline_ref,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    if result.returncode:
+        raise ValueError(f"Could not create isolated Git worktree: {result.stderr.strip()[-500:]}")
+    return working_directory, branch, baseline_commit
+
+
+def _create_remote_clone(
+    repository_url: str, ticket_id: str, session_id: str
+) -> tuple[Path, str, str]:
+    """Clone then branch a remote workspace so it has the same isolation guarantee."""
+    repo_slug = repository_url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
+    safe_slug = _safe_branch_part(repo_slug, "workspace")
+    workspace_root = CONTROL_PLANE_DIR / "workspaces"
+    workspace_root.mkdir(parents=True, exist_ok=True)
+    working_directory = workspace_root / f"{safe_slug}-{_safe_branch_part(session_id[-6:], 'agent')}"
+    clone = subprocess.run(
+        ["git", "clone", "--", repository_url, str(working_directory)],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    if clone.returncode:
+        raise ValueError(f"Remote clone failed: {clone.stderr.strip()[-500:]}")
+    try:
+        baseline_ref, baseline_commit = _baseline_ref(working_directory)
+        branch = _agent_branch(ticket_id, session_id)
+        checkout = subprocess.run(
+            ["git", "-C", str(working_directory), "checkout", "-b", branch, baseline_ref],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        if checkout.returncode:
+            raise ValueError(f"Could not create feature branch in clone: {checkout.stderr.strip()[-500:]}")
+    except ValueError:
+        shutil.rmtree(working_directory, ignore_errors=True)
+        raise
+    return working_directory, branch, baseline_commit
+
+
+def _likely_merge_conflicts(repository: Path, branch: str) -> list[str]:
+    """Report local active feature/bug branches that already conflict with this branch."""
+    branches = _git_output(repository, "for-each-ref", "--format=%(refname:short)", "refs/heads").splitlines()
+    conflicts: list[str] = []
+    for candidate in branches:
+        if candidate == branch or not candidate.startswith(("feature/", "bug/", "feature_", "bug_")):
+            continue
+        base = _git_output(repository, "merge-base", branch, candidate)
+        if not base:
+            continue
+        result = subprocess.run(
+            ["git", "-C", str(repository), "merge-tree", base, branch, candidate],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+        if "<<<<<<<" in result.stdout:
+            conflicts.append(candidate)
+    return conflicts
+
+
+def _open_terminal(script_path: Path) -> None:
+    """Open one generated handoff script in the user's terminal application."""
+    subprocess.Popen(
+        ["open", "-a", "Terminal", str(script_path)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
 def _control_board_path(path: str | None) -> str:
     if path is None or not path.strip():
         return str(CONTROL_BOARD_PATH)
@@ -305,22 +443,22 @@ async def api_control_launch_handoff(request: LaunchHandoffRequest):
         raise HTTPException(status_code=400, detail="Configure a remote repository URL in Project setup before launching this handoff")
     session_id = f"{request.client}-{uuid.uuid4().hex[:12]}"
     handoff_note = request.note.strip() or f"Continue ticket {request.ticket_id}; inspect its context, acceptance criteria, and latest evidence."
-    if use_remote:
-        repo_slug = repository_url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
-        safe_slug = "".join(char for char in repo_slug if char.isalnum() or char in "-_") or "workspace"
-        workspace_root = CONTROL_PLANE_DIR / "workspaces"
-        workspace_root.mkdir(parents=True, exist_ok=True)
-        working_directory = workspace_root / f"{safe_slug}-{session_id[-6:]}"
-        clone = await _asyncio.to_thread(
-            subprocess.run, ["git", "clone", "--", repository_url, str(working_directory)],
-            capture_output=True, text=True, timeout=120, check=False,
-        )
-        if clone.returncode:
-            raise HTTPException(status_code=400, detail=f"Remote clone failed: {clone.stderr.strip()[-500:]}")
-    else:
-        working_directory = Path(local_directory or "").expanduser().resolve()
-        if not working_directory.is_dir():
-            raise HTTPException(status_code=400, detail="local_directory must be an existing directory")
+    try:
+        if use_remote:
+            working_directory, branch, base_commit = await _asyncio.to_thread(
+                _create_remote_clone, repository_url, request.ticket_id, session_id
+            )
+            workspace_kind = "remote_clone"
+        else:
+            source_directory = Path(local_directory or "").expanduser().resolve()
+            if not source_directory.is_dir():
+                raise ValueError("local_directory must be an existing directory")
+            working_directory, branch, base_commit = await _asyncio.to_thread(
+                _create_local_worktree, source_directory, request.ticket_id, session_id
+            )
+            workspace_kind = "local_worktree"
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     harness_source = HERE / "static" / "agent-board-harness.md"
     harness_path = CONTROL_PLANE_DIR / "skills" / "agent-board" / "SKILL.md"
     harness_path.parent.mkdir(parents=True, exist_ok=True)
@@ -338,8 +476,23 @@ async def api_control_launch_handoff(request: LaunchHandoffRequest):
         handoff = await _asyncio.to_thread(run, {
             "action": "handoff_ticket", "path": board_path, "board_id": request.board_id, "id": request.ticket_id,
             "recipient": request.recipient, "note": handoff_note, "agent_client": request.client,
-            "session_id": session_id, "working_directory": str(working_directory), "workspace_source": "remote" if use_remote else "local", "repository_url": repository_url or None, "branch_rules": branch_rules, "confirm_write": True,
+            "session_id": session_id, "working_directory": str(working_directory), "workspace_source": workspace_kind, "repository_url": repository_url or None, "branch_rules": branch_rules, "confirm_write": True,
         })
+        evidence = await _asyncio.to_thread(run, {
+            "action": "attach_git_evidence", "path": board_path, "board_id": request.board_id,
+            "id": request.ticket_id, "repo_path": str(working_directory), "base_ref": base_commit,
+            "confirm_write": True,
+        })
+        conflicts = await _asyncio.to_thread(
+            _likely_merge_conflicts, working_directory, branch
+        )
+        if conflicts:
+            await _asyncio.to_thread(run, {
+                "action": "comment", "path": board_path, "board_id": request.board_id,
+                "id": request.ticket_id,
+                "comment": "Merge-risk scan found conflicts with active branches: " + ", ".join(conflicts),
+                "confirm_write": True,
+            })
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -362,10 +515,23 @@ async def api_control_launch_handoff(request: LaunchHandoffRequest):
     )
     script_path.chmod(0o700)
     try:
-        subprocess.Popen(["open", "-a", "Terminal", str(script_path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        _open_terminal(script_path)
     except OSError as exc:
         raise HTTPException(status_code=500, detail=f"Handoff was recorded but Terminal could not open: {exc}") from exc
-    return {"launched": True, "session_id": session_id, "client": request.client, "workspace_source": "remote" if use_remote else "local", "working_directory": str(working_directory), "harness_path": str(harness_path), "script_path": str(script_path), "handoff": handoff}
+    return {
+        "launched": True,
+        "session_id": session_id,
+        "client": request.client,
+        "workspace_source": workspace_kind,
+        "working_directory": str(working_directory),
+        "branch": branch,
+        "base_commit": base_commit,
+        "merge_risks": conflicts,
+        "harness_path": str(harness_path),
+        "script_path": str(script_path),
+        "handoff": handoff,
+        "git_evidence": evidence["git_evidence"],
+    }
 
 
 class LaunchTriageRequest(BaseModel):

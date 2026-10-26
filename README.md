@@ -226,6 +226,22 @@ Relay is AgenticStore's local delivery system for projects shared by people and 
 
 Use Relay to create multiple boards, group work into Epics, assign each ticket to an isolated workspace, and run Codex or Claude handoffs in parallel. Each ticket can retain progress comments, validation results, Git evidence, decision context, blockers, and the session that worked on it.
 
+### Parallel handoffs and releases
+
+Relay keeps one shared board at `~/.config/agentic-store/agent-board.json`, so ticket status, evidence, and handoffs remain synchronized. It does **not** share a checkout: a local-workspace handoff creates a dedicated Git worktree and a `feature/<ticket-id>-<session>` branch from `origin/main` (falling back to `main`, then the corresponding `master` refs). A remote-workspace handoff clones the repository and creates the same kind of feature branch. Relay records the immutable baseline commit as Git evidence and scans local active `feature/` and `bug/` branches for merge markers before the agent starts. Any detected conflict is appended to the ticket as a merge risk.
+
+This lets several agents keep uncommitted changes safely separated. The shared board is intentional coordination state; source files, branch pointers, virtual environments, and agent terminal sessions are per-handoff. Review and merge each feature branch independently, then remove completed worktrees through Git when they are no longer needed.
+
+For the dashboard itself, normally run one Relay UI and open its URL in additional browser tabs. If the default port is already serving Relay, `agentic-store-webapp` prints the existing URL and exits without touching the owner process. Use an intentionally separate instance only when needed:
+
+```bash
+agentic-store-webapp --port 8782 --no-open
+# or ask the OS for a free port if the requested port is occupied
+agentic-store-webapp --auto-port --no-open
+```
+
+The frontend, MCP package, and PyPI release must move as one compatibility chain: land and validate the MCP feature branch first, then have the frontend PR declare its required package version (or compatible range). A single release coordinator owns the package-version change and PyPI publish queue. Agents must not open concurrent version-bump PRs. The coordinator batches compatible merged changes, locks the release branch while tests and build metadata are validated, publishes exactly one version, and rolls back by yanking the bad PyPI release when supported, restoring the prior frontend package constraint, and issuing a corrective patch release. Record the release PRs and validation results as linked Relay tickets before deployment.
+
 ### Triage with the AI Task Planner
 
 Open **Relay → AI task planner** and describe the outcome, success criteria, constraints, product surfaces, and quality requirements. Relay opens a local Codex or Claude planning session with a reusable planning harness. The planner inspects the selected board, asks follow-up questions, proposes an Epic with bounded child tickets, and waits for your explicit approval before it creates work in bulk.
@@ -236,7 +252,7 @@ The harness makes automated tests and documentation part of the plan whenever co
 
 1. Create a board for a product, release, or client initiative.
 2. Use **AI task planner** to turn a goal into an approved Epic and testable tickets.
-3. Assign tickets to local checkouts or fresh remote clones, then hand them to Codex or Claude.
+3. Assign tickets to local repositories or remote URLs, then hand them to Codex or Claude; Relay creates the isolated worktree or clone for each session.
 4. Review work through recorded comments, validations, and Git evidence; drag tickets through delivery states as work progresses.
 
 Relay does not send project data to a hosted planning service. It launches the local agent client you select, which uses its own configured model and privacy settings.
