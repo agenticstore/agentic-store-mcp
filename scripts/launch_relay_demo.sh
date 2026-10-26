@@ -3,9 +3,9 @@ set -euo pipefail
 
 # Launch the published AgenticStore package for a Relay screen recording.
 # Override these without editing the script, for example:
-#   AGENTICSTORE_VERSION=1.0.10 RELAY_PORT=8782 ./scripts/launch_relay_demo.sh
+#   AGENTICSTORE_VERSION=1.0.11 RELAY_PORT=8782 ./scripts/launch_relay_demo.sh
 
-VERSION="${AGENTICSTORE_VERSION:-1.0.10}"
+VERSION="${AGENTICSTORE_VERSION:-1.0.11}"
 PORT="${RELAY_PORT:-8782}"
 ENV_DIR="${RELAY_DEMO_ENV:-/private/tmp/agenticstore-relay-${VERSION}}"
 PYTHON="${ENV_DIR}/bin/python"

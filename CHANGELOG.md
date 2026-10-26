@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.11 (2026-10-26)
+
+- Relay: attach screenshots and files up to 10 MB to tickets and progress updates, with agent-readable attachment metadata and bytes.
+- Relay: improve the planner, board layout, and ticket drawer; add checkable acceptance criteria and readable Markdown activity.
+- Relay: link recorded Git branches and commits, and clarify the isolated-workspace and coordinated PyPI release workflow.
+
 ## 1.0.10 (2026-10-25)
 
 - Relay: add an Archived ticket state with restore-to-Ready support and history entries.
