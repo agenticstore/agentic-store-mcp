@@ -1462,6 +1462,20 @@ body:has(#section-relay.active) main { padding-inline:clamp(18px,2.2vw,40px); }
 .cp-activity-details[open] summary span { display:none; }
 .cp-activity-details[open] summary strong { font-size:0; }
 .cp-activity-details[open] summary strong::after { content:"Hide update"; font-size:11px; }
+.cp-activity-details[open] summary { display:flex; justify-content:flex-end; padding:0; border:0; background:none; }
+.cp-git-list a { display:inline-flex; align-items:center; gap:5px; max-width:100%; color:#c5befd; text-decoration:none; }
+.cp-git-list a code { min-width:0; }
+.cp-git-list a span { flex:none; font-size:12px; }
+.cp-git-list a:hover,.cp-git-list a:focus-visible { color:#eee9ff; text-decoration:underline; text-underline-offset:3px; }
+.cp-git-list a:focus-visible { outline:2px solid #b7aaff; outline-offset:3px; border-radius:3px; }
+.cp-activity-copy h5 { margin:4px 0 0; color:#e6e0ff; font-size:12px; line-height:1.45; }
+.cp-activity-copy strong { color:#e1e6ef; font-weight:700; }
+.cp-activity-copy a { color:#b7aaff; text-decoration:underline; text-underline-offset:2px; }
+.cp-activity-copy code { padding:1px 4px; border-radius:4px; background:rgba(148,163,184,.12); color:#ded8ff; font:11px/1.5 var(--font-mono,monospace); overflow-wrap:anywhere; }
+.cp-activity-copy pre code { padding:0; background:none; color:inherit; }
+.cp-activity-field { display:grid; gap:4px; padding:9px 11px; border-left:2px solid #8175ff; border-radius:0 7px 7px 0; background:rgba(129,117,255,.055); }
+.cp-activity-field > strong { color:#c7bcff; font-size:11px; }
+.cp-activity-field p { margin:0; }
 
 /* Relay status transition sheet. */
 .cp-transition-sheet { width:min(740px, calc(100vw - 32px)); display:grid; gap:24px; padding:30px; border:1px solid rgba(127,115,255,.4); border-radius:18px; background:linear-gradient(145deg,#171b24,#10131a); box-shadow:0 30px 90px rgba(0,0,0,.58); }

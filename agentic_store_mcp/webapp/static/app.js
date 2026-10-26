@@ -1723,7 +1723,8 @@ function controlGitTimestamp(evidence) {
 
 function latestControlGitEvidence(evidence) {
   return [...(evidence || [])]
-    .sort((left, right) => String(controlGitTimestamp(right)).localeCompare(String(controlGitTimestamp(left))))[0] || null;
+    .sort((left, right) => (Date.parse(right.captured_at || right.at || right.recorded_at || right.commit_at || "") || 0)
+      - (Date.parse(left.captured_at || left.at || left.recorded_at || left.commit_at || "") || 0))[0] || null;
 }
 
 function formatControlGitDate(value) {
@@ -1733,21 +1734,94 @@ function formatControlGitDate(value) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
+function renderControlActivityInline(value) {
+  return String(value).split(/(`[^`\n]+`|\*\*[^*\n]+\*\*|\[[^\]]+\]\(https?:\/\/[^\s)]+\))/g).map((part) => {
+    if (part.startsWith("`") && part.endsWith("`")) return `<code>${escapeControl(part.slice(1, -1))}</code>`;
+    if (part.startsWith("**") && part.endsWith("**")) return `<strong>${escapeControl(part.slice(2, -2))}</strong>`;
+    const link = /^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/.exec(part);
+    if (link) return `<a href="${escapeControl(link[2])}" target="_blank" rel="noopener noreferrer">${escapeControl(link[1])}</a>`;
+    return escapeControl(part);
+  }).join("");
+}
+
 function renderControlActivityBody(value) {
   const body = String(value || "No summary recorded.").trim();
-  const blocks = body.split(/\n\s*\n/).map((block) => {
-    const lines = block.split(/\r?\n/);
-    if (lines.every((line) => /^\s*[-*]\s+/.test(line))) {
-      return `<ul>${lines.map((line) => `<li>${escapeControl(line.replace(/^\s*[-*]\s+/, ""))}</li>`).join("")}</ul>`;
+  const legacySections = !body.includes("\n") && /\b(?:Outcome|Validation recorded|Remaining risk|Next step):\s/.test(body)
+    ? body.replace(/\s+(?=(?:Validation recorded|Remaining risk|Next step|Outcome):\s)/gi, "\n\n") : body;
+  const blocks = [];
+  let paragraph = [];
+  let list = [];
+  let listType = "";
+  let code = null;
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    const content = paragraph.join("\n");
+    const field = /^(Outcome|Validation recorded|Remaining risk|Next step|Verification|Checks|Blockers):\s+([\s\S]*)$/i.exec(content);
+    blocks.push(field ? `<section class="cp-activity-field"><strong>${escapeControl(field[1])}</strong><p>${renderControlActivityInline(field[2])}</p></section>`
+      : `<p>${paragraph.map(renderControlActivityInline).join("<br>")}</p>`);
+    paragraph = [];
+  };
+  const flushList = () => {
+    if (!list.length) return;
+    blocks.push(`<${listType}>${list.map((item) => `<li>${renderControlActivityInline(item)}</li>`).join("")}</${listType}>`);
+    list = [];
+    listType = "";
+  };
+  for (const line of legacySections.split(/\r?\n/)) {
+    if (/^\s*```/.test(line)) {
+      flushParagraph(); flushList();
+      if (code) { blocks.push(`<pre><code>${escapeControl(code.join("\n"))}</code></pre>`); code = null; }
+      else code = [];
+      continue;
     }
-    if (lines.every((line) => /^\s*\d+[.)]\s+/.test(line))) {
-      return `<ol>${lines.map((line) => `<li>${escapeControl(line.replace(/^\s*\d+[.)]\s+/, ""))}</li>`).join("")}</ol>`;
+    if (code) { code.push(line); continue; }
+    if (!line.trim()) { flushParagraph(); flushList(); continue; }
+    const heading = /^\s*#{1,3}\s+(.+)$/.exec(line);
+    if (heading) { flushParagraph(); flushList(); blocks.push(`<h5>${renderControlActivityInline(heading[1])}</h5>`); continue; }
+    const bullet = /^\s*([-*]|\d+[.)])\s+(.+)$/.exec(line);
+    if (bullet) {
+      flushParagraph();
+      const nextType = /^\d/.test(bullet[1]) ? "ol" : "ul";
+      if (listType && listType !== nextType) flushList();
+      listType = nextType;
+      list.push(bullet[2]);
+      continue;
     }
-    return `<p>${lines.map(escapeControl).join("<br>")}</p>`;
-  }).join("");
-  if (body.length <= 320) return `<div class="cp-activity-copy">${blocks}</div>`;
-  const preview = body.replace(/\s+/g, " ").slice(0, 220).trimEnd();
-  return `<details class="cp-activity-details"><summary><span>${escapeControl(preview)}…</span><strong>Read full update</strong></summary><div class="cp-activity-copy">${blocks}</div></details>`;
+    flushList();
+    paragraph.push(line);
+  }
+  if (code) blocks.push(`<pre><code>${escapeControl(code.join("\n"))}</code></pre>`);
+  flushParagraph(); flushList();
+  const content = `<div class="cp-activity-copy">${blocks.join("")}</div>`;
+  if (body.length <= 320) return content;
+  const preview = body.replace(/[#*`]/g, "").replace(/\s+/g, " ").slice(0, 220).trimEnd();
+  return `<details class="cp-activity-details"><summary><span>${escapeControl(preview)}…</span><strong>Read full update</strong></summary>${content}</details>`;
+}
+
+function controlGitWebLink(repositoryUrl, kind, reference) {
+  if (!repositoryUrl || !reference) return "";
+  const ssh = /^git@([^:]+):(.+)$/.exec(repositoryUrl.trim());
+  const source = ssh ? `https://${ssh[1]}/${ssh[2]}` : repositoryUrl.trim();
+  let repository;
+  try { repository = new URL(source); } catch (_) { return ""; }
+  if (!["https:", "http:"].includes(repository.protocol) || repository.username || repository.password) return "";
+  const path = repository.pathname.replace(/\.git\/?$/i, "").replace(/\/+$/, "");
+  if (path.split("/").filter(Boolean).length < 2) return "";
+  const host = repository.hostname.toLowerCase();
+  const route = host === "github.com" ? (kind === "branch" ? "tree" : "commit")
+    : host === "gitlab.com" ? (kind === "branch" ? "-/tree" : "-/commit")
+    : host === "bitbucket.org" ? (kind === "branch" ? "src" : "commits") : "";
+  if (!route) return "";
+  if (kind === "commit" && !/^[0-9a-f]{7,64}$/i.test(reference)) return "";
+  const encodedReference = kind === "branch" ? reference.split("/").map(encodeURIComponent).join("/") : encodeURIComponent(reference);
+  return `${repository.origin}${path}/${route}/${encodedReference}`;
+}
+
+function renderControlGitReference(repositoryUrl, kind, reference, fallback) {
+  const value = reference || fallback;
+  const label = `<code>${escapeControl(kind === "commit" && reference ? reference.slice(0, 12) : value)}</code>`;
+  const href = controlGitWebLink(repositoryUrl, kind, reference);
+  return href ? `<a href="${escapeControl(href)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${kind} ${escapeControl(value)} in repository">${label}<span aria-hidden="true">↗</span></a>` : label;
 }
 
 function renderControlDetail() {
@@ -1761,6 +1835,7 @@ function renderControlDetail() {
   el.className = "cp-detail cp-ticket-dialog";
   const tasks = controlPlane.data?.tasks || [];
   const workspace = controlPlane.data?.workspaces?.find((item) => item.id === task.workspace_id);
+  const repositoryUrl = workspace?.repository_url || task.workspace_snapshot?.repository_url;
   const parentEpic = task.parent_id ? tasks.find((item) => item.id === task.parent_id) : null;
   const children = task.type === "epic" ? tasks.filter((item) => item.parent_id === task.id) : [];
   const completeChildren = children.filter((item) => item.status === "done").length;
@@ -1771,7 +1846,7 @@ function renderControlDetail() {
       .filter((item) => !controlPrDescription(item.body))
       .map((item) => ({ kind: "update", at: item.at, title: "Progress update", body: item.body })),
     ...(task.validations || []).map((item) => ({ kind: item.status || "validation", at: item.at, title: `${item.kind || "Validation"} · ${item.status || "recorded"}`, body: item.summary, output: item.output })),
-    ...(task.git_evidence || []).map((item) => ({ kind: "evidence", at: item.at || item.recorded_at, title: `Git snapshot · ${item.branch || "detached"}`, body: item.commit_subject || item.commit || "Repository evidence attached" })),
+    ...(task.git_evidence || []).map((item) => ({ kind: "evidence", at: item.captured_at || item.at || item.recorded_at, title: `Git snapshot · ${item.branch || "detached"}`, body: item.commit_subject || item.commit || "Repository evidence attached" })),
     ...(task.handoffs || []).map((item) => ({ kind: "handoff", at: item.at, title: `Handed to ${item.to || "agent"}`, body: item.note })),
   ].filter((item) => item.at).sort((a, b) => String(b.at).localeCompare(String(a.at)));
   const activityMarkup = activity.length ? activity.map((item) => {
@@ -1796,7 +1871,7 @@ function renderControlDetail() {
   const childMarkup = task.type === "epic" ? `<section class="cp-epic-delivery"><div class="cp-section-title"><div><span class="cp-section-kicker">EPIC DELIVERY</span><h4>${completeChildren}/${children.length} child tickets complete</h4></div><button class="cp-text-button" data-cp-action="edit">Edit Epic</button></div><div class="cp-epic-child-list">${children.length ? children.map((item) => `<button type="button" data-cp-ticket="${escapeControl(item.id)}"><span class="cp-state-dot cp-state-${escapeControl(item.status)}"></span><span>${escapeControl(item.title)}</span><small>${escapeControl(controlDetailStatus(item.status))}</small></button>`).join("") : '<p class="cp-muted-row">No child tickets yet. Create work and assign it to this Epic.</p>'}</div></section>` : "";
   const prDescriptionId = `cp-pr-description-${task.id}`;
   const prDescriptionMarkup = prDescription ? `<section class="cp-pr-description-panel cp-pr-description-container"><button class="cp-pr-description-toggle" type="button" data-cp-toggle-pr-description="true" aria-expanded="false" aria-controls="${escapeControl(prDescriptionId)}"><span><span>PR DESCRIPTION</span><strong>Copy-ready description</strong></span><b>Show</b></button><div class="cp-pr-description-content" id="${escapeControl(prDescriptionId)}" hidden><div class="cp-pr-description-head"><span>Review the full Markdown, then copy it into a pull request.</span><button class="btn btn-primary cp-copy-pr-description" type="button" data-cp-copy-pr-description="true">Copy PR description</button></div><pre class="cp-pr-description">${escapeControl(prDescription)}</pre></div></section>` : "";
-  const gitDetailsMarkup = latestGitEvidence ? `<section class="cp-detail-card cp-git-card"><div class="cp-section-title"><div><span class="cp-section-kicker">GIT DETAILS</span><h4>Latest snapshot</h4></div><button class="cp-icon-text" data-cp-action="attach_git_evidence">Refresh Git</button></div><dl class="cp-git-list"><div><dt>Branch</dt><dd><code>${escapeControl(latestGitEvidence.branch || "Detached HEAD")}</code></dd></div><div><dt>Last commit</dt><dd><code>${escapeControl((latestGitEvidence.commit || "Unknown").slice(0, 12))}</code></dd></div><div><dt>Committed</dt><dd><time datetime="${escapeControl(controlGitTimestamp(latestGitEvidence))}">${escapeControl(formatControlGitDate(controlGitTimestamp(latestGitEvidence)))}</time></dd></div></dl><p class="cp-git-subject">${escapeControl(latestGitEvidence.commit_subject || "No commit subject recorded.")}</p></section>` : `<section class="cp-detail-card cp-git-card"><div class="cp-section-title"><div><span class="cp-section-kicker">GIT DETAILS</span><h4>No snapshot yet</h4></div><button class="cp-icon-text" data-cp-action="attach_git_evidence">Attach Git</button></div><p class="cp-git-empty">Attach Git evidence to show this ticket's branch, latest commit, and commit date.</p></section>`;
+  const gitDetailsMarkup = latestGitEvidence ? `<section class="cp-detail-card cp-git-card"><div class="cp-section-title"><div><span class="cp-section-kicker">GIT DETAILS</span><h4>Latest snapshot</h4></div><button class="cp-icon-text" data-cp-action="attach_git_evidence">Refresh Git</button></div><dl class="cp-git-list"><div><dt>Branch</dt><dd>${renderControlGitReference(repositoryUrl, "branch", latestGitEvidence.branch, "Detached HEAD")}</dd></div><div><dt>Last commit</dt><dd>${renderControlGitReference(repositoryUrl, "commit", latestGitEvidence.commit, "Unknown")}</dd></div><div><dt>${latestGitEvidence.commit_at ? "Committed" : "Captured"}</dt><dd><time datetime="${escapeControl(controlGitTimestamp(latestGitEvidence))}">${escapeControl(formatControlGitDate(controlGitTimestamp(latestGitEvidence)))}</time></dd></div></dl><p class="cp-git-subject">${escapeControl(latestGitEvidence.commit_subject || "No commit subject recorded.")}</p></section>` : `<section class="cp-detail-card cp-git-card"><div class="cp-section-title"><div><span class="cp-section-kicker">GIT DETAILS</span><h4>No snapshot yet</h4></div><button class="cp-icon-text" data-cp-action="attach_git_evidence">Attach Git</button></div><p class="cp-git-empty">Attach Git evidence to show this ticket's branch, latest commit, and commit date.</p></section>`;
   const description = task.description || "Add context so an agent or reviewer can pick this up without a separate briefing.";
   const descriptionMarkup = description.length > 280
     ? `<details class="cp-description-details"><summary><span>${escapeControl(description.slice(0, 240).trimEnd())}…</span><strong>Read full description</strong></summary><p>${escapeControl(description)}</p></details>`
