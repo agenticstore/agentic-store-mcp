@@ -1301,6 +1301,18 @@ footer a:hover { color: var(--accent); }
 @media (max-width:820px) { .cp-ticket-dialog { width:calc(100vw - 18px); height:calc(100vh - 18px); }.cp-workdrawer-title,.cp-workdrawer-head,.cp-workdrawer-actions { padding-left:16px; padding-right:16px; }.cp-workdrawer-title { display:block; }.cp-edit-ticket { margin-top:13px; }.cp-pr-description-panel { margin-left:16px; margin-right:16px; }.cp-workdrawer-grid { grid-template-columns:1fr; }.cp-workdrawer-main { padding:15px 16px 32px; border-right:0; border-bottom:1px solid rgba(148,163,184,.12); }.cp-workdrawer-sidebar { padding:15px 16px 32px; }.cp-form-grid-three { grid-template-columns:1fr 1fr; } }
 @media (max-width:520px) { .cp-workdrawer-title h3 { font-size:22px; }.cp-workdrawer-actions > span { display:none; }.cp-workdrawer-actions { gap:6px; }.cp-workdrawer-actions .btn { flex:1; }.cp-quick-action { padding:5px 3px; }.cp-form-grid-three { grid-template-columns:1fr; }.cp-activity-title { display:block; }.cp-activity-title time { display:block; margin-top:3px; } }
 #cp-ticket-edit-modal,#cp-validation-modal,#cp-evidence-modal { z-index:1002; }
+.cp-file-picker { border:1px dashed rgba(148,163,184,.45); border-radius:10px; padding:14px; background:rgba(148,163,184,.06); cursor:pointer; }
+.cp-file-picker.dragging,.cp-file-picker:focus-within { border-color:var(--accent); background:rgba(74,222,128,.08); }
+.cp-file-picker input[type="file"] { width:100%; border:0; padding:0; background:transparent; }
+.cp-file-picker small,.cp-file-selection { color:var(--text-muted); font-size:11px; overflow-wrap:anywhere; }
+.cp-attachment-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px; }
+.cp-attachment { display:flex; gap:10px; align-items:center; min-width:0; padding:10px; border:1px solid var(--border); border-radius:9px; color:var(--text); text-decoration:none; background:rgba(148,163,184,.05); }
+.cp-attachment:hover,.cp-attachment:focus-visible { border-color:var(--accent); }
+.cp-attachment img,.cp-file-icon { width:52px; height:52px; flex:none; border-radius:6px; object-fit:cover; background:rgba(148,163,184,.12); }
+.cp-file-icon { display:grid; place-items:center; font-size:24px; }
+.cp-attachment span:last-child { min-width:0; display:grid; gap:4px; }
+.cp-attachment strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
+.cp-attachment small { color:var(--text-muted); font-size:10px; }
 
 /* Relay status transition sheet. */
 .cp-transition-sheet { width:min(740px, calc(100vw - 32px)); display:grid; gap:24px; padding:30px; border:1px solid rgba(127,115,255,.4); border-radius:18px; background:linear-gradient(145deg,#171b24,#10131a); box-shadow:0 30px 90px rgba(0,0,0,.58); }

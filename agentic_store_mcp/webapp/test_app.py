@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
 APP_FILE = Path(__file__).parent / "app.py"
 TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -63,6 +64,58 @@ def test_relay_pr_descriptions_are_copy_ready() -> None:
     assert ".cp-pr-description" in stylesheet
     assert "overscroll-behavior:contain" in stylesheet
     assert ".cp-git-list" in stylesheet
+
+
+def test_relay_ticket_file_upload_and_readback(tmp_path, monkeypatch):
+    app = load_app()
+    board_path = tmp_path / "relay.json"
+    monkeypatch.setattr(app, "CONTROL_BOARD_PATH", board_path)
+    client = TestClient(app.app)
+    created = client.post(
+        "/api/control/board",
+        json={
+            "action": "add",
+            "payload": {"task": {"title": "Media ticket"}, "confirm_write": True},
+        },
+    )
+    assert created.status_code == 200
+    ticket_id = created.json()["task"]["id"]
+    image = b"\x89PNG\r\n\x1a\nexample"
+    uploaded = client.post(
+        "/api/control/board/attachment",
+        params={"ticket_id": ticket_id, "file_name": "example.png"},
+        content=image,
+    )
+    assert uploaded.status_code == 200
+    attachment = uploaded.json()["attachment"]
+    assert attachment["media_type"] == "image/png"
+    downloaded = client.get(
+        "/api/control/board/attachment",
+        params={"ticket_id": ticket_id, "attachment_id": attachment["id"]},
+    )
+    assert downloaded.status_code == 200
+    assert downloaded.content == image
+    assert downloaded.headers["x-content-type-options"] == "nosniff"
+    document = client.post(
+        "/api/control/board/attachment",
+        params={"ticket_id": ticket_id, "file_name": "notes.html"},
+        content=b"<h1>notes</h1>",
+    )
+    assert document.status_code == 200
+    document_response = client.get(
+        "/api/control/board/attachment",
+        params={
+            "ticket_id": ticket_id,
+            "attachment_id": document.json()["attachment"]["id"],
+        },
+    )
+    assert "attachment" in document_response.headers["content-disposition"]
+    assert document_response.content == b"<h1>notes</h1>"
+    missing = client.get(
+        "/api/control/board/attachment",
+        params={"ticket_id": ticket_id, "attachment_id": "missing"},
+    )
+    assert missing.status_code == 404
 
 
 def test_planner_launch_records_a_gated_local_session(tmp_path, monkeypatch):

@@ -28,6 +28,8 @@
           "attach_git_evidence",
           "record_validation",
           "attach_artifact",
+          "attach_file",
+          "read_attachment",
           "create_from_finding",
           "plan_epic",
           "resume_ticket",
@@ -40,7 +42,7 @@
           "log_planning_session"
         ],
         "default": "list",
-        "description": "Read-only: list, get, summary, review_ticket, resume_ticket. Writes require confirm_write=true. Organize tickets and Epics into Relay boards, then record execution, handoffs, Git evidence, validations, artifacts, and project decisions."
+        "description": "Read-only: list, get, summary, review_ticket, resume_ticket, read_attachment. Writes require confirm_write=true. Organize tickets and Epics into Relay boards, then record execution, handoffs, Git evidence, validations, artifacts, and project decisions."
       },
       "path": {
         "type": "string",
@@ -180,6 +182,18 @@
       "artifact_reference": {
         "type": "string",
         "description": "Artifact path, URL, commit, or other local reference."
+      },
+      "file_name": {
+        "type": "string",
+        "description": "Original file name for attach_file (up to 180 characters)."
+      },
+      "data_base64": {
+        "type": "string",
+        "description": "Base64 file contents for attach_file (up to 10 MB decoded)."
+      },
+      "attachment_id": {
+        "type": "string",
+        "description": "File attachment id from get/list, used with read_attachment to return its base64 contents."
       },
       "source": {
         "type": "string",
