@@ -1669,19 +1669,22 @@ function renderControlPlane() {
     [summary.blocked.length, "blocked"], [`${summary.completion_percent}%`, "complete"], [summary.claimed, "claimed"],
   ].map(([value, label]) => `<div class="cp-metric"><strong>${escapeControl(value)}</strong><span>${label}</span></div>`).join("");
   const tasks = filteredControlTasks();
+  const board = document.getElementById("cp-board");
   if (controlPlane.view === "epics") {
-    document.getElementById("cp-board").classList.add("cp-board-epics");
-    document.getElementById("cp-board").innerHTML = renderControlEpics(tasks);
+    board.classList.add("cp-board-epics");
+    board.innerHTML = renderControlEpics(tasks);
   } else if (controlPlane.view === "archived") {
-    document.getElementById("cp-board").classList.remove("cp-board-epics");
+    board.classList.remove("cp-board-epics");
+    board.style.setProperty("--cp-column-count", "1");
     const archivedTasks = tasks.filter((task) => task.type !== "epic" && task.status === "archived");
     const cards = archivedTasks.map(renderControlCard).join("") || '<p class="cp-column-empty">No archived tickets</p>';
-    document.getElementById("cp-board").innerHTML = `<section class="cp-column cp-archived cp-archived-view" data-cp-drop-status="archived"><h3>Archived<span>${archivedTasks.length}</span></h3>${cards}</section>`;
+    board.innerHTML = `<section class="cp-column cp-archived cp-archived-view" data-cp-drop-status="archived"><h3>Archived<span>${archivedTasks.length}</span></h3>${cards}</section>`;
   } else {
-    document.getElementById("cp-board").classList.remove("cp-board-epics");
+    board.classList.remove("cp-board-epics");
     const deliveryTasks = tasks.filter((task) => task.type !== "epic");
     const columns = CP_COLUMNS.filter(([status]) => controlPlane.visibleColumns.has(status));
-    document.getElementById("cp-board").innerHTML = columns.map(([status, title]) => {
+    board.style.setProperty("--cp-column-count", String(columns.length));
+    board.innerHTML = columns.map(([status, title]) => {
       const cards = deliveryTasks.filter((task) => task.status === status).map(renderControlCard).join("") || '<p class="cp-column-empty">No tickets</p>';
       return `<section class="cp-column cp-${status}" data-cp-drop-status="${status}"><h3>${title}<span>${deliveryTasks.filter((task) => task.status === status).length}</span></h3>${cards}</section>`;
     }).join("");
@@ -1720,7 +1723,8 @@ function controlGitTimestamp(evidence) {
 
 function latestControlGitEvidence(evidence) {
   return [...(evidence || [])]
-    .sort((left, right) => String(controlGitTimestamp(right)).localeCompare(String(controlGitTimestamp(left))))[0] || null;
+    .sort((left, right) => (Date.parse(right.captured_at || right.at || right.recorded_at || right.commit_at || "") || 0)
+      - (Date.parse(left.captured_at || left.at || left.recorded_at || left.commit_at || "") || 0))[0] || null;
 }
 
 function formatControlGitDate(value) {
@@ -1728,6 +1732,96 @@ function formatControlGitDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+function renderControlActivityInline(value) {
+  return String(value).split(/(`[^`\n]+`|\*\*[^*\n]+\*\*|\[[^\]]+\]\(https?:\/\/[^\s)]+\))/g).map((part) => {
+    if (part.startsWith("`") && part.endsWith("`")) return `<code>${escapeControl(part.slice(1, -1))}</code>`;
+    if (part.startsWith("**") && part.endsWith("**")) return `<strong>${escapeControl(part.slice(2, -2))}</strong>`;
+    const link = /^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/.exec(part);
+    if (link) return `<a href="${escapeControl(link[2])}" target="_blank" rel="noopener noreferrer">${escapeControl(link[1])}</a>`;
+    return escapeControl(part);
+  }).join("");
+}
+
+function renderControlActivityBody(value) {
+  const body = String(value || "No summary recorded.").trim();
+  const legacySections = !body.includes("\n") && /\b(?:Outcome|Validation recorded|Remaining risk|Next step):\s/.test(body)
+    ? body.replace(/\s+(?=(?:Validation recorded|Remaining risk|Next step|Outcome):\s)/gi, "\n\n") : body;
+  const blocks = [];
+  let paragraph = [];
+  let list = [];
+  let listType = "";
+  let code = null;
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    const content = paragraph.join("\n");
+    const field = /^(Outcome|Validation recorded|Remaining risk|Next step|Verification|Checks|Blockers):\s+([\s\S]*)$/i.exec(content);
+    blocks.push(field ? `<section class="cp-activity-field"><strong>${escapeControl(field[1])}</strong><p>${renderControlActivityInline(field[2])}</p></section>`
+      : `<p>${paragraph.map(renderControlActivityInline).join("<br>")}</p>`);
+    paragraph = [];
+  };
+  const flushList = () => {
+    if (!list.length) return;
+    blocks.push(`<${listType}>${list.map((item) => `<li>${renderControlActivityInline(item)}</li>`).join("")}</${listType}>`);
+    list = [];
+    listType = "";
+  };
+  for (const line of legacySections.split(/\r?\n/)) {
+    if (/^\s*```/.test(line)) {
+      flushParagraph(); flushList();
+      if (code) { blocks.push(`<pre><code>${escapeControl(code.join("\n"))}</code></pre>`); code = null; }
+      else code = [];
+      continue;
+    }
+    if (code) { code.push(line); continue; }
+    if (!line.trim()) { flushParagraph(); flushList(); continue; }
+    const heading = /^\s*#{1,3}\s+(.+)$/.exec(line);
+    if (heading) { flushParagraph(); flushList(); blocks.push(`<h5>${renderControlActivityInline(heading[1])}</h5>`); continue; }
+    const bullet = /^\s*([-*]|\d+[.)])\s+(.+)$/.exec(line);
+    if (bullet) {
+      flushParagraph();
+      const nextType = /^\d/.test(bullet[1]) ? "ol" : "ul";
+      if (listType && listType !== nextType) flushList();
+      listType = nextType;
+      list.push(bullet[2]);
+      continue;
+    }
+    flushList();
+    paragraph.push(line);
+  }
+  if (code) blocks.push(`<pre><code>${escapeControl(code.join("\n"))}</code></pre>`);
+  flushParagraph(); flushList();
+  const content = `<div class="cp-activity-copy">${blocks.join("")}</div>`;
+  if (body.length <= 320) return content;
+  const preview = body.replace(/[#*`]/g, "").replace(/\s+/g, " ").slice(0, 220).trimEnd();
+  return `<details class="cp-activity-details"><summary><span>${escapeControl(preview)}…</span><strong>Read full update</strong></summary>${content}</details>`;
+}
+
+function controlGitWebLink(repositoryUrl, kind, reference) {
+  if (!repositoryUrl || !reference) return "";
+  const ssh = /^git@([^:]+):(.+)$/.exec(repositoryUrl.trim());
+  const source = ssh ? `https://${ssh[1]}/${ssh[2]}` : repositoryUrl.trim();
+  let repository;
+  try { repository = new URL(source); } catch (_) { return ""; }
+  if (!["https:", "http:"].includes(repository.protocol) || repository.username || repository.password) return "";
+  const path = repository.pathname.replace(/\.git\/?$/i, "").replace(/\/+$/, "");
+  if (path.split("/").filter(Boolean).length < 2) return "";
+  const host = repository.hostname.toLowerCase();
+  const route = host === "github.com" ? (kind === "branch" ? "tree" : "commit")
+    : host === "gitlab.com" ? (kind === "branch" ? "-/tree" : "-/commit")
+    : host === "bitbucket.org" ? (kind === "branch" ? "src" : "commits") : "";
+  if (!route) return "";
+  if (kind === "commit" && !/^[0-9a-f]{7,64}$/i.test(reference)) return "";
+  const encodedReference = kind === "branch" ? reference.split("/").map(encodeURIComponent).join("/") : encodeURIComponent(reference);
+  return `${repository.origin}${path}/${route}/${encodedReference}`;
+}
+
+function renderControlGitReference(repositoryUrl, kind, reference, fallback) {
+  const value = reference || fallback;
+  const label = `<code>${escapeControl(kind === "commit" && reference ? reference.slice(0, 12) : value)}</code>`;
+  const href = controlGitWebLink(repositoryUrl, kind, reference);
+  return href ? `<a href="${escapeControl(href)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${kind} ${escapeControl(value)} in repository">${label}<span aria-hidden="true">↗</span></a>` : label;
 }
 
 function renderControlDetail() {
@@ -1741,6 +1835,7 @@ function renderControlDetail() {
   el.className = "cp-detail cp-ticket-dialog";
   const tasks = controlPlane.data?.tasks || [];
   const workspace = controlPlane.data?.workspaces?.find((item) => item.id === task.workspace_id);
+  const repositoryUrl = workspace?.repository_url || task.workspace_snapshot?.repository_url;
   const parentEpic = task.parent_id ? tasks.find((item) => item.id === task.parent_id) : null;
   const children = task.type === "epic" ? tasks.filter((item) => item.parent_id === task.id) : [];
   const completeChildren = children.filter((item) => item.status === "done").length;
@@ -1751,12 +1846,12 @@ function renderControlDetail() {
       .filter((item) => !controlPrDescription(item.body))
       .map((item) => ({ kind: "update", at: item.at, title: "Progress update", body: item.body })),
     ...(task.validations || []).map((item) => ({ kind: item.status || "validation", at: item.at, title: `${item.kind || "Validation"} · ${item.status || "recorded"}`, body: item.summary, output: item.output })),
-    ...(task.git_evidence || []).map((item) => ({ kind: "evidence", at: item.at || item.recorded_at, title: `Git snapshot · ${item.branch || "detached"}`, body: item.commit_subject || item.commit || "Repository evidence attached" })),
+    ...(task.git_evidence || []).map((item) => ({ kind: "evidence", at: item.captured_at || item.at || item.recorded_at, title: `Git snapshot · ${item.branch || "detached"}`, body: item.commit_subject || item.commit || "Repository evidence attached" })),
     ...(task.handoffs || []).map((item) => ({ kind: "handoff", at: item.at, title: `Handed to ${item.to || "agent"}`, body: item.note })),
   ].filter((item) => item.at).sort((a, b) => String(b.at).localeCompare(String(a.at)));
   const activityMarkup = activity.length ? activity.map((item) => {
-    const content = `<p>${escapeControl(item.body || "No summary recorded.")}</p>${item.output ? `<pre>${escapeControl(item.output)}</pre>` : ""}`;
-    return `<article class="cp-activity-item cp-activity-${escapeControl(item.kind)}"><span class="cp-activity-dot"></span><div><div class="cp-activity-title"><strong>${escapeControl(item.title)}</strong><time>${escapeControl(item.at)}</time></div>${content}</div></article>`;
+    const content = `${renderControlActivityBody(item.body)}${item.output ? `<pre>${escapeControl(item.output)}</pre>` : ""}`;
+    return `<article class="cp-activity-item cp-activity-${escapeControl(item.kind)}"><span class="cp-activity-dot"></span><div><div class="cp-activity-title"><strong>${escapeControl(item.title)}</strong><time datetime="${escapeControl(item.at)}">${escapeControl(formatControlGitDate(item.at))}</time></div>${content}</div></article>`;
   }).join("") : '<div class="cp-activity-empty"><strong>No activity yet</strong><p>Capture the first decision, validation result, or agent handoff here.</p></div>';
   const fileAttachments = (task.attachments || []).filter((item) => item.kind === "file");
   const attachmentMarkup = fileAttachments.length ? fileAttachments.map((item) => {
@@ -1768,17 +1863,25 @@ function renderControlDetail() {
     return `<a class="cp-attachment" href="${escapeControl(url)}" target="_blank" rel="noopener">${preview}<span><strong>${escapeControl(item.label)}</strong><small>${Math.ceil(item.size / 1024)} KB · ${escapeControl(item.media_type)}</small></span></a>`;
   }).join("") : '<p class="cp-muted-row">No files attached yet.</p>';
   const attachmentCard = `<section class="cp-detail-card cp-attachment-card"><div class="cp-section-title"><div><span class="cp-section-kicker">TICKET FILES</span><h4>Screenshots &amp; files</h4></div><button class="cp-text-button" data-cp-action="comment">Add files</button></div><div class="cp-attachment-list">${attachmentMarkup}</div></section>`;
-  const criteria = (task.acceptance_criteria || []).length ? task.acceptance_criteria.map((item) => `<li><span class="cp-check"></span>${escapeControl(item)}</li>`).join("") : '<li class="cp-muted-row">No acceptance criteria recorded.</li>';
+  const criteria = (task.acceptance_criteria || []).length ? task.acceptance_criteria.map((item, index) => {
+    const checked = /^\s*\[x\]\s*/i.test(item);
+    const label = item.replace(/^\s*\[[ x]\]\s*/i, "");
+    return `<li><label class="cp-criterion${checked ? " checked" : ""}"><input type="checkbox" data-cp-criterion="${index}" ${checked ? "checked" : ""}><span>${escapeControl(label)}</span></label></li>`;
+  }).join("") : '<li class="cp-muted-row">No acceptance criteria recorded.</li>';
   const childMarkup = task.type === "epic" ? `<section class="cp-epic-delivery"><div class="cp-section-title"><div><span class="cp-section-kicker">EPIC DELIVERY</span><h4>${completeChildren}/${children.length} child tickets complete</h4></div><button class="cp-text-button" data-cp-action="edit">Edit Epic</button></div><div class="cp-epic-child-list">${children.length ? children.map((item) => `<button type="button" data-cp-ticket="${escapeControl(item.id)}"><span class="cp-state-dot cp-state-${escapeControl(item.status)}"></span><span>${escapeControl(item.title)}</span><small>${escapeControl(controlDetailStatus(item.status))}</small></button>`).join("") : '<p class="cp-muted-row">No child tickets yet. Create work and assign it to this Epic.</p>'}</div></section>` : "";
   const prDescriptionId = `cp-pr-description-${task.id}`;
   const prDescriptionMarkup = prDescription ? `<section class="cp-pr-description-panel cp-pr-description-container"><button class="cp-pr-description-toggle" type="button" data-cp-toggle-pr-description="true" aria-expanded="false" aria-controls="${escapeControl(prDescriptionId)}"><span><span>PR DESCRIPTION</span><strong>Copy-ready description</strong></span><b>Show</b></button><div class="cp-pr-description-content" id="${escapeControl(prDescriptionId)}" hidden><div class="cp-pr-description-head"><span>Review the full Markdown, then copy it into a pull request.</span><button class="btn btn-primary cp-copy-pr-description" type="button" data-cp-copy-pr-description="true">Copy PR description</button></div><pre class="cp-pr-description">${escapeControl(prDescription)}</pre></div></section>` : "";
-  const gitDetailsMarkup = latestGitEvidence ? `<section class="cp-detail-card cp-git-card"><div class="cp-section-title"><div><span class="cp-section-kicker">GIT DETAILS</span><h4>Latest snapshot</h4></div><button class="cp-icon-text" data-cp-action="attach_git_evidence">Refresh Git</button></div><dl class="cp-git-list"><div><dt>Branch</dt><dd><code>${escapeControl(latestGitEvidence.branch || "Detached HEAD")}</code></dd></div><div><dt>Last commit</dt><dd><code>${escapeControl((latestGitEvidence.commit || "Unknown").slice(0, 12))}</code></dd></div><div><dt>Committed</dt><dd><time datetime="${escapeControl(controlGitTimestamp(latestGitEvidence))}">${escapeControl(formatControlGitDate(controlGitTimestamp(latestGitEvidence)))}</time></dd></div></dl><p class="cp-git-subject">${escapeControl(latestGitEvidence.commit_subject || "No commit subject recorded.")}</p></section>` : `<section class="cp-detail-card cp-git-card"><div class="cp-section-title"><div><span class="cp-section-kicker">GIT DETAILS</span><h4>No snapshot yet</h4></div><button class="cp-icon-text" data-cp-action="attach_git_evidence">Attach Git</button></div><p class="cp-git-empty">Attach Git evidence to show this ticket's branch, latest commit, and commit date.</p></section>`;
+  const gitDetailsMarkup = latestGitEvidence ? `<section class="cp-detail-card cp-git-card"><div class="cp-section-title"><div><span class="cp-section-kicker">GIT DETAILS</span><h4>Latest snapshot</h4></div><button class="cp-icon-text" data-cp-action="attach_git_evidence">Refresh Git</button></div><dl class="cp-git-list"><div><dt>Branch</dt><dd>${renderControlGitReference(repositoryUrl, "branch", latestGitEvidence.branch, "Detached HEAD")}</dd></div><div><dt>Last commit</dt><dd>${renderControlGitReference(repositoryUrl, "commit", latestGitEvidence.commit, "Unknown")}</dd></div><div><dt>${latestGitEvidence.commit_at ? "Committed" : "Captured"}</dt><dd><time datetime="${escapeControl(controlGitTimestamp(latestGitEvidence))}">${escapeControl(formatControlGitDate(controlGitTimestamp(latestGitEvidence)))}</time></dd></div></dl><p class="cp-git-subject">${escapeControl(latestGitEvidence.commit_subject || "No commit subject recorded.")}</p></section>` : `<section class="cp-detail-card cp-git-card"><div class="cp-section-title"><div><span class="cp-section-kicker">GIT DETAILS</span><h4>No snapshot yet</h4></div><button class="cp-icon-text" data-cp-action="attach_git_evidence">Attach Git</button></div><p class="cp-git-empty">Attach Git evidence to show this ticket's branch, latest commit, and commit date.</p></section>`;
+  const description = task.description || "Add context so an agent or reviewer can pick this up without a separate briefing.";
+  const descriptionMarkup = description.length > 280
+    ? `<details class="cp-description-details"><summary><span>${escapeControl(description.slice(0, 240).trimEnd())}…</span><strong>Read full description</strong></summary><p>${escapeControl(description)}</p></details>`
+    : `<p>${escapeControl(description)}</p>`;
   const owner = task.claimed_by || task.assignee || "Unassigned";
+  const workflowActions = `${["backlog", "todo", "blocked"].includes(task.status) ? '<button class="btn btn-primary" data-cp-action="start_ticket">Start work</button>' : ""}${task.status === "in_progress" ? '<button class="btn btn-ghost" data-cp-action="review_ticket">Request review</button>' : ""}${["in_progress", "in_review"].includes(task.status) ? '<button class="btn btn-ghost" data-cp-action="complete_ticket">Mark complete</button>' : ""}`;
   el.innerHTML = `<div class="cp-workdrawer-head"><div class="cp-workdrawer-ident"><code>${escapeControl(task.id)}</code><span class="cp-status-pill cp-status-${escapeControl(task.status)}">${escapeControl(controlDetailStatus(task.status))}</span></div><button class="cp-close" id="cp-close-detail" aria-label="Close ticket">×</button></div>
-    <div class="cp-workdrawer-title"><div><h3>${escapeControl(task.title)}</h3><p>${escapeControl(task.description || "Add context so an agent or reviewer can pick this up without a separate briefing.")}</p></div><button class="btn btn-ghost cp-edit-ticket" data-cp-action="edit">Edit details</button></div>
-    ${prDescriptionMarkup}
-    <div class="cp-workdrawer-actions"><button class="btn btn-primary" data-cp-action="start_ticket">Start work</button><button class="btn btn-ghost" data-cp-action="review_ticket">Request review</button><button class="btn btn-ghost" data-cp-action="complete_ticket">Mark complete</button><button class="btn btn-ghost" data-cp-action="archive_ticket">${task.status === "archived" ? "Restore ticket to ready" : "Archive ticket"}</button><span></span><button class="cp-quick-action" data-cp-action="comment">+ Update</button><button class="cp-quick-action" data-cp-action="record_validation">+ Evidence</button><button class="cp-quick-action" data-cp-action="attach_git_evidence">+ Git</button><button class="cp-quick-action" data-cp-action="handoff_ticket">Handoff</button></div>
-    <div class="cp-workdrawer-grid"><main class="cp-workdrawer-main"><section class="cp-detail-card cp-criteria-card"><div class="cp-section-title"><div><span class="cp-section-kicker">DEFINITION OF DONE</span><h4>Acceptance criteria</h4></div><button class="cp-text-button" data-cp-action="edit">Edit</button></div><ul class="cp-criteria-list">${criteria}</ul></section>${childMarkup}${attachmentCard}<section class="cp-detail-card cp-activity-card"><div class="cp-section-title"><div><span class="cp-section-kicker">PROJECT RECORD</span><h4>Activity &amp; evidence</h4></div><button class="cp-text-button" data-cp-action="comment">Add update</button></div><div class="cp-activity-feed">${activityMarkup}</div></section></main>
+    <div class="cp-workdrawer-title"><h3>${escapeControl(task.title)}</h3><button class="btn btn-ghost cp-edit-ticket" data-cp-action="edit">Edit details</button></div>
+    <div class="cp-workdrawer-actions">${workflowActions}<button class="btn btn-ghost" data-cp-action="archive_ticket">${task.status === "archived" ? "Restore ticket to ready" : "Archive ticket"}</button><span></span><button class="cp-quick-action" data-cp-action="comment">+ Update</button><button class="cp-quick-action" data-cp-action="record_validation">+ Evidence</button><button class="cp-quick-action" data-cp-action="attach_git_evidence">+ Git</button><button class="cp-quick-action" data-cp-action="handoff_ticket">Handoff</button></div>
+    <div class="cp-workdrawer-grid"><main class="cp-workdrawer-main"><section class="cp-detail-card cp-description-card"><div class="cp-section-title"><div><span class="cp-section-kicker">TICKET BRIEF</span><h4>Description</h4></div></div>${descriptionMarkup}</section>${prDescriptionMarkup}<section class="cp-detail-card cp-criteria-card"><div class="cp-section-title"><div><span class="cp-section-kicker">DEFINITION OF DONE</span><h4>Acceptance criteria</h4></div><button class="cp-text-button" data-cp-action="edit">Edit</button></div><ul class="cp-criteria-list">${criteria}</ul></section>${childMarkup}${attachmentCard}<section class="cp-detail-card cp-activity-card"><div class="cp-section-title"><div><span class="cp-section-kicker">PROJECT RECORD</span><h4>Activity &amp; evidence</h4></div><button class="cp-text-button" data-cp-action="comment">Add update</button></div><div class="cp-activity-feed">${activityMarkup}</div></section></main>
     <aside class="cp-workdrawer-sidebar"><section class="cp-detail-card cp-details-card"><div class="cp-section-title"><div><span class="cp-section-kicker">AT A GLANCE</span><h4>Details</h4></div><button class="cp-icon-text" data-cp-action="edit" aria-label="Edit details">Edit</button></div><dl class="cp-detail-list"><div><dt>Owner</dt><dd>${escapeControl(owner)}</dd></div><div><dt>Priority</dt><dd><span class="cp-detail-priority cp-priority-${escapeControl(task.priority)}">${escapeControl(task.priority)}</span></dd></div><div><dt>Risk</dt><dd>${escapeControl(task.risk_level || "medium")}</dd></div><div><dt>Complexity</dt><dd>${escapeControl(task.complexity || "medium")}</dd></div><div><dt>Type</dt><dd>${escapeControl(task.type)}</dd></div><div><dt>Workspace</dt><dd>${escapeControl(workspace?.name || "Not assigned")}</dd></div>${parentEpic ? `<div><dt>Epic</dt><dd><button type="button" data-cp-ticket="${escapeControl(parentEpic.id)}">${escapeControl(parentEpic.title)}</button></dd></div>` : ""}</dl></section>${gitDetailsMarkup}
     <section class="cp-detail-card cp-proof-card"><div class="cp-section-title"><div><span class="cp-section-kicker">ADD TO THE RECORD</span><h4>Proof of work</h4></div></div><button class="cp-proof-action" data-cp-action="record_validation"><span>✓</span><div><strong>Validation</strong><small>Test, lint, review, or build result</small></div><b>+</b></button><button class="cp-proof-action" data-cp-action="attach_git_evidence"><span>⌘</span><div><strong>Git snapshot</strong><small>Branch, commit, and changed files</small></div><b>+</b></button><button class="cp-proof-action" data-cp-action="handoff_ticket"><span>↗</span><div><strong>Agent handoff</strong><small>Launch Codex or Claude with context</small></div><b>+</b></button></section></aside></div>`;
 }
@@ -1814,6 +1917,27 @@ async function controlWrite(action, payload = {}) {
     return result;
   } catch (error) { controlError(error); return null; }
 }
+
+document.addEventListener("change", async (event) => {
+  const input = event.target.closest?.("[data-cp-criterion]");
+  if (!input) return;
+  const task = selectedControlTask();
+  const index = Number(input.dataset.cpCriterion);
+  if (!task || !Number.isInteger(index) || !task.acceptance_criteria?.[index]) return;
+  const criteria = [...task.acceptance_criteria];
+  const label = criteria[index].replace(/^\s*\[[ x]\]\s*/i, "");
+  criteria[index] = input.checked ? `[x] ${label}` : label;
+  const scrollTop = document.querySelector(".cp-workdrawer-grid")?.scrollTop || 0;
+  input.disabled = true;
+  if (await controlWrite("update", { id: task.id, changes: { acceptance_criteria: criteria } })) {
+    const drawer = document.querySelector(".cp-workdrawer-grid");
+    if (drawer) drawer.scrollTop = scrollTop;
+    drawer?.querySelector(`[data-cp-criterion="${index}"]`)?.focus({ preventScroll: true });
+  } else {
+    input.checked = !input.checked;
+    input.disabled = false;
+  }
+});
 
 async function uploadControlFiles(ticketId, files) {
   const failed = [];
@@ -2377,6 +2501,10 @@ document.querySelectorAll("[data-cp-filter]").forEach((button) => button.addEven
 }));
 function closeControlBoardCustomizer() {
   document.getElementById("cp-board-customizer").style.display = "none";
+  if (controlPlane.view === "delivery" && controlPlane.visibleColumns.has("archived")) {
+    const board = document.getElementById("cp-board");
+    board.scrollLeft = board.scrollWidth - board.clientWidth;
+  }
 }
 
 document.getElementById("cp-customize-board")?.addEventListener("click", () => {

@@ -22,4 +22,8 @@ Use `task_board` with the supplied board path and ticket ID. Every modifying cal
 - `handoff_ticket`: use if another agent should continue; name the next agent and give a concise next step.
 - `complete_ticket`: only after acceptance criteria have validation evidence. If requirements are unclear or blocked, do not mark complete; add a comment and move it to `blocked` when appropriate.
 
-Keep comments concise and factual. Include paths, commit identifiers, command outcomes, risks, and missing evidence rather than pasting large logs. Finish with a final comment that states the outcome, tests run, and remaining risks.
+## Comment format
+
+Write progress comments in short Markdown sections so the Relay activity feed is easy to scan. For substantial updates, use the headings `## Outcome`, `## Checks`, and `## Next` as relevant, with bullets for individual results. Put commands, paths, and commit IDs in backticks; include a link when a reviewable remote artifact exists. A brief one-sentence comment is fine for a simple decision or status change. Keep failures and remaining risks explicit. Do not paste large logs into a comment; use `record_validation` for check output and `attach_git_evidence` for commits.
+
+Finish with a final formatted comment that states the outcome, tests run, and remaining risks.
