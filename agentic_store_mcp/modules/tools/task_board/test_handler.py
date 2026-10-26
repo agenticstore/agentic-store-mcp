@@ -2,6 +2,7 @@
 
 import importlib.util
 from pathlib import Path
+from types import SimpleNamespace
 
 HANDLER = Path(__file__).parent / "handler.py"
 
@@ -117,3 +118,29 @@ def test_archive_status_is_available_and_excluded_from_active_work(tmp_path):
     assert archived["history"][-1]["to"] == "archived"
     assert summary["by_status"]["archived"] == 1
     assert summary["active"] == 0
+
+
+def test_git_evidence_records_the_last_commit_timestamp(tmp_path, monkeypatch):
+    handler = load_handler()
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    output = {
+        ("rev-parse", "--show-toplevel"): str(repository),
+        ("branch", "--show-current"): "feature/example",
+        ("rev-parse", "HEAD"): "c0ffee1234567890",
+        ("log", "-1", "--format=%s"): "feat: record commit dates",
+        ("log", "-1", "--format=%cI"): "2026-10-26T05:20:00+00:00",
+        ("status", "--short"): "",
+        ("diff", "--stat"): "",
+        ("diff", "--name-only"): "",
+    }
+
+    def fake_run(command, **_kwargs):
+        return SimpleNamespace(returncode=0, stdout=f"{output[tuple(command[3:])]}\n")
+
+    monkeypatch.setattr(handler.subprocess, "run", fake_run)
+
+    evidence = handler._git_evidence(str(repository))
+
+    assert evidence["branch"] == "feature/example"
+    assert evidence["commit_at"] == "2026-10-26T05:20:00+00:00"
