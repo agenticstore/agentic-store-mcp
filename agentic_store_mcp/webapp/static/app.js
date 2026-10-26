@@ -1700,6 +1700,13 @@ function controlDetailStatus(status) {
   return String(status || "todo").replaceAll("_", " ");
 }
 
+const CP_PR_DESCRIPTION_PREFIX = "Potential PR description\n\n";
+
+function controlPrDescription(body) {
+  if (typeof body !== "string" || !body.startsWith(CP_PR_DESCRIPTION_PREFIX)) return null;
+  return body.slice(CP_PR_DESCRIPTION_PREFIX.length).trim();
+}
+
 function renderControlDetail() {
   const el = document.getElementById("cp-detail");
   const task = controlPlane.data?.tasks.find((item) => item.id === controlPlane.selectedId);
@@ -1715,12 +1722,22 @@ function renderControlDetail() {
   const children = task.type === "epic" ? tasks.filter((item) => item.parent_id === task.id) : [];
   const completeChildren = children.filter((item) => item.status === "done").length;
   const activity = [
-    ...(task.comments || []).map((item) => ({ kind: "update", at: item.at, title: "Progress update", body: item.body })),
+    ...(task.comments || []).map((item) => {
+      const prDescription = controlPrDescription(item.body);
+      return prDescription
+        ? { kind: "pr-description", at: item.at, title: "Potential PR description", prDescription }
+        : { kind: "update", at: item.at, title: "Progress update", body: item.body };
+    }),
     ...(task.validations || []).map((item) => ({ kind: item.status || "validation", at: item.at, title: `${item.kind || "Validation"} · ${item.status || "recorded"}`, body: item.summary, output: item.output })),
     ...(task.git_evidence || []).map((item) => ({ kind: "evidence", at: item.at || item.recorded_at, title: `Git snapshot · ${item.branch || "detached"}`, body: item.commit_subject || item.commit || "Repository evidence attached" })),
     ...(task.handoffs || []).map((item) => ({ kind: "handoff", at: item.at, title: `Handed to ${item.to || "agent"}`, body: item.note })),
   ].filter((item) => item.at).sort((a, b) => String(b.at).localeCompare(String(a.at)));
-  const activityMarkup = activity.length ? activity.map((item) => `<article class="cp-activity-item cp-activity-${escapeControl(item.kind)}"><span class="cp-activity-dot"></span><div><div class="cp-activity-title"><strong>${escapeControl(item.title)}</strong><time>${escapeControl(item.at)}</time></div><p>${escapeControl(item.body || "No summary recorded.")}</p>${item.output ? `<pre>${escapeControl(item.output)}</pre>` : ""}</div></article>`).join("") : '<div class="cp-activity-empty"><strong>No activity yet</strong><p>Capture the first decision, validation result, or agent handoff here.</p></div>';
+  const activityMarkup = activity.length ? activity.map((item) => {
+    const content = item.prDescription
+      ? `<pre class="cp-pr-description">${escapeControl(item.prDescription)}</pre><button class="btn btn-ghost cp-copy-pr-description" type="button" data-cp-copy-pr-description="true">Copy PR description</button>`
+      : `<p>${escapeControl(item.body || "No summary recorded.")}</p>${item.output ? `<pre>${escapeControl(item.output)}</pre>` : ""}`;
+    return `<article class="cp-activity-item cp-activity-${escapeControl(item.kind)}"><span class="cp-activity-dot"></span><div><div class="cp-activity-title"><strong>${escapeControl(item.title)}</strong><time>${escapeControl(item.at)}</time></div>${content}</div></article>`;
+  }).join("") : '<div class="cp-activity-empty"><strong>No activity yet</strong><p>Capture the first decision, validation result, or agent handoff here.</p></div>';
   const criteria = (task.acceptance_criteria || []).length ? task.acceptance_criteria.map((item) => `<li><span class="cp-check"></span>${escapeControl(item)}</li>`).join("") : '<li class="cp-muted-row">No acceptance criteria recorded.</li>';
   const childMarkup = task.type === "epic" ? `<section class="cp-epic-delivery"><div class="cp-section-title"><div><span class="cp-section-kicker">EPIC DELIVERY</span><h4>${completeChildren}/${children.length} child tickets complete</h4></div><button class="cp-text-button" data-cp-action="edit">Edit Epic</button></div><div class="cp-epic-child-list">${children.length ? children.map((item) => `<button type="button" data-cp-ticket="${escapeControl(item.id)}"><span class="cp-state-dot cp-state-${escapeControl(item.status)}"></span><span>${escapeControl(item.title)}</span><small>${escapeControl(controlDetailStatus(item.status))}</small></button>`).join("") : '<p class="cp-muted-row">No child tickets yet. Create work and assign it to this Epic.</p>'}</div></section>` : "";
   const owner = task.claimed_by || task.assignee || "Unassigned";
@@ -1731,6 +1748,20 @@ function renderControlDetail() {
     <aside class="cp-workdrawer-sidebar"><section class="cp-detail-card cp-details-card"><div class="cp-section-title"><div><span class="cp-section-kicker">AT A GLANCE</span><h4>Details</h4></div><button class="cp-icon-text" data-cp-action="edit" aria-label="Edit details">Edit</button></div><dl class="cp-detail-list"><div><dt>Owner</dt><dd>${escapeControl(owner)}</dd></div><div><dt>Priority</dt><dd><span class="cp-detail-priority cp-priority-${escapeControl(task.priority)}">${escapeControl(task.priority)}</span></dd></div><div><dt>Risk</dt><dd>${escapeControl(task.risk_level || "medium")}</dd></div><div><dt>Complexity</dt><dd>${escapeControl(task.complexity || "medium")}</dd></div><div><dt>Type</dt><dd>${escapeControl(task.type)}</dd></div><div><dt>Workspace</dt><dd>${escapeControl(workspace?.name || "Not assigned")}</dd></div>${parentEpic ? `<div><dt>Epic</dt><dd><button type="button" data-cp-ticket="${escapeControl(parentEpic.id)}">${escapeControl(parentEpic.title)}</button></dd></div>` : ""}</dl></section>
     <section class="cp-detail-card cp-proof-card"><div class="cp-section-title"><div><span class="cp-section-kicker">ADD TO THE RECORD</span><h4>Proof of work</h4></div></div><button class="cp-proof-action" data-cp-action="record_validation"><span>✓</span><div><strong>Validation</strong><small>Test, lint, review, or build result</small></div><b>+</b></button><button class="cp-proof-action" data-cp-action="attach_git_evidence"><span>⌘</span><div><strong>Git snapshot</strong><small>Branch, commit, and changed files</small></div><b>+</b></button><button class="cp-proof-action" data-cp-action="handoff_ticket"><span>↗</span><div><strong>Agent handoff</strong><small>Launch Codex or Claude with context</small></div><b>+</b></button></section></aside></div>`;
 }
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-cp-copy-pr-description]");
+  if (!button) return;
+  const description = button.closest(".cp-activity-item")?.querySelector(".cp-pr-description");
+  if (!description) return;
+  try {
+    await navigator.clipboard.writeText(description.textContent);
+    button.textContent = "Copied ✓";
+    window.setTimeout(() => { button.textContent = "Copy PR description"; }, 1400);
+  } catch (_) {
+    button.textContent = "Copy failed";
+  }
+});
 
 async function controlWrite(action, payload = {}) {
   try {

@@ -10,7 +10,7 @@ Use this workflow whenever you receive a Relay handoff.
 
 ## Branch and commit rules
 
-Follow the branch rules supplied with the handoff. If none were supplied, create a `feature/<ticket-id>-<short-slug>` branch before edits. Keep commits focused. Before every commit, run the applicable lint or static checks; run relevant tests before marking work complete. Never commit secrets, local recordings, local memory, credentials, or generated private data. Before committing and again before closing a ticket as done, draft a concise potential PR description covering the outcome, key changes, validation, and remaining risks; add it to the ticket as a `task_board` comment so a reviewer can use it directly.
+Follow the branch rules supplied with the handoff. If none were supplied, create a `feature/<ticket-id>-<short-slug>` branch before edits. Keep commits focused. Before every commit, run the applicable lint or static checks; run relevant tests before marking work complete. Never commit secrets, local recordings, local memory, credentials, or generated private data. Before committing and again before closing a ticket as done, draft a concise potential PR description covering the outcome, key changes, validation, and remaining risks; add it to the ticket as a `task_board` comment beginning exactly with `Potential PR description\n\n`. Use plain Markdown with a title, `## Summary`, `## Validation`, and `## Risks` headings so Relay can display it in a copy-ready card.
 
 ## Evidence and callbacks
 

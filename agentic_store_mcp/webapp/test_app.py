@@ -46,6 +46,16 @@ def test_relay_board_customizer_and_archive_controls_are_available_in_the_ui() -
     assert 'CP_COLUMN_VISIBILITY_STORAGE_KEY' in app_script
 
 
+def test_relay_pr_descriptions_are_copy_ready() -> None:
+    app_script = (APP_FILE.parent / "static" / "app.js").read_text(encoding="utf-8")
+    stylesheet = (APP_FILE.parent / "static" / "style.css").read_text(encoding="utf-8")
+
+    assert 'CP_PR_DESCRIPTION_PREFIX = "Potential PR description\\n\\n"' in app_script
+    assert 'data-cp-copy-pr-description="true"' in app_script
+    assert 'navigator.clipboard.writeText(description.textContent)' in app_script
+    assert ".cp-pr-description" in stylesheet
+
+
 def test_planner_launch_records_a_gated_local_session(tmp_path, monkeypatch):
     app = load_app()
     control_dir = tmp_path / "relay-control"
